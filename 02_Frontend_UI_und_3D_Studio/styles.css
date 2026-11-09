@@ -1,28 +1,31 @@
 /* =============================================================================
    TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
    File: 02_Frontend_UI_und_3D_Studio/styles.css
-   Theme: Dark-Slate, Crimson-Red & Cybernetic Glassmorphism
+   Theme: Dark-Slate, Iron-Man Hot-Rod-Red, Gold-Titanium & Cybernetic Glassmorphism
    ============================================================================= */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg-deep: #07090e;
+  --bg-deep: #06080e;
   --bg-surface: #0f1420;
-  --bg-glass: rgba(17, 24, 39, 0.88);
-  --bg-glass-card: rgba(15, 23, 42, 0.75);
+  --bg-glass: rgba(15, 20, 32, 0.88);
+  --bg-glass-card: rgba(15, 23, 42, 0.78);
   --border-color: #1f2937;
   --border-focus: #ef4444;
 
-  --accent-red: #ef4444;
-  --accent-red-hover: #dc2626;
-  --accent-red-glow: rgba(239, 68, 68, 0.45);
-  --accent-red-subtle: rgba(239, 68, 68, 0.12);
+  /* Iron-Man Farbpalette */
+  --iron-red: #dc2626;
+  --iron-red-dark: #991b1b;
+  --iron-gold: #fbbf24;
+  --iron-gold-light: #fef08a;
+  --arc-cyan: #38bdf8;
+  --arc-glow: rgba(56, 189, 248, 0.5);
 
+  --accent-red: #ef4444;
   --accent-cyan: #06b6d4;
   --accent-amber: #f59e0b;
   --accent-emerald: #10b981;
-  --accent-purple: #8b5cf6;
 
   --text-main: #f9fafb;
   --text-muted: #9ca3af;
@@ -41,9 +44,9 @@
 body {
   background-color: var(--bg-deep);
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(14, 165, 233, 0.04) 0%, transparent 40%),
-    linear-gradient(180deg, #07090e 0%, #0c101a 100%);
+    radial-gradient(circle at 10% 20%, rgba(220, 38, 38, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 40%),
+    linear-gradient(180deg, #06080e 0%, #0c101a 100%);
   color: var(--text-main);
   font-family: var(--font-sans);
   height: 100vh;
@@ -53,21 +56,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar-Design */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
-}
-::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-red);
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--iron-gold); }
 
 /* =============================================================================
    TOP BAR & FILTER NAVIGATION
@@ -97,14 +90,15 @@ body {
   gap: 12px;
 }
 
+/* Iron-Man Logo Badge */
 .brand-logo-badge {
-  background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
-  color: #fff;
-  font-weight: 800;
-  font-size: 14px;
+  background: linear-gradient(135deg, var(--iron-red) 0%, var(--iron-gold) 100%);
+  color: #000;
+  font-weight: 900;
+  font-size: 13px;
   padding: 4px 10px;
   border-radius: 6px;
-  box-shadow: 0 0 12px var(--accent-red-glow);
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.4);
   letter-spacing: 0.5px;
 }
 
@@ -127,8 +121,8 @@ body {
 }
 
 .search-input:focus {
-  border-color: var(--accent-red);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+  border-color: var(--iron-gold);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
   background: rgba(17, 24, 39, 0.95);
 }
 
@@ -187,6 +181,12 @@ body {
   color: #fbbf24;
 }
 
+.checkpoint-badge.training {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
 .btn-resume-pulse {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: #000;
@@ -200,7 +200,7 @@ body {
   font-size: 12px;
 }
 
-/* Department Filter Pills (Zeile 2) */
+/* Department Filter Pills */
 .dept-pills-row {
   display: flex;
   gap: 8px;
@@ -230,11 +230,11 @@ body {
 }
 
 .dept-pill-btn.active {
-  background: var(--accent-red-subtle);
-  border-color: var(--accent-red);
+  background: rgba(220, 38, 38, 0.15);
+  border-color: var(--iron-gold);
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
 }
 
 .status-dot {
@@ -245,8 +245,9 @@ body {
 }
 
 .status-dot.ready { background: #64748b; }
-.status-dot.working { background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan); animation: pulse-dot 1.2s infinite; }
-.status-dot.auditing { background: var(--accent-amber); box-shadow: 0 0 8px var(--accent-amber); animation: pulse-dot 1.2s infinite; }
+.status-dot.training { background: var(--arc-cyan); box-shadow: 0 0 8px var(--arc-cyan); animation: pulse-dot 1.8s infinite; }
+.status-dot.working { background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan); animation: pulse-dot 1.0s infinite; }
+.status-dot.auditing { background: var(--accent-amber); box-shadow: 0 0 8px var(--accent-amber); animation: pulse-dot 1.0s infinite; }
 .status-dot.done { background: var(--accent-emerald); box-shadow: 0 0 8px var(--accent-emerald); }
 
 /* =============================================================================
@@ -257,6 +258,7 @@ body {
   flex: 1;
   height: calc(100vh - 105px);
   overflow: hidden;
+  position: relative;
 }
 
 .studio-stage-container {
@@ -264,7 +266,7 @@ body {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border-color);
-  background: #090d15;
+  background: #080c14;
   position: relative;
   overflow: hidden;
 }
@@ -325,7 +327,7 @@ body {
   width: 100%;
   height: calc(100% - 48px);
   position: relative;
-  background: radial-gradient(circle at center, #101726 0%, #07090e 80%);
+  background: radial-gradient(circle at center, #0f172a 0%, #06080e 80%);
 }
 
 .canvas-controls-overlay {
@@ -335,7 +337,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(15, 23, 42, 0.88);
   border: 1px solid var(--border-color);
   backdrop-filter: blur(8px);
   padding: 6px 12px;
@@ -355,7 +357,13 @@ body {
 }
 
 .ctrl-btn:hover {
-  background: var(--accent-red);
+  background: var(--iron-gold);
+  color: #000;
+  font-weight: 600;
+}
+
+.ctrl-btn.active {
+  background: var(--iron-red);
   color: #fff;
 }
 
@@ -363,7 +371,7 @@ body {
   position: absolute;
   left: 20px;
   bottom: 24px;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 23, 42, 0.75);
   border: 1px solid var(--border-color);
   padding: 5px 12px;
   border-radius: 6px;
@@ -400,7 +408,7 @@ body {
 }
 
 .dept-card:hover {
-  border-color: rgba(239, 68, 68, 0.5);
+  border-color: rgba(251, 191, 36, 0.4);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
   transform: translateY(-2px);
 }
@@ -441,8 +449,8 @@ body {
 }
 
 .chef-badge:hover {
-  border-color: var(--accent-red);
-  background: rgba(239, 68, 68, 0.08);
+  border-color: var(--iron-gold);
+  background: rgba(251, 191, 36, 0.08);
 }
 
 .chef-info-left {
@@ -452,16 +460,16 @@ body {
 }
 
 .chef-avatar-icon {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
-  background: linear-gradient(135deg, #ef4444 0%, #7f1d1d 100%);
+  background: linear-gradient(135deg, var(--iron-red) 0%, var(--iron-gold) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  color: #fff;
-  font-weight: 700;
+  font-size: 13px;
+  color: #000;
+  font-weight: 800;
 }
 
 .pc-agent-list {
@@ -474,7 +482,7 @@ body {
   background: rgba(17, 24, 39, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 8px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -484,13 +492,13 @@ body {
 }
 
 .pc-item:hover {
-  background: rgba(31, 41, 55, 0.8);
+  background: rgba(31, 41, 55, 0.85);
   border-color: #4b5563;
   color: #fff;
 }
 
 /* =============================================================================
-   RECHTE COMMAND-SIDEBAR (25% BREITE)
+   RECHTE COMMAND-SIDEBAR (25% BREITE) MIT IRON-MAN AVATAR
    ============================================================================= */
 .sidebar-command-center {
   width: 380px;
@@ -501,6 +509,7 @@ body {
   justify-content: space-between;
   padding: 20px;
   overflow-y: auto;
+  transition: transform 0.3s ease;
 }
 
 .sidebar-header-row {
@@ -517,14 +526,14 @@ body {
 
 .trevor-hero-box {
   margin-top: 16px;
-  background: rgba(17, 24, 39, 0.7);
-  border: 1px solid var(--border-color);
+  background: rgba(17, 24, 39, 0.75);
+  border: 1px solid rgba(251, 191, 36, 0.25);
   border-radius: 12px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
 }
 
 .trevor-presence-row {
@@ -533,32 +542,39 @@ body {
   gap: 14px;
 }
 
-/* Animierter Trevor Energiekern (Orb) */
-.trevor-orb-container {
-  width: 44px;
-  height: 44px;
+/* Trevor Iron-Man Arc-Reactor Avatar */
+.iron-man-avatar-orb {
+  width: 48px;
+  height: 48px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.trevor-orb {
-  width: 22px;
-  height: 22px;
+.arc-reactor-core {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #f87171, #ef4444 60%, #991b1b);
-  box-shadow: 0 0 16px var(--accent-red);
-  animation: orb-glow 2s ease-in-out infinite alternate;
+  background: radial-gradient(circle at 35% 35%, #ffffff, #38bdf8 65%, #0284c7);
+  box-shadow: 0 0 16px var(--arc-cyan);
+  animation: arc-pulse 2s ease-in-out infinite alternate;
 }
 
-.trevor-orb-ring {
+.arc-reactor-ring {
   position: absolute;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  border: 1.5px dashed rgba(239, 68, 68, 0.6);
-  animation: rotate-ring 8s linear infinite;
+  border: 2px dashed var(--iron-gold);
+  animation: rotate-ring 10s linear infinite;
+}
+
+.iron-man-armor-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 12px;
 }
 
 .trevor-presence-text h2 {
@@ -566,11 +582,14 @@ body {
   font-weight: 800;
   color: #fff;
   letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .trevor-presence-text p {
   font-size: 11px;
-  color: var(--accent-red);
+  color: var(--iron-gold);
   font-weight: 600;
 }
 
@@ -581,29 +600,28 @@ body {
 }
 
 .btn-work-with-trevor {
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, var(--iron-red) 0%, #b91c1c 50%, var(--iron-gold) 100%);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   padding: 12px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 0 18px var(--accent-red-glow);
+  box-shadow: 0 0 18px rgba(220, 38, 38, 0.5);
   transition: all 0.2s ease;
 }
 
 .btn-work-with-trevor:hover {
-  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-  box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.6);
   transform: translateY(-1px);
 }
 
-/* 4-Stufen-Workflow-Tracker */
+/* 4-Stufen Workflow Tracker */
 .workflow-tracker-box {
   margin-top: 18px;
   display: flex;
@@ -631,14 +649,15 @@ body {
 }
 
 .stage-step.active {
-  border-color: var(--accent-red);
-  background: rgba(239, 68, 68, 0.1);
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+  border-color: var(--iron-gold);
+  background: rgba(220, 38, 38, 0.12);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
 }
 
 .stage-step.active .stage-num {
-  background: var(--accent-red);
-  color: #fff;
+  background: var(--iron-gold);
+  color: #000;
+  font-weight: 800;
 }
 
 .stage-num {
@@ -655,16 +674,8 @@ body {
   font-family: var(--font-mono);
 }
 
-.stage-step-info h4 {
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.stage-step-info p {
-  font-size: 10px;
-  color: var(--text-muted);
-}
+.stage-step-info h4 { font-size: 12px; font-weight: 600; color: #fff; }
+.stage-step-info p { font-size: 10px; color: var(--text-muted); }
 
 .sidebar-footer-links {
   margin-top: 20px;
@@ -697,7 +708,7 @@ body {
 }
 
 /* =============================================================================
-   MODALS: TREVOR AUFTRAGS- & JA/NEIN TERMINAL
+   KLICK-INSPEKTOR MODAL MIT TABS ("WAS MACHE ICH GERADE?" & "GELERNTES WISSEN")
    ============================================================================= */
 .modal-overlay {
   position: fixed;
@@ -711,9 +722,7 @@ body {
   padding: 20px;
 }
 
-.modal-overlay.open {
-  display: flex;
-}
+.modal-overlay.open { display: flex; }
 
 .terminal-modal-card {
   width: 100%;
@@ -722,7 +731,7 @@ body {
   background: #0d121d;
   border: 1px solid #374151;
   border-radius: 14px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(220, 38, 38, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -750,9 +759,88 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
+/* Inspector Tabs */
+.inspector-tabs-nav {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.inspector-tab-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.inspector-tab-btn.active {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: var(--iron-gold);
+  color: #fff;
+}
+
+.inspector-callout-box {
+  background: rgba(17, 24, 39, 0.75);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inspector-callout-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--iron-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.inspector-callout-text {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+
+.learned-insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insight-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.insight-project-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--arc-cyan);
+  text-transform: uppercase;
+}
+
+.insight-text {
+  font-size: 12px;
+  color: #f1f5f9;
+}
+
+/* Prompt Input & Decisions */
 .prompt-textarea {
   width: 100%;
   min-height: 110px;
@@ -768,12 +856,12 @@ body {
 }
 
 .prompt-textarea:focus {
-  border-color: var(--accent-red);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+  border-color: var(--iron-gold);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
 }
 
 .btn-submit-task {
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, var(--iron-red) 0%, #b91c1c 100%);
   color: #fff;
   border: none;
   padding: 12px 20px;
@@ -789,10 +877,9 @@ body {
 
 .btn-submit-task:hover {
   background: #dc2626;
-  box-shadow: 0 0 15px var(--accent-red-glow);
+  box-shadow: 0 0 15px rgba(220, 38, 38, 0.5);
 }
 
-/* Section B: Live-Fortschritt */
 .progress-card {
   background: rgba(17, 24, 39, 0.6);
   border: 1px solid var(--border-color);
@@ -814,14 +901,13 @@ body {
 .progress-bar-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #ef4444 0%, #06b6d4 100%);
+  background: linear-gradient(90deg, var(--iron-red) 0%, var(--iron-gold) 50%, var(--arc-cyan) 100%);
   transition: width 0.3s ease;
 }
 
-/* Section C: Trevor Decision Terminal */
 .decision-summary-box {
   background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid rgba(251, 191, 36, 0.35);
   border-radius: 10px;
   padding: 16px;
   font-size: 13px;
@@ -889,7 +975,7 @@ body {
 
 .btn-decision-no {
   flex: 1;
-  background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
+  background: linear-gradient(135deg, var(--iron-red) 0%, #991b1b 100%);
   color: #fff;
   border: none;
   padding: 14px 20px;
@@ -897,7 +983,7 @@ body {
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -907,7 +993,7 @@ body {
 
 .btn-decision-no:hover {
   background: #dc2626;
-  box-shadow: 0 0 28px rgba(239, 68, 68, 0.65);
+  box-shadow: 0 0 28px rgba(220, 38, 38, 0.65);
 }
 
 .feedback-box {
@@ -915,7 +1001,7 @@ body {
   flex-direction: column;
   gap: 8px;
   background: rgba(31, 41, 55, 0.4);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(220, 38, 38, 0.3);
   padding: 12px;
   border-radius: 8px;
 }
@@ -933,11 +1019,64 @@ body {
 }
 
 /* =============================================================================
+   MOBILE & RESPONSIVE ANPASSUNGEN (BOTTOM-SHEET DRAWER)
+   ============================================================================= */
+.mobile-sidebar-toggle-btn {
+  display: none;
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: linear-gradient(135deg, var(--iron-red) 0%, var(--iron-gold) 100%);
+  color: #000;
+  font-weight: 900;
+  border: none;
+  border-radius: 50px;
+  padding: 12px 20px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .top-header { height: auto; padding: 10px 14px; gap: 8px; }
+  .top-bar-row-1 { flex-direction: column; align-items: stretch; gap: 10px; }
+  .search-input-wrapper { max-width: 100%; }
+  
+  .studio-main-wrapper {
+    flex-direction: column;
+    height: calc(100vh - 140px);
+  }
+
+  .sidebar-command-center {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 80vh;
+    border-radius: 20px 20px 0 0;
+    border-top: 2px solid var(--iron-gold);
+    transform: translateY(105%);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
+    z-index: 60;
+  }
+
+  .sidebar-command-center.open {
+    transform: translateY(0);
+  }
+
+  .mobile-sidebar-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+/* =============================================================================
    ANIMATION KEYFRAMES
    ============================================================================= */
-@keyframes orb-glow {
-  0% { transform: scale(0.95); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
-  100% { transform: scale(1.05); box-shadow: 0 0 24px rgba(239, 68, 68, 0.85); }
+@keyframes arc-pulse {
+  0% { transform: scale(0.92); box-shadow: 0 0 10px var(--arc-cyan); }
+  100% { transform: scale(1.08); box-shadow: 0 0 24px rgba(56, 189, 248, 0.9); }
 }
 
 @keyframes rotate-ring {
@@ -951,6 +1090,6 @@ body {
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 0.4; }
+  0%, 100% { opacity: 0.35; }
   50% { opacity: 1; }
 }

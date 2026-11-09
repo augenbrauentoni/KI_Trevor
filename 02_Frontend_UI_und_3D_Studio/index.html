@@ -2,10 +2,10 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TREVOR – AI Software Studio & Multi-Agent Command Center</title>
   <link rel="stylesheet" href="./styles.css">
-  <!-- Three.js CDN für Phase 4 3D-Campus -->
+  <!-- Three.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- OrbitControls CDN -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -28,20 +28,20 @@
       <!-- Live-Suchfeld -->
       <div class="search-input-wrapper">
         <span class="search-icon">🔍</span>
-        <input type="text" id="global-search-input" class="search-input" placeholder="Bereich oder Agent finden (z. B. Supabase, Docker, Security)...">
+        <input type="text" id="global-search-input" class="search-input" placeholder="Bereich oder Spezialist finden (z. B. 6. Datenbank, Login, Docker)...">
       </div>
 
       <!-- Engine & Checkpoint Controls -->
       <div class="header-right-controls">
-        <button id="engine-mode-btn" class="engine-mode-pill" title="Klicken zum Umschalten oder Konfigurieren">
+        <button id="engine-mode-btn" class="engine-mode-pill" title="Klicken zum Umschalten">
           <span id="engine-mode-icon">☁️</span>
           <span id="engine-mode-label">Gemini Cloud (Schule)</span>
         </button>
         <button id="btn-open-settings" class="ctrl-btn" title="Einstellungen öffnen">⚙️</button>
 
-        <div id="checkpoint-badge" class="checkpoint-badge">
-          <span>💾</span>
-          <span id="checkpoint-text">Zwischenstand gesichert: Bereit</span>
+        <div id="checkpoint-badge" class="checkpoint-badge training">
+          <span>🧠</span>
+          <span id="checkpoint-text">Autonomes Leerlauf-Training aktiv</span>
         </div>
 
         <button id="btn-resume-limit" class="btn-resume-pulse" style="display: none;">
@@ -55,7 +55,7 @@
       <button class="dept-pill-btn active" data-dept-id="all">
         <span class="status-dot ready"></span> Alle 10 Bereiche
       </button>
-      <!-- Wird dynamisch durch app.js befüllt -->
+      <!-- Dynamisch befüllt -->
     </nav>
   </header>
 
@@ -64,24 +64,22 @@
        ========================================================================= -->
   <div class="studio-main-wrapper">
 
-    <!-- LINKS: HAUPTSTÜHNE (3D-STUDIO ODER 2D-ARBEITSPLÄTZE) -->
+    <!-- LINKS: HAUPTBÜHNE (3D-STUDIO ODER 2D-ARBEITSPLÄTZE) -->
     <main class="studio-stage-container">
       <div class="stage-top-header">
         <div class="stage-title">
-          <span style="color: var(--accent-red); font-size: 16px;">•</span>
-          <span>Dein digitales Entwicklungsstudio</span>
+          <span style="color: var(--iron-gold); font-size: 16px;">•</span>
+          <span>Dein digitaler Architektur-Campus</span>
         </div>
 
         <div class="view-mode-toggle">
-          <button id="btn-view-3d" class="view-toggle-btn active">🧊 3D-Studio</button>
+          <button id="btn-view-3d" class="view-toggle-btn active">🧊 3D-Campus</button>
           <button id="btn-view-grid" class="view-toggle-btn">⊞ Arbeitsplätze</button>
         </div>
       </div>
 
-      <!-- ANSICHT 1: 3D STUDIO CANVAS (PHASE 4 VORBEREITUNG) -->
+      <!-- ANSICHT 1: 3D CAMPUS MIT IRON-MAN TREVOR & GLAS-BÜROS -->
       <div id="threejs-canvas-container">
-        <!-- 3D Canvas wird von Three.js hier injiziert -->
-        
         <div class="canvas-controls-overlay">
           <button id="ctrl-rot-left" class="ctrl-btn" title="Kamera links drehen">⟲ Links drehen</button>
           <button id="ctrl-rot-right" class="ctrl-btn" title="Kamera rechts drehen">⟳ Rechts drehen</button>
@@ -92,39 +90,40 @@
         </div>
 
         <div class="canvas-footer-stats">
-          <span>10 Bereiche · 43 Agenten + Trevor · 3D Campus V1.0</span>
+          <span>10 Abteilungen · 43 Spezialisten + Trevor (Iron-Man Armor) · 3D Campus V2.0</span>
         </div>
       </div>
 
-      <!-- ANSICHT 2: 2D ARBEITSPLÄTZE GRID (VOLLSTÄNDIG INTERAKTIV) -->
+      <!-- ANSICHT 2: 2D ARBEITSPLÄTZE GRID -->
       <div id="workstations-grid-container" style="display: none;">
-        <!-- Dynamisch gerendert durch app.js -->
+        <!-- Dynamisch gerendert -->
       </div>
     </main>
 
-    <!-- RECHTS: KOMMANDO-SIDEBAR ("DEIN ARBEITSPLATZ" MIT TREVOR) -->
-    <aside class="sidebar-command-center">
+    <!-- RECHTS: KOMMANDO-SIDEBAR MIT TREVOR IM IRON-MAN LOOK -->
+    <aside class="sidebar-command-center" id="sidebar-command-center">
       <div>
         <div class="sidebar-header-row">
           <span>DEIN ARBEITSPLATZ</span>
-          <span style="color: var(--accent-red);">01 / STUDIO</span>
+          <span style="color: var(--iron-gold);">01 / STUDIO DIRECTOR</span>
         </div>
 
-        <!-- Trevor Hero Box mit rot pulsierendem Energiekern -->
+        <!-- Trevor Hero Box mit rot-goldenem Arc-Reactor -->
         <div class="trevor-hero-box">
           <div class="trevor-presence-row">
-            <div class="trevor-orb-container">
-              <div class="trevor-orb-ring"></div>
-              <div class="trevor-orb"></div>
+            <div class="iron-man-avatar-orb">
+              <div class="arc-reactor-ring"></div>
+              <div class="arc-reactor-core"></div>
+              <div class="iron-man-armor-badge">🛡️</div>
             </div>
             <div class="trevor-presence-text">
-              <h2>Trevor.</h2>
-              <p>• Dein Hauptagent & Studio-Leiter</p>
+              <h2>Trevor. <span style="font-size: 11px; color: var(--iron-gold);">MK-VII</span></h2>
+              <p>• Dein Studio-Leiter im Iron-Man Look</p>
             </div>
           </div>
 
           <p class="trevor-lead-text">
-            Besprich dein Projekt mit Trevor oder wähle einen Arbeitsplatz, um die belegte Arbeit des Teams zu prüfen.
+            Besprich dein Software-Projekt mit Trevor oder klicke auf einen beliebigen Arbeitsplatz, um zu prüfen, was der Spezialist gerade macht.
           </p>
 
           <button id="btn-sidebar-open-trevor" class="btn-work-with-trevor">
@@ -141,7 +140,7 @@
             <div class="stage-num">01</div>
             <div class="stage-step-info">
               <h4>Fachteam</h4>
-              <p>Spezial-PCs sichten und bereiten intern vor</p>
+              <p>33 Spezial-PCs erarbeiten Code & Spezifikationen</p>
             </div>
           </div>
 
@@ -149,7 +148,7 @@
             <div class="stage-num">02</div>
             <div class="stage-step-info">
               <h4>Chef-Agent</h4>
-              <p>Prüft Ergebnisse und Widersprüche</p>
+              <p>10 Abteilungsleiter prüfen auf Widersprüche & Bugs</p>
             </div>
           </div>
 
@@ -157,7 +156,7 @@
             <div class="stage-num">03</div>
             <div class="stage-step-info">
               <h4>Trevor</h4>
-              <p>Bündelt die nächsten Schritte für dich</p>
+              <p>Bündelt alles zur Executive Summary & Antigravity-Prompt</p>
             </div>
           </div>
 
@@ -174,26 +173,89 @@
       <!-- Footer-Links der Sidebar -->
       <div class="sidebar-footer-links">
         <button id="btn-sidebar-chef-reports" class="footer-link-btn">
-          <span>Chef-Arbeitsplatz</span>
+          <span>Chef-Arbeitsplatz & Berichte</span>
           <span>→</span>
         </button>
         <button id="btn-sidebar-trevor-terminal" class="footer-link-btn">
-          <span>Trevor-Arbeitsplatz & Entscheidung</span>
+          <span>Trevor-Terminal & Freigabe</span>
           <span>→</span>
         </button>
       </div>
     </aside>
 
+    <!-- Mobile Toggle Button (für Smartphone & Tablet) -->
+    <button id="btn-mobile-sidebar-toggle" class="mobile-sidebar-toggle-btn">
+      <span>🛡️ Trevor & Status</span>
+    </button>
+
   </div>
 
   <!-- =========================================================================
-       3. MODAL: TREVORS AUFTRAGS- & JA/NEIN-ENTSCHEIDUNGS-TERMINAL
+       3. MODAL: KLICK-INSPEKTOR ("WAS MACHT DIESER RAUM / PC GERADE?")
+       ========================================================================= -->
+  <div id="modal-agent-inspector" class="modal-overlay">
+    <div class="terminal-modal-card" style="max-width: 760px;">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <span style="color: var(--arc-cyan);">🔬</span>
+          <span id="inspector-agent-title">SPEZIALISTEN-INSPEKTOR</span>
+        </div>
+        <button class="ctrl-btn modal-close-btn" data-modal="modal-agent-inspector">✕</button>
+      </div>
+      <div class="terminal-body">
+        
+        <!-- Tabs im Inspektor -->
+        <div class="inspector-tabs-nav">
+          <button id="tab-btn-live-work" class="inspector-tab-btn active">⚡ Live-Status & Arbeit</button>
+          <button id="tab-btn-learned" class="inspector-tab-btn">📚 Gelerntes Wissen (Training)</button>
+        </div>
+
+        <!-- TAB 1: LIVE-STATUS & AUFGABE -->
+        <div id="tab-content-live-work" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Wofür bin ich zuständig? -->
+          <div class="inspector-callout-box">
+            <span class="inspector-callout-label">Wofür bin ich zuständig?</span>
+            <p id="inspector-easy-explanation" class="inspector-callout-text"></p>
+          </div>
+
+          <!-- Was mache ich in dieser Sekunde? -->
+          <div class="inspector-callout-box" style="border-color: rgba(56, 189, 248, 0.4);">
+            <span class="inspector-callout-label" style="color: var(--arc-cyan);">Was mache ich in dieser Sekunde?</span>
+            <div id="inspector-live-activity" style="font-size: 13px; font-weight: 600; color: #fff;"></div>
+            <div id="inspector-live-detail" style="font-size: 11px; color: var(--text-dim); margin-top: 2px;"></div>
+          </div>
+
+          <!-- Code / Technisches Protokoll -->
+          <div>
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px;">
+              AKTUELLES CODE- & SPEZIFIKATIONS-PROTOKOLL:
+            </div>
+            <pre class="code-preview-content" id="inspector-agent-content" style="max-height: 280px; display: block;"></pre>
+          </div>
+        </div>
+
+        <!-- TAB 2: GELERNTES WISSEN (IDLE TRAINING) -->
+        <div id="tab-content-learned" style="display: none; flex-direction: column; gap: 12px;">
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Erkenntnisse und Optimierungen, die dieser Spezialist beim autonomen Üben an deinen bestehenden Projekten gesammelt hat:
+          </div>
+          <div class="learned-insights-list" id="inspector-learned-list">
+            <!-- Dynamisch befüllt -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       4. MODAL: TREVOR COMMAND TERMINAL & JA/NEIN ENTSCHEIDUNGSHUB
        ========================================================================= -->
   <div id="modal-trevor-terminal" class="modal-overlay">
     <div class="terminal-modal-card">
       <div class="terminal-header">
         <div class="terminal-title">
-          <span style="color: var(--accent-red); font-size: 20px;">🛡️</span>
+          <span style="color: var(--iron-gold); font-size: 20px;">🛡️</span>
           <span>TREVOR COMMAND TERMINAL & DECISION HUB</span>
         </div>
         <button class="ctrl-btn modal-close-btn" data-modal="modal-trevor-terminal">✕</button>
@@ -217,7 +279,7 @@
         <!-- BEREICH B: LIVE-FORTSCHRITT & ECHTZEIT-ZWISCHENSTAND -->
         <div id="section-task-progress" class="progress-card" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span id="progress-status-label" style="font-size: 12px; font-weight: 700; color: var(--accent-cyan);">
+            <span id="progress-status-label" style="font-size: 12px; font-weight: 700; color: var(--arc-cyan);">
               Workflow initialisiert...
             </span>
             <span id="progress-percent-label" style="font-size: 12px; font-weight: 600; color: #fff;">0%</span>
@@ -228,7 +290,7 @@
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
-            <span id="progress-active-agent">Warte auf Agenten...</span>
+            <span id="progress-active-agent">Warte auf Spezialisten...</span>
             <span style="color: #34d399;">✔ Zwischenstand in Supabase & lokal gesichert</span>
           </div>
         </div>
@@ -236,15 +298,14 @@
         <!-- BEREICH C: STUFE 04 - DEINE ENTSCHEIDUNG (NUR JA ODER NEIN) -->
         <div id="section-decision" style="display: none; flex-direction: column; gap: 14px;">
           
-          <!-- Trevors Executive Summary -->
           <div class="decision-summary-box">
-            <h3 style="font-size: 14px; font-weight: 800; color: var(--accent-red); margin-bottom: 8px;">
+            <h3 style="font-size: 14px; font-weight: 800; color: var(--iron-gold); margin-bottom: 8px;">
               📋 TREVORS EXECUTIVE SUMMARY FÜR DICH:
             </h3>
             <div id="decision-summary-text"></div>
           </div>
 
-          <!-- Vorschau auf den Antigravity Master-Prompt (aufklappbar) -->
+          <!-- Aufklappbare Antigravity Master-Prompt Vorschau -->
           <div class="code-preview-collapsible">
             <div class="code-preview-header" id="btn-toggle-prompt-preview">
               <span>💻 GENERIERTER ANTIGRAVITY MASTER-PROMPT (VORSCHAU)</span>
@@ -257,8 +318,8 @@
           <div id="decision-success-banner" class="success-banner">
             <span>🎉</span>
             <div>
-              <strong>Prompt kopiert & unter <code>05_Antigravity_Outputs/ANTIGRAVITY_TASK.md</code> abgelegt!</strong>
-              <div style="font-size: 11px; margin-top: 2px;">Füge den Prompt jetzt einfach mit <kbd>Strg + V</kbd> in Antigravity ein.</div>
+              <strong>Prompt freigegeben & unter <code>05_Antigravity_Outputs/ANTIGRAVITY_TASK.md</code> gesichert!</strong>
+              <div style="font-size: 11px; margin-top: 2px;">Automatisch in deine Zwischenablage kopiert & an die Heim-Station übermittelt.</div>
             </div>
           </div>
 
@@ -272,12 +333,12 @@
             </button>
           </div>
 
-          <!-- Optionale Korrektur-Box bei NEIN -->
+          <!-- Korrektur-Box bei NEIN -->
           <div id="decision-feedback-box" class="feedback-box">
             <label style="font-size: 12px; font-weight: 700; color: #f87171;">
               Kunden-Hinweis an Trevor (Was soll geändert werden?):
             </label>
-            <textarea id="feedback-input" class="prompt-textarea" style="min-height: 70px;" placeholder="Z. B.: Bitte mehr Fokus auf JWT Session-Sicherheit und Tailwind Dark-Mode..."></textarea>
+            <textarea id="feedback-input" class="prompt-textarea" style="min-height: 70px;" placeholder="Z. B.: Bitte mehr Fokus auf JWT Session-Sicherheit und Supabase RLS Policies..."></textarea>
             <button id="btn-submit-feedback" class="btn-submit-task" style="align-self: flex-start; background: #b91c1c;">
               🔄 Korrektur an Chef-Agenten übermitteln
             </button>
@@ -295,25 +356,6 @@
 
         </div>
 
-      </div>
-    </div>
-  </div>
-
-  <!-- =========================================================================
-       4. MODAL: AGENT LOG INSPECTOR
-       ========================================================================= -->
-  <div id="modal-agent-inspector" class="modal-overlay">
-    <div class="terminal-modal-card" style="max-width: 700px;">
-      <div class="terminal-header">
-        <div class="terminal-title">
-          <span style="color: var(--accent-cyan);">🔬</span>
-          <span id="inspector-agent-title">AGENTEN-PROTOKOLL</span>
-        </div>
-        <button class="ctrl-btn modal-close-btn" data-modal="modal-agent-inspector">✕</button>
-      </div>
-      <div class="terminal-body">
-        <div style="font-size: 12px; color: var(--text-muted);" id="inspector-agent-meta"></div>
-        <pre class="code-preview-content" id="inspector-agent-content" style="max-height: 450px; display: block;"></pre>
       </div>
     </div>
   </div>
@@ -384,7 +426,6 @@
     </div>
   </div>
 
-  <!-- Controller Script -->
   <script type="module" src="./app.js"></script>
 </body>
 </html>
