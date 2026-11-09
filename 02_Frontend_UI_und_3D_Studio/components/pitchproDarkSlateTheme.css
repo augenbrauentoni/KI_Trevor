@@ -1,0 +1,234 @@
+/**
+ * PITCHPRO VERSION 10.0 BETA LITE - DARK-SLATE DESIGN SYSTEM
+ * Optimierungs-Erkenntnis Agent chef_design: Dark-Slate Palette (#0f172a / #1e293b / #334155)
+ * kombiniert mit PitchPro Gold (#f5c518), Emerald (#10b981) und Crimson (#ef4444).
+ */
+
+:root {
+  --pp-bg-base: #0a0f1d;
+  --pp-bg-surface: #0f172a;
+  --pp-bg-card: #1e293b;
+  --pp-bg-card-hover: #273549;
+  --pp-bg-overlay: rgba(10, 15, 29, 0.85);
+
+  --pp-border-subtle: #1e293b;
+  --pp-border-default: #334155;
+  --pp-border-active: #475569;
+  --pp-border-gold: rgba(245, 197, 24, 0.4);
+
+  --pp-accent-gold: #f5c518;
+  --pp-accent-gold-hover: #e5b512;
+  --pp-accent-gold-glow: rgba(245, 197, 24, 0.25);
+  
+  --pp-accent-blue: #38bdf8;
+  --pp-accent-emerald: #10b981;
+  --pp-accent-rose: #f43f5e;
+  --pp-accent-purple: #a855f7;
+  --pp-accent-amber: #f59e0b;
+
+  --pp-text-primary: #f8fafc;
+  --pp-text-secondary: #94a3b8;
+  --pp-text-muted: #64748b;
+  --pp-text-gold: #f5c518;
+
+  --pp-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --pp-font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+}
+
+/* Base Styles */
+body.pitchpro-dark-slate {
+  background-color: var(--pp-bg-base);
+  color: var(--pp-text-primary);
+  font-family: var(--pp-font-sans);
+  margin: 0;
+  padding: 0;
+}
+
+/* Glass & Card Surfaces */
+.pp-card {
+  background: var(--pp-bg-card);
+  border: 1px solid var(--pp-border-default);
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.pp-card:hover {
+  border-color: var(--pp-border-active);
+}
+
+.pp-card-glow {
+  border-color: var(--pp-border-gold);
+  box-shadow: 0 0 20px -3px var(--pp-accent-gold-glow);
+}
+
+/* Badges für die 5 RBAC-Rollen */
+.pp-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: var(--pp-font-mono);
+}
+
+.pp-role-badge.role-admin {
+  background: rgba(245, 197, 24, 0.15);
+  border: 1px solid rgba(245, 197, 24, 0.45);
+  color: var(--pp-accent-gold);
+}
+
+.pp-role-badge.role-trainer {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: var(--pp-accent-blue);
+}
+
+.pp-role-badge.role-cotrainer {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: var(--pp-accent-emerald);
+}
+
+.pp-role-badge.role-verwaltung {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: var(--pp-accent-purple);
+}
+
+.pp-role-badge.role-tester {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: var(--pp-accent-amber);
+}
+
+/* Buttons */
+.pp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  outline: none;
+}
+
+.pp-btn-primary {
+  background: linear-gradient(135deg, #f5c518 0%, #d4a510 100%);
+  color: #000000;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(245, 197, 24, 0.25);
+}
+
+.pp-btn-primary:hover {
+  background: linear-gradient(135deg, #fed434 0%, #e5b512 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 197, 24, 0.35);
+}
+
+.pp-btn-secondary {
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+}
+
+.pp-btn-secondary:hover {
+  background: #334155;
+  border-color: #475569;
+}
+
+.pp-btn-danger {
+  background: rgba(244, 63, 94, 0.15);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.pp-btn-danger:hover {
+  background: rgba(244, 63, 94, 0.25);
+}
+
+/* Input Fields */
+.pp-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: #f8fafc;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pp-input:focus {
+  outline: none;
+  border-color: var(--pp-accent-gold);
+  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15);
+}
+
+/* RBAC Lock Overlay */
+.pp-rbac-locked {
+  position: relative;
+  opacity: 0.55;
+  filter: grayscale(0.4);
+  pointer-events: none !important;
+}
+
+.pp-rbac-lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #f43f5e;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Modals */
+.pp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--pp-bg-overlay);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pp-modal-container {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  max-width: 540px;
+  width: 100%;
+  overflow: hidden;
+  animation: ppModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ppModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

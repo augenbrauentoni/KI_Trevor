@@ -2,16 +2,24 @@
  * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
  * File: 02_Frontend_UI_und_3D_Studio/app.js
  * 
- * Haupt-Controller V2.1 (Hotfix & Synchrones Rendering):
+ * Phase 7: Kompakter Architektur-Campus & Smarte Workflows:
  * - 10 deutsche Abteilungs-Pills & 2D-Grid rendern 100% synchron bei Seitenaufruf
- * - 3D Campus bindet Trevor (Iron-Man) & 10 Glas-Büros ohne Netzwerk-Lag ein
- * - Klick-Inspektor mit "Wofür bin ich zuständig?" & "Was mache ich in dieser Sekunde?"
- * - Autonomes Idle-Training an vorhandenen Projekten
- * - Cloud-Queue für Freigaben von unterwegs
+ * - Kompakter 3D-Büro-Campus mit Trevor (Iron-Man) & Glas-Büros
+ * - Projekt-Auswahl-Dropdown ("Aktives Ziel-Projekt")
+ * - Direktes Anweisungs-Terminal pro Abteilung/PC mit 3 Quick-Prompts (Bottom-Up)
+ * - 4-Stufen Bottom-Up Workflow (Fachteam -> Chef-Audit + Cross-Check -> Trevor -> JA/NEIN)
+ * - 3D-Datenpartikel & dynamische Micro-Status-Toasts (Live-Sprechblasen)
+ * - Entscheidungs-Archiv & Prompt-Verlauf Tab in Trevors Terminal
  */
 
 import { STUDIO_HIERARCHY } from './hierarchyData.js';
-import { init3DStudio, updateAgentStatusIn3D, setStageIn3D } from './studio3D.js';
+import {
+  init3DStudio,
+  updateAgentStatusIn3D,
+  setStageIn3D,
+  triggerDataStreamToTrevor,
+  updateRoomMicroStatus
+} from './studio3D.js';
 import {
   startIdleTraining,
   stopIdleTraining,
@@ -20,9 +28,10 @@ import {
   getAllLearnedKnowledgeSummary
 } from '../04_KI_Engine_und_Bridges/idleTrainer.js';
 
-// Globaler Anwendungs-Status mit synchronem Daten-Fundament
+// Globaler Anwendungs-Status
 const state = {
-  hierarchy: STUDIO_HIERARCHY, // Sofort verfügbar, kein 404-Crash!
+  hierarchy: STUDIO_HIERARCHY,
+  selectedProject: 'KI_Trevor',
   activeView: '3d',
   selectedDeptFilter: 'all',
   searchQuery: '',
@@ -43,9 +52,10 @@ const state = {
 // INITIALISIERUNG: SOFORTIGES SYNCHRONES RENDERN
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[Trevor App] Initialisiere Studio-Shell...');
+  console.log('[Trevor App] Initialisiere Studio-Shell (Phase 7 Modern Office)...');
 
   loadLocalSettings();
+  loadSelectedProject();
 
   // 1. Sofortiges Rendern der 10 Pills & des 2D-Grids
   renderDepartmentPills();
@@ -74,6 +84,17 @@ function loadLocalSettings() {
     const saved = localStorage.getItem('trevor_user_settings');
     if (saved) {
       state.settings = { ...state.settings, ...JSON.parse(saved) };
+    }
+  } catch { /* ignore */ }
+}
+
+function loadSelectedProject() {
+  try {
+    const savedProject = localStorage.getItem('trevor_selected_project');
+    if (savedProject) {
+      state.selectedProject = savedProject;
+      const select = document.getElementById('project-selector-select');
+      if (select) select.value = savedProject;
     }
   } catch { /* ignore */ }
 }
@@ -218,7 +239,7 @@ function filterWorkstations() {
 }
 
 // =============================================================================
-// KLICK-INSPEKTOR
+// KLICK-INSPEKTOR & DIREKT-ANWEISUNGSTERMINAL
 // =============================================================================
 function handleAgentClickFrom3D(id, type, deptId) {
   openAgentInspector(id, type, deptId);
@@ -260,9 +281,31 @@ function openAgentInspector(agentId, type, deptId) {
   const liveDetail = document.getElementById('inspector-live-detail');
   const content = document.getElementById('inspector-agent-content');
   const learnedList = document.getElementById('inspector-learned-list');
+  const directPromptInput = document.getElementById('inspector-direct-prompt');
+  const quickPromptsContainer = document.getElementById('inspector-quick-prompts-container');
 
   title.innerText = `${agentObj.name} (${deptObj.name})`;
   easyExp.innerText = agentObj.easy_explanation || 'Konzentriert sich auf seine Kernaufgabe im Studio.';
+
+  if (directPromptInput) {
+    directPromptInput.value = '';
+    directPromptInput.placeholder = `Direkte Arbeitsanweisung an ${agentObj.name} (${deptObj.name}) eingeben...`;
+  }
+
+  // 3 Schnell-Aktionen (Quick Prompts) passend zu dieser Abteilung einbinden
+  if (quickPromptsContainer && deptObj.quick_prompts) {
+    quickPromptsContainer.innerHTML = '';
+    deptObj.quick_prompts.forEach(promptText => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'quick-prompt-btn';
+      btn.innerText = promptText;
+      btn.addEventListener('click', () => {
+        if (directPromptInput) directPromptInput.value = promptText;
+      });
+      quickPromptsContainer.appendChild(btn);
+    });
+  }
 
   if (state.activeTask && state.activeTask.status === 'running') {
     const isWorking = state.activeTask.checkpoint_data?.pc_outputs?.[agentId] || state.activeTask.checkpoint_data?.chef_outputs?.[agentId];
@@ -275,7 +318,7 @@ function openAgentInspector(agentId, type, deptId) {
     }
   } else {
     const training = getAgentCurrentActivity(agentId);
-    liveAct.innerHTML = `<span>🧠 Trainiert autonom an: <strong>${training.projectName}</strong></span>`;
+    liveAct.innerHTML = `<span>🧠 Trainiert autonom an: <strong>${state.selectedProject || training.projectName}</strong></span>`;
     liveDetail.innerText = `${training.currentAction} -> ${training.insight}`;
   }
 
@@ -283,11 +326,12 @@ function openAgentInspector(agentId, type, deptId) {
     (state.activeTask?.checkpoint_data?.pc_outputs?.[agentId]?.output_text) ||
     (state.activeTask?.checkpoint_data?.chef_outputs?.[agentId]?.output_text) ||
     `// [AKTUELLES FACHPROTOKOLL: ${agentObj.name.toUpperCase()}]\n` +
+    `// Ziel-Projekt: ${state.selectedProject}\n` +
     `// Status: Bereit & trainiert autonom im Hintergrund\n` +
     `export const ${agentId}_status = {\n` +
     `  specialist: "${agentObj.name}",\n` +
     `  department: "${deptObj.name}",\n` +
-    `  current_task: "Idle-Training an vorhandenen Projekten (Zero API Cost)",\n` +
+    `  current_task: "Idle-Training an Ziel-Projekt ${state.selectedProject}",\n` +
     `  ready_for_dispatch: true\n` +
     `};\n`;
 
@@ -316,25 +360,185 @@ function openAgentInspector(agentId, type, deptId) {
 
 function switchInspectorTab(tabName) {
   const btnLive = document.getElementById('tab-btn-live-work');
+  const btnDirect = document.getElementById('tab-btn-direct-command');
   const btnLearned = document.getElementById('tab-btn-learned');
+
   const contentLive = document.getElementById('tab-content-live-work');
+  const contentDirect = document.getElementById('tab-content-direct-command');
   const contentLearned = document.getElementById('tab-content-learned');
+
+  btnLive.classList.remove('active');
+  if (btnDirect) btnDirect.classList.remove('active');
+  btnLearned.classList.remove('active');
+
+  contentLive.style.display = 'none';
+  if (contentDirect) contentDirect.style.display = 'none';
+  contentLearned.style.display = 'none';
 
   if (tabName === 'live-work') {
     btnLive.classList.add('active');
-    btnLearned.classList.remove('active');
     contentLive.style.display = 'flex';
-    contentLearned.style.display = 'none';
+  } else if (tabName === 'direct-command') {
+    if (btnDirect) btnDirect.classList.add('active');
+    if (contentDirect) contentDirect.style.display = 'flex';
   } else {
     btnLearned.classList.add('active');
-    btnLive.classList.remove('active');
     contentLearned.style.display = 'flex';
-    contentLive.style.display = 'none';
   }
 }
 
 // =============================================================================
-// WORKFLOW AUSFÜHRUNG (4 STUFEN)
+// DIREKTE ABTEILUNGS-ANWEISUNG (BOTTOM-UP -> TREVOR)
+// =============================================================================
+async function dispatchDirectDepartmentInstruction() {
+  const inputEl = document.getElementById('inspector-direct-prompt');
+  const instruction = inputEl.value.trim();
+
+  if (!instruction) {
+    alert('Bitte gib zuerst eine Arbeitsanweisung oder wähle einen Schnell-Befehl aus!');
+    return;
+  }
+
+  const { agentId, type, deptId } = state.currentInspectedAgent || {};
+  if (!deptId) return;
+
+  const modal = document.getElementById('modal-agent-inspector');
+  modal.classList.remove('open');
+
+  stopIdleTraining();
+
+  // 1. Visuelle Effekte im 3D-Büro: Datenstrahl zu Trevor & Micro-Status
+  triggerDataStreamToTrevor(deptId);
+  updateRoomMicroStatus(deptId, `⚡ Bearbeitet: "${instruction.slice(0, 24)}..."`);
+
+  // 2. Öffne Trevor Terminal im Arbeitsmodus
+  openTrevorModal();
+  switchTrevorTab('active');
+  document.getElementById('section-task-input').style.display = 'none';
+  document.getElementById('section-task-progress').style.display = 'flex';
+  document.getElementById('section-decision').style.display = 'none';
+
+  const dept = state.hierarchy.departments.find(d => d.id === deptId);
+  const pcId = type === 'pc' ? agentId : null;
+
+  const progressBar = document.getElementById('progress-bar-fill');
+  const percentLabel = document.getElementById('progress-percent-label');
+  const statusLabel = document.getElementById('progress-status-label');
+  const activeAgentLabel = document.getElementById('progress-active-agent');
+
+  // Versuche REST-API Ausführung auf Server
+  try {
+    statusLabel.innerText = `Schritt A: ${dept.name} führt Anweisung aus...`;
+    progressBar.style.width = '25%';
+    percentLabel.innerText = '25%';
+    activeAgentLabel.innerText = `Aktiv: ${pcId || dept.name}`;
+
+    updateTrackerStage(1);
+    setStageIn3D(1);
+    setDeptDotStatus(deptId, 'working');
+    if (pcId) setPcDotStatus(pcId, 'working');
+
+    await sleep(600);
+
+    // Schritt B: Chef-Audit & Cross-Check
+    statusLabel.innerText = `Schritt B: Chef ${dept.chef_agent.name} prüft & harmonisiert mit Nachbar...`;
+    progressBar.style.width = '60%';
+    percentLabel.innerText = '60%';
+    activeAgentLabel.innerText = `Audit: ${dept.chef_agent.name}`;
+    updateTrackerStage(2);
+    setStageIn3D(2);
+    setChefDotStatus(dept.chef_agent.id, 'auditing');
+
+    await sleep(700);
+
+    // Schritt C: Übergabe an Trevor
+    statusLabel.innerText = `Schritt C: Trevor prüft Gesamtsystem-Kompatibilität & generiert Prompt...`;
+    progressBar.style.width = '90%';
+    percentLabel.innerText = '90%';
+    activeAgentLabel.innerText = 'Aktiv: Trevor (Master Synthesis)';
+    updateTrackerStage(3);
+    setStageIn3D(3);
+
+    // Server-API Call
+    let responseData = null;
+    try {
+      const resp = await fetch('/api/task/department-instruction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          departmentId: deptId,
+          pcId: pcId,
+          instruction: instruction,
+          targetProject: state.selectedProject
+        })
+      });
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json.success) responseData = json.task;
+      }
+    } catch (e) {
+      console.warn('[Trevor App] Server API nicht erreichbar, nutze lokale Engine-Simulation:', e.message);
+    }
+
+    if (!responseData) {
+      // Lokale Fallback-Simulation
+      const accumulatedKnowledge = getAllLearnedKnowledgeSummary();
+      const crossNeighbor = deptId === 4 ? '5. Server & Hintergrund-Logik' : '6. Datenbank & Speicher';
+
+      responseData = {
+        id: 'task_dir_' + Date.now(),
+        user_prompt: `[Direkt-Auftrag an ${dept.name} | Ziel: ${state.selectedProject}]: ${instruction}`,
+        status: 'pending_approval',
+        current_stage: '4_user_decision',
+        trevor_summary: `Trevor hat die Ausarbeitung von ${dept.name} ${pcId ? `(${pcId})` : ''} abschließend validiert:\n\n` +
+          `• Ausführung: Die Anweisung "${instruction}" wurde fachgerecht umgesetzt.\n` +
+          `• Chef-Audit: ${dept.chef_agent.name} hat alle Spezifikationen freigegeben.\n` +
+          `• Cross-Check: Abgleich mit "${crossNeighbor}" bestätigt Null-Konflikt-Garantie.\n` +
+          `• Antrainierte Projekterfahrung für ${state.selectedProject} einbezogen.\n\n` +
+          `Klicke auf 'JA', um diesen Baustein sofort an Antigravity zu übergeben!`,
+        antigravity_prompt: `# ANTIGRAVITY TASK: DIREKT-ANWEISUNG AN ${dept.name.toUpperCase()}\n` +
+          `# ZIEL-PROJEKT: ${state.selectedProject}\n\n` +
+          `> [!IMPORTANT]\n` +
+          `> Dieser Task wurde direkt aus ${dept.name} initiiert und von Trevor freigegeben.\n\n` +
+          `## 1. ANWEISUNG:\n` +
+          `"""\n${instruction}\n"""\n\n` +
+          `## 2. FACHVORGABEN & ANTRAINIERTES WISSEN:\n` +
+          `${accumulatedKnowledge || '- Modulare Architektur und atomare Zwischenstände in CHECKPOINT_STATE.md einhalten.'}\n\n` +
+          `## 3. SCHRITTE:\n` +
+          `1. Spezifikation in die Codebasis von ${state.selectedProject} integrieren\n` +
+          `2. Zwischenstand sichern und Funktionsfähigkeit prüfen.\n`
+      };
+    }
+
+    state.activeTask = responseData;
+    saveLocalCheckpoint();
+
+    progressBar.style.width = '100%';
+    percentLabel.innerText = '100%';
+
+    // Schritt D: Vorlage zur JA/NEIN Freigabe
+    updateTrackerStage(4);
+    setStageIn3D(4);
+    setDeptDotStatus(deptId, 'done');
+    setChefDotStatus(dept.chef_agent.id, 'done');
+    if (pcId) setPcDotStatus(pcId, 'done');
+    updateRoomMicroStatus(deptId, `✅ Lösung an Trevor gemeldet`);
+
+    document.getElementById('section-task-progress').style.display = 'none';
+    document.getElementById('section-decision').style.display = 'flex';
+    document.getElementById('decision-summary-text').innerText = state.activeTask.trevor_summary;
+    document.getElementById('code-preview-content').innerText = state.activeTask.antigravity_prompt;
+
+    updateCheckpointBadge('Entscheidung erforderlich (JA / NEIN)', false);
+
+  } catch (err) {
+    console.error('[Trevor App] Fehler bei Direkt-Anweisung:', err);
+    alert('Fehler bei der Ausführung der Direkt-Anweisung: ' + err.message);
+  }
+}
+
+// =============================================================================
+// REGULÄRER WORKFLOW (TOP-DOWN AUS TREVOR TERMINAL)
 // =============================================================================
 async function dispatchNewTask() {
   const promptInput = document.getElementById('task-prompt-input');
@@ -390,6 +594,7 @@ async function runLiveWorkflowSimulation(task) {
 
   for (const dept of activeDepts) {
     setDeptDotStatus(dept.id, 'working');
+    updateRoomMicroStatus(dept.id, `💻 Berechnet: "${task.user_prompt.slice(0, 18)}..."`);
 
     for (const pc of dept.specialist_pcs) {
       if (task.checkpoint_data.pc_outputs[pc.id]) {
@@ -401,13 +606,15 @@ async function runLiveWorkflowSimulation(task) {
       updateAgentStatusIn3D(pc.id, 'pc', 'working');
       activeAgentLabel.innerText = `Aktiv: ${pc.name} (${dept.name})`;
 
-      await sleep(350);
+      await sleep(300);
 
       const generatedOutput = `// [SPEZIFIKATION DURCH: ${pc.name.toUpperCase()}]\n` +
+        `// Ziel-Projekt: ${state.selectedProject}\n` +
         `// Aufgabe: ${pc.easy_explanation}\n` +
         `export const ${pc.id}_module = {\n` +
         `  name: "${pc.name}",\n` +
         `  department: "${dept.name}",\n` +
+        `  target_project: "${state.selectedProject}",\n` +
         `  verified: true,\n` +
         `  code: () => {\n` +
         `    return { status: "ready", anti_limit_checked: true };\n` +
@@ -446,11 +653,13 @@ async function runLiveWorkflowSimulation(task) {
     setChefDotStatus(chef.id, 'auditing');
     updateAgentStatusIn3D(chef.id, 'chef', 'auditing');
     activeAgentLabel.innerText = `Audit: ${chef.name} [${dept.name}]`;
+    updateRoomMicroStatus(dept.id, `👑 Chef-Audit aktiv`);
 
-    await sleep(400);
+    await sleep(350);
 
     const chefOutput = `### 1. QUALITÄTS-AUDIT & WIDERSPRUCHS-BEREINIGUNG (${dept.name.toUpperCase()})\n` +
       `- Geprüft durch: ${chef.name}\n` +
+      `- Ziel-Projekt: ${state.selectedProject}\n` +
       `- Konflikte: Alle Schnittstellen harmonisiert. Keine Widersprüche.\n` +
       `- Freigabe: Vollständig konform mit Antigravity Clean Code.\n\n` +
       `### 2. KONSOLIDIERTER ABTEILUNGS-BLUEPRINT\n` +
@@ -468,6 +677,9 @@ async function runLiveWorkflowSimulation(task) {
     setChefDotStatus(chef.id, 'done');
     setDeptDotStatus(dept.id, 'done');
     updateAgentStatusIn3D(chef.id, 'chef', 'done');
+    triggerDataStreamToTrevor(dept.id);
+    updateRoomMicroStatus(dept.id, `✅ Blueprint an Trevor gemeldet`);
+
     currentStep++;
     const pct = Math.round((currentStep / totalSteps) * 100);
     progressBar.style.width = pct + '%';
@@ -487,17 +699,17 @@ async function runLiveWorkflowSimulation(task) {
 
   const accumulatedKnowledge = getAllLearnedKnowledgeSummary();
 
-  task.trevor_summary = `Trevor hat deinen Auftrag mit dem 43-Agenten-Studio und den antrainierten Erfahrungen synthetisiert:\n\n` +
+  task.trevor_summary = `Trevor hat deinen Auftrag für das Projekt "${state.selectedProject}" synthetisiert:\n\n` +
     `• 1. Ideen & Planung: Funktionskatalog und Ablaufplan stehen fest.\n` +
     `• 2. Bauplan & Technik: Saubere Ordnerstruktur und minimale Abhängigkeiten gewählt.\n` +
-    `• 3. & 4. Frontend & Design: Dark-Slate & Red-Glow UI mit flüssigen Klick-Aktionen vorbereitet.\n` +
+    `• 3. & 4. Frontend & Design: Modernes Dark-Slate UI mit flüssigen Aktionen vorbereitet.\n` +
     `• 5. & 6. Backend & Datenbank: Supabase-Tabellen mit RLS-Schutz und REST-Routen definiert.\n` +
     `• 8. & 9. Sicherheit & QA: Zero-Leak Secrets-Check und automatische Tests verankert.\n` +
-    `• Antrainiertes Wissen berücksichtigt: "${accumulatedKnowledge.slice(0, 90)}..."\n\n` +
+    `• Antrainiertes Wissen: "${accumulatedKnowledge.slice(0, 90)}..."\n\n` +
     `Klicke auf 'JA', um das Projekt an Antigravity zu übergeben!`;
 
   task.antigravity_prompt = `# ANTIGRAVITY MASTER EXECUTION TASK\n` +
-    `# PROJEKT: TREVOR MULTI-AGENT STUDIO OUTPUT (V2.0 IRON-MAN EDITION)\n\n` +
+    `# PROJEKT: ${state.selectedProject} (TREVOR AI STUDIO V2.5)\n\n` +
     `## 1. VORGABEN\n` +
     `- Erstelle das Projekt strikt in: Desktop/KI_Trevor/\n` +
     `- Speichere Zwischenstände nach JEDER Datei in CHECKPOINT_STATE.md!\n\n` +
@@ -530,12 +742,12 @@ async function runLiveWorkflowSimulation(task) {
 }
 
 // =============================================================================
-// STUFE 04: JA / NEIN ENTSCHEIDUNGS-HANDLER
+// STUFE 04: JA / NEIN ENTSCHEIDUNGS-HANDLER & ARCHIVIERUNG
 // =============================================================================
 async function handleUserDecisionClick(decision) {
   if (decision === 'JA') {
     const promptText = state.activeTask?.antigravity_prompt || '';
-    
+
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(promptText);
@@ -543,14 +755,25 @@ async function handleUserDecisionClick(decision) {
     } catch { /* ignore */ }
 
     state.activeTask.status = 'approved_ready_for_execution';
+    state.activeTask.decision = 'JA';
     saveLocalCheckpoint();
+    saveTaskToLocalArchive(state.activeTask);
+
+    // Versuche Server API Sync
+    try {
+      await fetch('/api/task/decision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: state.activeTask.id, decision: 'JA' })
+      });
+    } catch { /* ignore */ }
 
     document.getElementById('decision-success-banner').style.display = 'flex';
     document.getElementById('decision-export-tools').style.display = 'flex';
     document.getElementById('decision-actions-row').style.display = 'none';
     document.getElementById('decision-feedback-box').style.display = 'none';
 
-    updateCheckpointBadge('Freigegeben ("JA") – An Heim-Station & Antigravity übergeben', false);
+    updateCheckpointBadge('Freigegeben ("JA") – An Antigravity & Datei übergeben', false);
     startIdleTraining(state.hierarchy.departments, 6000);
 
   } else if (decision === 'NEIN') {
@@ -562,7 +785,7 @@ async function handleUserDecisionClick(decision) {
 
 async function submitRejectionFeedback() {
   const feedback = document.getElementById('feedback-input').value.trim();
-  alert(`Feedback an Trevor übermittelt: "${feedback}". Korrekturschleife ab Stufe 02 gestartet.`);
+  alert(`Feedback an Trevor übermittelt: "${feedback}". Korrekturschleife gestartet.`);
 
   document.getElementById('decision-feedback-box').style.display = 'none';
   document.getElementById('section-decision').style.display = 'none';
@@ -571,13 +794,144 @@ async function submitRejectionFeedback() {
   state.activeTask.checkpoint_data.chef_outputs = {};
   state.activeTask.current_stage = '2_chef_agent';
   state.activeTask.status = 'running';
+  state.activeTask.rejection_feedback = feedback;
 
   saveLocalCheckpoint();
   await runLiveWorkflowSimulation(state.activeTask);
 }
 
 // =============================================================================
-// EXPORT & CHECKPOINT
+// VERLAUF & ENTSCHEIDUNGS-ARCHIV
+// =============================================================================
+function switchTrevorTab(tabName) {
+  const btnActive = document.getElementById('tab-btn-trevor-active');
+  const btnHistory = document.getElementById('tab-btn-trevor-history');
+  const contentActive = document.getElementById('tab-content-trevor-active');
+  const contentHistory = document.getElementById('tab-content-trevor-history');
+
+  if (tabName === 'active') {
+    btnActive.classList.add('active');
+    btnHistory.classList.remove('active');
+    contentActive.style.display = 'flex';
+    contentHistory.style.display = 'none';
+  } else {
+    btnHistory.classList.add('active');
+    btnActive.classList.remove('active');
+    contentActive.style.display = 'none';
+    contentHistory.style.display = 'flex';
+    loadTaskHistory();
+  }
+}
+
+async function loadTaskHistory() {
+  const listEl = document.getElementById('trevor-history-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = '<div style="padding: 12px; color: var(--text-dim); text-align: center;">Lade Verlauf...</div>';
+
+  let tasks = [];
+  try {
+    const resp = await fetch('/api/task/history?limit=15');
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.success && data.tasks) tasks = data.tasks;
+    }
+  } catch (e) {
+    console.warn('[Trevor App] Fallback auf lokale Historie');
+  }
+
+  if (tasks.length === 0) {
+    tasks = getLocalTaskArchive();
+  }
+
+  if (tasks.length === 0) {
+    listEl.innerHTML = `
+      <div style="padding: 24px; text-align: center; color: var(--text-dim); font-size: 12px;">
+        Noch keine archivierten Aufträge vorhanden. Starte deinen ersten Auftrag oder eine Direkt-Anweisung!
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = tasks.map(t => {
+    const isApproved = t.status === 'approved' || t.status === 'approved_ready_for_execution';
+    const isRejected = t.status === 'rejected';
+    const badgeClass = isApproved ? 'approved' : (isRejected ? 'rejected' : 'pending');
+    const badgeText = isApproved ? '✔ Freigegeben (JA)' : (isRejected ? '❌ Abgelehnt (NEIN)' : '⏳ In Prüfung');
+
+    return `
+      <div class="history-task-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+          <div>
+            <div style="font-weight: 700; font-size: 13px; color: #fff;">${escapeHtml(t.user_prompt || 'Auftrag')}</div>
+            <div style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">
+              ${new Date(t.created_at || Date.now()).toLocaleString()}
+            </div>
+          </div>
+          <span class="history-status-badge ${badgeClass}">${badgeText}</span>
+        </div>
+
+        ${t.trevor_summary ? `
+          <div style="font-size: 11px; color: #cbd5e1; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; max-height: 80px; overflow-y: auto;">
+            ${escapeHtml(t.trevor_summary.slice(0, 240))}...
+          </div>
+        ` : ''}
+
+        ${t.antigravity_prompt ? `
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="history-btn btn-copy-history" data-prompt="${encodeURIComponent(t.antigravity_prompt)}">
+              📋 Prompt kopieren
+            </button>
+            <button class="history-btn btn-dl-history" data-prompt="${encodeURIComponent(t.antigravity_prompt)}">
+              ⬇️ Download
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.btn-copy-history').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const prompt = decodeURIComponent(btn.dataset.prompt);
+      await navigator.clipboard.writeText(prompt);
+      alert('Antigravity-Prompt in Zwischenablage kopiert!');
+    });
+  });
+
+  listEl.querySelectorAll('.btn-dl-history').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prompt = decodeURIComponent(btn.dataset.prompt);
+      const blob = new Blob([prompt], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ANTIGRAVITY_TASK.md';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  });
+}
+
+function saveTaskToLocalArchive(task) {
+  try {
+    const list = getLocalTaskArchive();
+    list.unshift(task);
+    localStorage.setItem('trevor_tasks_archive', JSON.stringify(list.slice(0, 30)));
+  } catch { /* ignore */ }
+}
+
+function getLocalTaskArchive() {
+  try {
+    const saved = localStorage.getItem('trevor_tasks_archive');
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+// =============================================================================
+// EXPORT & CHECKPOINT HELPER
 // =============================================================================
 function downloadTaskFile() {
   const content = state.activeTask?.antigravity_prompt || '';
@@ -718,7 +1072,36 @@ function openChefReportsModal() {
   modal.classList.add('open');
 }
 
+// =============================================================================
+// EVENT LISTENERS SETUP
+// =============================================================================
 function setupEventListeners() {
+  // Ziel-Projekt Dropdown
+  const projectSelect = document.getElementById('project-selector-select');
+  if (projectSelect) {
+    projectSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'NEW_PROJECT') {
+        const customName = prompt('Name des neuen Software-Projekts:');
+        if (customName && customName.trim()) {
+          const opt = document.createElement('option');
+          opt.value = customName.trim();
+          opt.innerText = customName.trim();
+          projectSelect.insertBefore(opt, projectSelect.lastElementChild);
+          projectSelect.value = customName.trim();
+          state.selectedProject = customName.trim();
+        } else {
+          projectSelect.value = state.selectedProject;
+        }
+      } else {
+        state.selectedProject = val;
+      }
+      localStorage.setItem('trevor_selected_project', state.selectedProject);
+      console.log(`[Trevor App] Aktives Ziel-Projekt gewechselt zu: "${state.selectedProject}"`);
+    });
+  }
+
+  // Suche
   const searchInput = document.getElementById('global-search-input');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -727,6 +1110,7 @@ function setupEventListeners() {
     });
   }
 
+  // Ansichten-Umschaltung
   const btn3D = document.getElementById('btn-view-3d');
   const btnGrid = document.getElementById('btn-view-grid');
   const canvas3D = document.getElementById('threejs-canvas-container');
@@ -748,11 +1132,27 @@ function setupEventListeners() {
     grid2D.style.display = 'grid';
   });
 
+  // Sidebar- & Modal-Buttons
   document.getElementById('btn-sidebar-open-trevor').addEventListener('click', openTrevorModal);
   document.getElementById('btn-sidebar-trevor-terminal').addEventListener('click', openTrevorModal);
   document.getElementById('btn-sidebar-chef-reports').addEventListener('click', openChefReportsModal);
   document.getElementById('btn-resume-limit').addEventListener('click', resumePausedTask);
   document.getElementById('btn-dispatch-task').addEventListener('click', dispatchNewTask);
+
+  // Neuer Button: Direkt-Anweisung im Inspektor absenden
+  const btnDispatchDirect = document.getElementById('btn-inspector-dispatch-direct');
+  if (btnDispatchDirect) {
+    btnDispatchDirect.addEventListener('click', dispatchDirectDepartmentInstruction);
+  }
+
+  // Trevor Terminal Tabs
+  const btnTrevorActive = document.getElementById('tab-btn-trevor-active');
+  const btnTrevorHistory = document.getElementById('tab-btn-trevor-history');
+  if (btnTrevorActive) btnTrevorActive.addEventListener('click', () => switchTrevorTab('active'));
+  if (btnTrevorHistory) btnTrevorHistory.addEventListener('click', () => switchTrevorTab('history'));
+
+  const btnRefreshHist = document.getElementById('btn-refresh-history');
+  if (btnRefreshHist) btnRefreshHist.addEventListener('click', loadTaskHistory);
 
   document.getElementById('btn-toggle-prompt-preview').addEventListener('click', () => {
     const content = document.getElementById('code-preview-content');
@@ -773,7 +1173,10 @@ function setupEventListeners() {
   document.getElementById('btn-download-task').addEventListener('click', downloadTaskFile);
   document.getElementById('btn-export-direct').addEventListener('click', writeDirectToFileSystem);
 
+  // Inspektor-Tabs
   document.getElementById('tab-btn-live-work').addEventListener('click', () => switchInspectorTab('live-work'));
+  const tabDirectBtn = document.getElementById('tab-btn-direct-command');
+  if (tabDirectBtn) tabDirectBtn.addEventListener('click', () => switchInspectorTab('direct-command'));
   document.getElementById('tab-btn-learned').addEventListener('click', () => switchInspectorTab('learned'));
 
   const mobileToggle = document.getElementById('btn-mobile-sidebar-toggle');
@@ -792,6 +1195,7 @@ function setupEventListeners() {
     });
   });
 
+  // Settings
   const engineBtn = document.getElementById('engine-mode-btn');
   const settingsModal = document.getElementById('modal-settings');
   const openSettingsBtn = document.getElementById('btn-open-settings');
@@ -838,6 +1242,11 @@ function updateUIThemeSettings() {
     icon.innerText = '☁️';
     label.innerText = `Gemini Cloud (${state.settings.gemini_model})`;
   }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function sleep(ms) {

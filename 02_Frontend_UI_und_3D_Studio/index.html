@@ -39,6 +39,18 @@
         <input type="text" id="global-search-input" class="search-input" placeholder="Bereich oder Spezialist finden (z. B. 6. Datenbank, Login, Docker)...">
       </div>
 
+      <!-- Projekt-Auswahl-Dropdown ("Aktives Ziel-Projekt") -->
+      <div class="project-selector-wrapper">
+        <span class="project-selector-label">🎯 Ziel-Projekt:</span>
+        <select id="project-selector-select" class="project-selector-dropdown">
+          <option value="KI_Trevor">KI_Trevor (Dieses Studio)</option>
+          <option value="PitchPro">Fussballschulen-Manager (PitchPro)</option>
+          <option value="LernfeldTrainer">LernfeldTrainer</option>
+          <option value="ClassKartGP">Class Kart GP</option>
+          <option value="NEW_PROJECT">+ Neues Projekt anlegen...</option>
+        </select>
+      </div>
+
       <!-- Engine & Checkpoint Controls -->
       <div class="header-right-controls">
         <button id="engine-mode-btn" class="engine-mode-pill" title="Klicken zum Umschalten">
@@ -215,6 +227,7 @@
         <!-- Tabs im Inspektor -->
         <div class="inspector-tabs-nav">
           <button id="tab-btn-live-work" class="inspector-tab-btn active">⚡ Live-Status & Arbeit</button>
+          <button id="tab-btn-direct-command" class="inspector-tab-btn">🎯 Direkte Anweisung</button>
           <button id="tab-btn-learned" class="inspector-tab-btn">📚 Gelerntes Wissen (Training)</button>
         </div>
 
@@ -242,7 +255,37 @@
           </div>
         </div>
 
-        <!-- TAB 2: GELERNTES WISSEN (IDLE TRAINING) -->
+        <!-- TAB 2: DIREKTE ANWEISUNG AN ABTEILUNG / PC -->
+        <div id="tab-content-direct-command" style="display: none; flex-direction: column; gap: 14px;">
+          <div class="inspector-callout-box" style="border-color: rgba(251, 191, 36, 0.4);">
+            <span class="inspector-callout-label" style="color: var(--iron-gold);">⚡ DIREKT-AUFTRAG (BOTTOM-UP -> TREVOR)</span>
+            <p style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+              Die Ausführung startet sofort fachspezifisch in diesem Raum, wird vom Chef geprüft, bei Bedarf mit Nachbar-Abteilungen abgeglichen und Trevor zur finalen JA/NEIN-Vorlage übergeben.
+            </p>
+          </div>
+
+          <div>
+            <label style="font-size: 12px; font-weight: 700; color: #fff;">
+              Deine konkrete Arbeitsanweisung:
+            </label>
+            <textarea id="inspector-direct-prompt" class="prompt-textarea" style="min-height: 85px; margin-top: 6px;" placeholder="Gib eine direkte Anweisung an diesen Bereich..."></textarea>
+          </div>
+
+          <div>
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px;">
+              SCHNELL-BEFEHLE FÜR DIESEN RAUM (1-KLICK):
+            </div>
+            <div id="inspector-quick-prompts-container" class="quick-prompts-row">
+              <!-- Dynamisch mit 3 Buttons befüllt -->
+            </div>
+          </div>
+
+          <button id="btn-inspector-dispatch-direct" class="btn-submit-task" style="width: 100%; justify-content: center; margin-top: 6px;">
+            <span>⚡ Direkt ausführen & an Trevor melden</span>
+          </button>
+        </div>
+
+        <!-- TAB 3: GELERNTES WISSEN (IDLE TRAINING) -->
         <div id="tab-content-learned" style="display: none; flex-direction: column; gap: 12px;">
           <div style="font-size: 12px; color: var(--text-muted);">
             Erkenntnisse und Optimierungen, die dieser Spezialist beim autonomen Üben an deinen bestehenden Projekten gesammelt hat:
@@ -271,97 +314,117 @@
 
       <div class="terminal-body">
         
-        <!-- BEREICH A: NEUER AUFTRAG -->
-        <div id="section-task-input" style="display: flex; flex-direction: column; gap: 10px;">
-          <label style="font-size: 13px; font-weight: 700; color: #fff;">
-            Dein Software-Auftrag an Trevor:
-          </label>
-          <textarea id="task-prompt-input" class="prompt-textarea" placeholder="Beschreibe dein Feature, Fullstack-Modul, Datenbankmodell oder Bugfix. Z. B.: 'Baue eine Supabase Auth-Pipeline mit Role-Based-Access-Control, React Dark-Mode-UI und Docker-Deployment.'"></textarea>
-          <div style="display: flex; justify-content: flex-end;">
-            <button id="btn-dispatch-task" class="btn-submit-task">
-              <span>🚀 Auftrag an Trevor & Team übergeben</span>
-            </button>
-          </div>
+        <!-- Tabs in Trevors Terminal -->
+        <div class="trevor-tabs-nav">
+          <button id="tab-btn-trevor-active" class="inspector-tab-btn active">🚀 Auftrag & Freigabe</button>
+          <button id="tab-btn-trevor-history" class="inspector-tab-btn">📜 Verlauf & Freigaben (Archiv)</button>
         </div>
 
-        <!-- BEREICH B: LIVE-FORTSCHRITT & ECHTZEIT-ZWISCHENSTAND -->
-        <div id="section-task-progress" class="progress-card" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span id="progress-status-label" style="font-size: 12px; font-weight: 700; color: var(--arc-cyan);">
-              Workflow initialisiert...
-            </span>
-            <span id="progress-percent-label" style="font-size: 12px; font-weight: 600; color: #fff;">0%</span>
-          </div>
-
-          <div class="progress-bar-bg">
-            <div id="progress-bar-fill" class="progress-bar-fill"></div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
-            <span id="progress-active-agent">Warte auf Spezialisten...</span>
-            <span style="color: #34d399;">✔ Zwischenstand in Supabase & lokal gesichert</span>
-          </div>
-        </div>
-
-        <!-- BEREICH C: STUFE 04 - DEINE ENTSCHEIDUNG (NUR JA ODER NEIN) -->
-        <div id="section-decision" style="display: none; flex-direction: column; gap: 14px;">
-          
-          <div class="decision-summary-box">
-            <h3 style="font-size: 14px; font-weight: 800; color: var(--iron-gold); margin-bottom: 8px;">
-              📋 TREVORS EXECUTIVE SUMMARY FÜR DICH:
-            </h3>
-            <div id="decision-summary-text"></div>
-          </div>
-
-          <!-- Aufklappbare Antigravity Master-Prompt Vorschau -->
-          <div class="code-preview-collapsible">
-            <div class="code-preview-header" id="btn-toggle-prompt-preview">
-              <span>💻 GENERIERTER ANTIGRAVITY MASTER-PROMPT (VORSCHAU)</span>
-              <span id="code-preview-indicator">▼ Aufklappen</span>
-            </div>
-            <pre class="code-preview-content" id="code-preview-content" style="display: none;"></pre>
-          </div>
-
-          <!-- Erfolgs-Banner nach Freigabe -->
-          <div id="decision-success-banner" class="success-banner">
-            <span>🎉</span>
-            <div>
-              <strong>Prompt freigegeben & unter <code>05_Antigravity_Outputs/ANTIGRAVITY_TASK.md</code> gesichert!</strong>
-              <div style="font-size: 11px; margin-top: 2px;">Automatisch in deine Zwischenablage kopiert & an die Heim-Station übermittelt.</div>
-            </div>
-          </div>
-
-          <!-- Download & File-System Buttons -->
-          <div id="decision-export-tools" style="display: none; gap: 10px;">
-            <button id="btn-export-direct" class="ctrl-btn" style="flex: 1; padding: 8px;">
-              📁 Direkt in lokalen Projektordner schreiben
-            </button>
-            <button id="btn-download-task" class="ctrl-btn" style="flex: 1; padding: 8px;">
-              ⬇️ Als ANTIGRAVITY_TASK.md herunterladen
-            </button>
-          </div>
-
-          <!-- Korrektur-Box bei NEIN -->
-          <div id="decision-feedback-box" class="feedback-box">
-            <label style="font-size: 12px; font-weight: 700; color: #f87171;">
-              Kunden-Hinweis an Trevor (Was soll geändert werden?):
+        <!-- TAB CONTENT 1: AKTIVER AUFTRAG & FREIGABE -->
+        <div id="tab-content-trevor-active" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- BEREICH A: NEUER AUFTRAG -->
+          <div id="section-task-input" style="display: flex; flex-direction: column; gap: 10px;">
+            <label style="font-size: 13px; font-weight: 700; color: #fff;">
+              Dein Software-Auftrag an Trevor:
             </label>
-            <textarea id="feedback-input" class="prompt-textarea" style="min-height: 70px;" placeholder="Z. B.: Bitte mehr Fokus auf JWT Session-Sicherheit und Supabase RLS Policies..."></textarea>
-            <button id="btn-submit-feedback" class="btn-submit-task" style="align-self: flex-start; background: #b91c1c;">
-              🔄 Korrektur an Chef-Agenten übermitteln
-            </button>
+            <textarea id="task-prompt-input" class="prompt-textarea" placeholder="Beschreibe dein Feature, Fullstack-Modul, Datenbankmodell oder Bugfix. Z. B.: 'Baue eine Supabase Auth-Pipeline mit Role-Based-Access-Control, React Dark-Mode-UI und Docker-Deployment.'"></textarea>
+            <div style="display: flex; justify-content: flex-end;">
+              <button id="btn-dispatch-task" class="btn-submit-task">
+                <span>🚀 Auftrag an Trevor & Team übergeben</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Die zwei großen Entscheidungs-Buttons -->
-          <div id="decision-actions-row" class="decision-actions-row">
-            <button id="btn-decision-yes" class="btn-decision-yes">
-              <span>✅ JA – FREIGEBEN & AN ANTIGRAVITY ÜBERGEBEN</span>
-            </button>
-            <button id="btn-decision-no" class="btn-decision-no">
-              <span>❌ NEIN – ABLEHNEN & ÜBERARBEITEN LASSEN</span>
-            </button>
+          <!-- BEREICH B: LIVE-FORTSCHRITT & ECHTZEIT-ZWISCHENSTAND -->
+          <div id="section-task-progress" class="progress-card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span id="progress-status-label" style="font-size: 12px; font-weight: 700; color: var(--arc-cyan);">
+                Workflow initialisiert...
+              </span>
+              <span id="progress-percent-label" style="font-size: 12px; font-weight: 600; color: #fff;">0%</span>
+            </div>
+
+            <div class="progress-bar-bg">
+              <div id="progress-bar-fill" class="progress-bar-fill"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
+              <span id="progress-active-agent">Warte auf Spezialisten...</span>
+              <span style="color: #34d399;">✔ Zwischenstand in Supabase & lokal gesichert</span>
+            </div>
           </div>
 
+          <!-- BEREICH C: STUFE 04 - DEINE ENTSCHEIDUNG (NUR JA ODER NEIN) -->
+          <div id="section-decision" style="display: none; flex-direction: column; gap: 14px;">
+            
+            <div class="decision-summary-box">
+              <h3 style="font-size: 14px; font-weight: 800; color: var(--iron-gold); margin-bottom: 8px;">
+                📋 TREVORS EXECUTIVE SUMMARY FÜR DICH:
+              </h3>
+              <div id="decision-summary-text"></div>
+            </div>
+
+            <!-- Aufklappbare Antigravity Master-Prompt Vorschau -->
+            <div class="code-preview-collapsible">
+              <div class="code-preview-header" id="btn-toggle-prompt-preview">
+                <span>💻 GENERIERTER ANTIGRAVITY MASTER-PROMPT (VORSCHAU)</span>
+                <span id="code-preview-indicator">▼ Aufklappen</span>
+              </div>
+              <pre class="code-preview-content" id="code-preview-content" style="display: none;"></pre>
+            </div>
+
+            <!-- Erfolgs-Banner nach Freigabe -->
+            <div id="decision-success-banner" class="success-banner">
+              <span>🎉</span>
+              <div>
+                <strong>Prompt freigegeben & unter <code>05_Antigravity_Outputs/ANTIGRAVITY_TASK.md</code> gesichert!</strong>
+                <div style="font-size: 11px; margin-top: 2px;">Automatisch in deine Zwischenablage kopiert & an die Heim-Station übermittelt.</div>
+              </div>
+            </div>
+
+            <!-- Download & File-System Buttons -->
+            <div id="decision-export-tools" style="display: none; gap: 10px;">
+              <button id="btn-export-direct" class="ctrl-btn" style="flex: 1; padding: 8px;">
+                📁 Direkt in lokalen Projektordner schreiben
+              </button>
+              <button id="btn-download-task" class="ctrl-btn" style="flex: 1; padding: 8px;">
+                ⬇️ Als ANTIGRAVITY_TASK.md herunterladen
+              </button>
+            </div>
+
+            <!-- Korrektur-Box bei NEIN -->
+            <div id="decision-feedback-box" class="feedback-box">
+              <label style="font-size: 12px; font-weight: 700; color: #f87171;">
+                Kunden-Hinweis an Trevor (Was soll geändert werden?):
+              </label>
+              <textarea id="feedback-input" class="prompt-textarea" style="min-height: 70px;" placeholder="Z. B.: Bitte mehr Fokus auf JWT Session-Sicherheit und Supabase RLS Policies..."></textarea>
+              <button id="btn-submit-feedback" class="btn-submit-task" style="align-self: flex-start; background: #b91c1c;">
+                🔄 Korrektur an Chef-Agenten übermitteln
+              </button>
+            </div>
+
+            <!-- Die zwei großen Entscheidungs-Buttons -->
+            <div id="decision-actions-row" class="decision-actions-row">
+              <button id="btn-decision-yes" class="btn-decision-yes">
+                <span>✅ JA – FREIGEBEN & AN ANTIGRAVITY ÜBERGEBEN</span>
+              </button>
+              <button id="btn-decision-no" class="btn-decision-no">
+                <span>❌ NEIN – ABLEHNEN & ÜBERARBEITEN LASSEN</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- TAB CONTENT 2: ENTSCHEIDUNGS-ARCHIV & PROMPT-VERLAUF -->
+        <div id="tab-content-trevor-history" style="display: none; flex-direction: column; gap: 12px;">
+          <div style="font-size: 12px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center;">
+            <span>Alle bisherigen Aufträge, Abteilungs-Ergebnisse und Freigaben:</span>
+            <button id="btn-refresh-history" class="history-btn">🔄 Aktualisieren</button>
+          </div>
+          <div id="trevor-history-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 480px; overflow-y: auto;">
+            <!-- Dynamisch befüllt -->
+          </div>
         </div>
 
       </div>

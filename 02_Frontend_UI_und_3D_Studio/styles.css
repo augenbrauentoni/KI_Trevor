@@ -326,8 +326,8 @@ body {
 #threejs-canvas-container {
   position: relative;
   width: 100%;
-  height: calc(100% - 48px);
-  min-height: 600px;
+  height: calc(100vh - 170px);
+  min-height: 580px;
   overflow: hidden;
   background: radial-gradient(circle at center, #0f172a 0%, #06080e 85%);
 }
@@ -1103,3 +1103,137 @@ body {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 1; }
 }
+
+/* =============================================================================
+   PHASE 7: KOMFORT- & PROJEKT-STYLES
+   ============================================================================= */
+.project-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.project-selector-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--iron-gold);
+}
+
+.project-selector-dropdown {
+  background: #090d16;
+  border: 1px solid #374151;
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.project-selector-dropdown:focus {
+  border-color: var(--iron-gold);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+/* Schnell-Aktionen (Quick Prompts) */
+.quick-prompts-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.quick-prompt-btn {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-prompt-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--arc-cyan);
+  color: #fff;
+  transform: translateX(3px);
+}
+
+/* Verlauf & Historie */
+.trevor-tabs-nav {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.history-task-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.history-task-card:hover {
+  border-color: var(--iron-gold);
+}
+
+.history-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.history-status-badge.approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid #10b981;
+}
+
+.history-status-badge.rejected {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid #ef4444;
+}
+
+.history-status-badge.pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid #f59e0b;
+}
+
+.history-btn {
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #e5e7eb;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-btn:hover {
+  background: var(--iron-gold);
+  color: #000;
+  font-weight: 700;
+}
+

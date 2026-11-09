@@ -2,14 +2,16 @@
  * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
  * File: 02_Frontend_UI_und_3D_Studio/studio3D.js
  * 
- * High-End 3D-Architektur-Campus (Three.js):
- * - 10 realistische Büro-Pods im Ring mit warmen Holzböden & Glaswänden
- * - Schwebende 3D-Billboard-Labels ("1. Ideen & Planung", "2. Bauplan & Technik" etc.)
- * - Trevor im Iron-Man Look (Hot-Rod-Rot, Gold-Titan, hell strahlender Arc-Reactor & Repulsoren)
- * - 33 Spezial-PCs mit sitzenden, animierten 3D-Entwicklern & Dual-Widescreen Monitoren
- * - 10 Chef-Terminals mit Amber-Audit-Leuchten
- * - Kräftige Studio-Beleuchtung (Ambient 1.4 + Directional 2.0)
- * - 100% robuster Fallback für Hierarchy & Three.js-Loading
+ * Phase 7: Kompakter, moderner Open-Space Büro-Campus (Three.js):
+ * - Ein großer, zusammenhängender Architektur-Floor (Schiefer-/Holz-/Beton-Struktur)
+ * - 10 Abteilungen kompakt und nah am Zentrum (Radius ~13) auf einer gemeinsamen Etage
+ * - Trevor (MK-VII) im Iron-Man Look (Rot/Gold/Arc-Reactor) in der zentralen Rotunde
+ * - Halboffene Glaswände mit schwarzen Aluminium-Rahmen & Durchgängen
+ * - Realistische Schreibtische, Bürostühle, Pflanzentöpfe, Whiteboards & Server-Racks
+ * - Leuchtende Dual-Monitore mit sichtbaren Code- & Terminal-Texturen
+ * - Schwebende 3D-Billboard-Labels mit Live-Sprechblasen (Micro-Status-Toasts)
+ * - Interaktive Datenstrahlen von jeder Abteilung zu Trevor
+ * - Vollständig synchrones Rendern & ResizeObserver
  */
 
 import { STUDIO_HIERARCHY } from './hierarchyData.js';
@@ -21,7 +23,8 @@ let decisionTerminalScreen;
 const interactiveObjects = [];
 const pcMeshMap = {};
 const chefMeshMap = {};
-const dataParticleStreams = [];
+const deptBillboards = {};
+const dynamicParticleStreams = [];
 const blinkingLeds = [];
 const developerAvatars = [];
 
@@ -29,106 +32,219 @@ let isQuietMode = false;
 let targetCameraPos = null;
 let targetLookAt = null;
 
+// Geteilte Texturen für realistische Monitore
+let codeScreenTexture = null;
+let serverScreenTexture = null;
+
 /**
- * Erzeugt schwebende 3D-Billboard-Labels über Räumen und Trevor
+ * Erzeugt dynamische Monitor-Texturen mit echtem Code- und Terminal-Look
  */
-function createFloatingLabelSprite(title, subtitle, colorHexStr) {
+function createScreenCanvasTexture(type = 'code', colorHex = '#06b6d4') {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
+  canvas.width = 256;
   canvas.height = 160;
   const ctx = canvas.getContext('2d');
 
-  // Hintergrund-Pill
-  ctx.fillStyle = 'rgba(11, 16, 26, 0.92)';
-  ctx.strokeStyle = colorHexStr || '#fbbf24';
-  ctx.lineWidth = 6;
+  // Bildschirm-Hintergrund
+  ctx.fillStyle = '#080d1a';
+  ctx.fillRect(0, 0, 256, 160);
 
-  // Abgerundetes Rechteck
-  ctx.beginPath();
-  ctx.roundRect(10, 10, 492, 140, 24);
-  ctx.fill();
-  ctx.stroke();
+  // Titelleiste
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, 256, 24);
 
-  // Status-Punkt
-  ctx.fillStyle = colorHexStr || '#fbbf24';
-  ctx.beginPath();
-  ctx.arc(45, 80, 14, 0, Math.PI * 2);
-  ctx.fill();
+  // Fenster-Buttons
+  ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(12, 12, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(24, 12, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.arc(36, 12, 4, 0, Math.PI * 2); ctx.fill();
 
-  // Titel-Text
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 36px Inter, sans-serif';
-  ctx.fillText(title, 75, 70);
+  if (type === 'code') {
+    // Codezeilen
+    const colors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#94a3b8'];
+    for (let i = 0; i < 7; i++) {
+      const y = 38 + i * 16;
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(10, y + 2, 8, 8); // Zeilennummer
 
-  // Untertitel-Text
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = '500 24px Inter, sans-serif';
-  ctx.fillText(subtitle, 75, 115);
+      let curX = 26;
+      const spans = Math.floor(Math.random() * 3) + 2;
+      for (let s = 0; s < spans; s++) {
+        const w = 18 + Math.floor(Math.random() * 45);
+        ctx.fillStyle = colors[(i + s) % colors.length];
+        ctx.fillRect(curX, y + 3, w, 6);
+        curX += w + 8;
+        if (curX > 230) break;
+      }
+    }
+  } else {
+    // Server / Dashboard Ansicht
+    ctx.fillStyle = '#10b981';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText('STATUS: ONLINE 24/7', 12, 45);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText('MEMORY: 42% | CPU: 18%', 12, 65);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('ACTIVE SESSIONS: 142', 12, 85);
+    
+    // Kleiner Balken-Graph
+    for (let b = 0; b < 10; b++) {
+      const h = 10 + Math.random() * 35;
+      ctx.fillStyle = b % 2 === 0 ? colorHex : '#38bdf8';
+      ctx.fillRect(14 + b * 22, 145 - h, 14, h);
+    }
+  }
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.minFilter = THREE.LinearFilter;
-  const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(6.4, 2.0, 1.0);
-  return sprite;
+  // Scanline Effekt
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+  for (let y = 0; y < 160; y += 4) {
+    ctx.fillRect(0, y, 256, 2);
+  }
+
+  return canvas;
 }
 
 /**
- * Initialisiert die Three.js Szene mit garantierten Abmessungen & Beleuchtung
+ * Erzeugt schwebende 3D-Billboard-Labels mit Live-Sprechblase (Micro-Status Toast)
+ */
+function createFloatingLabelSprite(title, subtitle, microStatusText, colorHexStr) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 190;
+  const ctx = canvas.getContext('2d');
+
+  drawLabelOnCanvas(ctx, title, subtitle, microStatusText, colorHexStr);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+
+  const spriteMat = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false
+  });
+
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(7.5, 2.8, 1);
+  sprite.userData = { canvas, ctx, title, subtitle, microStatusText, colorHexStr, texture };
+
+  return sprite;
+}
+
+function drawLabelOnCanvas(ctx, title, subtitle, microStatusText, colorHexStr) {
+  ctx.clearRect(0, 0, 512, 190);
+
+  // 1. Haupt-Panel
+  ctx.fillStyle = 'rgba(9, 14, 24, 0.94)';
+  ctx.strokeStyle = colorHexStr || '#fbbf24';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.roundRect(10, 10, 492, 170, 22);
+  ctx.fill();
+  ctx.stroke();
+
+  // 2. Akzent-Kopfleiste
+  ctx.fillStyle = colorHexStr || '#fbbf24';
+  ctx.beginPath();
+  ctx.roundRect(18, 18, 476, 6, 3);
+  ctx.fill();
+
+  // 3. Titel (Raumname)
+  ctx.font = 'bold 30px "Inter", "Segoe UI", sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(title, 26, 62);
+
+  // 4. Untertitel (Chef / Funktion)
+  ctx.font = '600 20px "Inter", "Segoe UI", sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText(subtitle, 26, 96);
+
+  // 5. Live-Sprechblase (Micro-Status Toast)
+  if (microStatusText) {
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(24, 116, 464, 46, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 19px "Inter", "Segoe UI", sans-serif';
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText(microStatusText, 38, 146);
+  }
+}
+
+/**
+ * Aktualisiert den schwebenden Micro-Status-Text (Sprechblase) im 3D-Büro
+ */
+export function updateRoomMicroStatus(deptId, statusText) {
+  const sprite = deptBillboards[deptId];
+  if (!sprite || !sprite.userData) return;
+
+  const { ctx, title, subtitle, colorHexStr, texture } = sprite.userData;
+  sprite.userData.microStatusText = statusText;
+  drawLabelOnCanvas(ctx, title, subtitle, statusText, colorHexStr);
+  texture.needsUpdate = true;
+}
+
+/**
+ * Haupt-Initialisierung der 3D-Szene
  */
 export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorClick) {
   containerEl = document.getElementById('threejs-canvas-container');
   if (!containerEl) {
-    console.warn('[Studio 3D] Container #threejs-canvas-container nicht gefunden.');
+    console.error('[Studio 3D] Container #threejs-canvas-container nicht im DOM gefunden.');
     return;
   }
 
-  // Löse THREE auf (Global oder ESM)
-  let THREE_LIB = window.THREE;
+  const THREE_LIB = window.THREE;
   if (!THREE_LIB) {
-    try {
-      THREE_LIB = await import('three');
-      window.THREE = THREE_LIB;
-    } catch (e) {
-      console.error('[Studio 3D] Three.js konnte weder global noch per Import geladen werden:', e);
-      return;
-    }
+    console.error('[Studio 3D] Three.js Library nicht global verfügbar!');
+    return;
   }
 
-  // Fester Daten-Fallback
-  const effectiveHierarchy = (hierarchyDataParam && hierarchyDataParam.departments && hierarchyDataParam.departments.length > 0)
+  const effectiveHierarchy = hierarchyDataParam && hierarchyDataParam.departments
     ? hierarchyDataParam
     : STUDIO_HIERARCHY;
 
-  // 1. Szene
+  // 1. Texturen für Monitore initialisieren
+  try {
+    const codeCanvas = createScreenCanvasTexture('code', '#38bdf8');
+    codeScreenTexture = new THREE_LIB.CanvasTexture(codeCanvas);
+    const serverCanvas = createScreenCanvasTexture('server', '#10b981');
+    serverScreenTexture = new THREE_LIB.CanvasTexture(serverCanvas);
+  } catch (e) {
+    console.warn('[Studio 3D] Bildschirm-Texturen Fallback aktiv');
+  }
+
+  // 2. Szene
   scene = new THREE_LIB.Scene();
   scene.background = new THREE_LIB.Color(0x06080e);
-  scene.fog = new THREE_LIB.FogExp2(0x06080e, 0.009);
+  scene.fog = new THREE_LIB.FogExp2(0x06080e, 0.008);
 
-  // 2. Abmessungen mit garantiertem Fallback
+  // 3. Abmessungen
   const width = containerEl.clientWidth || Math.round(window.innerWidth * 0.72) || 1200;
-  const height = containerEl.clientHeight || Math.max(window.innerHeight - 170, 600) || 700;
+  const height = containerEl.clientHeight || Math.max(window.innerHeight - 170, 580) || 650;
 
-  // 3. Kamera (Sichtbar schräg über dem Campus)
-  camera = new THREE_LIB.PerspectiveCamera(44, width / height, 0.5, 600);
-  camera.position.set(0, 38, 48);
+  // 4. Kamera: Isometrisch schräg direkt auf den kompakten Campus
+  camera = new THREE_LIB.PerspectiveCamera(42, width / height, 0.5, 500);
+  camera.position.set(0, 24, 25);
   camera.lookAt(0, 1.2, 0);
 
-  // 4. Renderer
+  // 5. Renderer
   renderer = new THREE_LIB.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE_LIB.PCFSoftShadowMap;
   renderer.toneMapping = THREE_LIB.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.25;
 
-  // Vorherige Canvas entfernen
   const oldCanvas = containerEl.querySelector('canvas');
   if (oldCanvas) oldCanvas.remove();
   containerEl.appendChild(renderer.domElement);
 
-  // 5. OrbitControls
+  // 6. OrbitControls
   if (window.THREE && window.THREE.OrbitControls) {
     controls = new window.THREE.OrbitControls(camera, renderer.domElement);
   } else {
@@ -136,7 +252,7 @@ export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorCli
       const controlsMod = await import('three/addons/controls/OrbitControls.js');
       controls = new controlsMod.OrbitControls(camera, renderer.domElement);
     } catch {
-      console.warn('[Studio 3D] OrbitControls nicht geladen, Szene bleibt statisch bedienbar.');
+      console.warn('[Studio 3D] OrbitControls Fallback');
     }
   }
 
@@ -144,25 +260,22 @@ export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorCli
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
     controls.maxPolarAngle = Math.PI / 2.05;
-    controls.minDistance = 8;
-    controls.maxDistance = 110;
+    controls.minDistance = 6;
+    controls.maxDistance = 75;
     controls.target.set(0, 1.2, 0);
   }
 
-  // 6. Kräftige Beleuchtung (Kein dunkler Raum!)
+  // 7. Helle & plastische Studio-Beleuchtung
   setupCampusLighting(THREE_LIB);
 
-  // 7. Campus-Boden & Cyber-Plaza
-  setupCampusFloor(THREE_LIB);
+  // 8. Große, zusammenhängende Haupt-Büroetage (Open-Space Architektur-Floor)
+  setupUnifiedOfficeFloor(THREE_LIB);
 
-  // 8. Trevor im Iron-Man Look (Zentrum)
+  // 9. Trevor im Iron-Man Look (Zentrale Glas-Rotunde)
   setupTrevorIronManMech(THREE_LIB);
 
-  // 9. Die 10 realistischen Büro-Pods
-  setupCampusDepartments(THREE_LIB, effectiveHierarchy);
-
-  // 10. Datenpipelines & Partikel
-  setupDataPipelines(THREE_LIB, effectiveHierarchy);
+  // 10. Die 10 kompakten Abteilungen mit Schreibtischen, Monitoren & Pflanzen
+  setupCompactDepartments(THREE_LIB, effectiveHierarchy);
 
   // 11. Raycasting & Klicks
   setupRaycasting(THREE_LIB, onAgentClick, onTrevorClick);
@@ -170,7 +283,7 @@ export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorCli
   // 12. UI-Kamera-Buttons
   setupCameraButtons();
 
-  // 13. Resize-Observer
+  // 13. Automatischer Resize-Observer
   window.addEventListener('resize', onWindowResize);
   if (window.ResizeObserver) {
     new ResizeObserver(() => onWindowResize()).observe(containerEl);
@@ -178,249 +291,284 @@ export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorCli
 
   // 14. Render-Loop starten
   animate();
-  console.log('[Studio 3D] 3D-Campus mit schwebenden Labels & Iron-Man Trevor aktiv!');
+  console.log('[Studio 3D] Kompakter Open-Space Tech-Campus V2.5 erfolgreich gerendert!');
 }
 
 /**
- * Kräftige Beleuchtung (AmbientLight 1.4 + DirectionalLight 2.0)
+ * Helle, moderne Studio-Beleuchtung (Warmes Licht + weiche Schatten)
  */
 function setupCampusLighting(THREE_LIB) {
-  // Kräftiges weißes Umgebungslicht
+  // Weißes Umgebungslicht
   const ambientLight = new THREE_LIB.AmbientLight(0xffffff, 1.4);
   scene.add(ambientLight);
 
-  // Haupt-Licht schräg von oben
-  const keySpot = new THREE_LIB.DirectionalLight(0xffffff, 2.0);
-  keySpot.position.set(30, 50, 35);
-  keySpot.castShadow = true;
-  keySpot.shadow.mapSize.width = 2048;
-  keySpot.shadow.mapSize.height = 2048;
-  scene.add(keySpot);
+  // Hemisphere-Licht für plastische Raumtiefe (Himmel: hellweiß, Boden: Schiefer)
+  const hemiLight = new THREE_LIB.HemisphereLight(0xffffff, 0x1e293b, 1.1);
+  scene.add(hemiLight);
 
-  // Blau-Cyan Akzentlicht von der Gegenseite
-  const fillLight = new THREE_LIB.DirectionalLight(0x38bdf8, 0.8);
-  fillLight.position.set(-30, 25, -30);
+  // Warmes Haupt-Spotlicht von schräg oben
+  const keyLight = new THREE_LIB.DirectionalLight(0xffedd5, 1.8);
+  keyLight.position.set(24, 38, 24);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.width = 2048;
+  keyLight.shadow.mapSize.height = 2048;
+  keyLight.shadow.camera.near = 5;
+  keyLight.shadow.camera.far = 100;
+  keyLight.shadow.camera.left = -25;
+  keyLight.shadow.camera.right = 25;
+  keyLight.shadow.camera.top = 25;
+  keyLight.shadow.camera.bottom = -25;
+  scene.add(keyLight);
+
+  // Kühles Cyan-Aufhelllicht
+  const fillLight = new THREE_LIB.DirectionalLight(0x38bdf8, 0.9);
+  fillLight.position.set(-24, 25, -24);
   scene.add(fillLight);
 }
 
 /**
- * Campus-Boden (Edle Schiefer-Plaza mit konzentrischen Leuchtringen)
+ * Großer zusammenhängender Architektur-Hauptboden (Radius ~21)
  */
-function setupCampusFloor(THREE_LIB) {
-  const floorGeo = new THREE_LIB.CylinderGeometry(44, 44, 0.4, 64);
-  const floorMat = new THREE_LIB.MeshStandardMaterial({
-    color: 0x090d16,
-    roughness: 0.65,
-    metalness: 0.25
-  });
-  const floor = new THREE_LIB.Mesh(floorGeo, floorMat);
-  floor.position.y = -0.2;
-  floor.receiveShadow = true;
-  scene.add(floor);
+function setupUnifiedOfficeFloor(THREE_LIB) {
+  const floorGroup = new THREE_LIB.Group();
 
-  // Konzentrische Leuchtringe
-  for (let r = 7; r <= 40; r += 7) {
-    const ringGeo = new THREE_LIB.RingGeometry(r - 0.05, r + 0.05, 64);
+  // 1. Großes zusammenhängendes Haupt-Deck (Schiefer / Dunkler warmer Beton)
+  const mainFloorGeo = new THREE_LIB.CylinderGeometry(21.5, 21.8, 0.4, 64);
+  const mainFloorMat = new THREE_LIB.MeshStandardMaterial({
+    color: 0x0f1523,
+    roughness: 0.45,
+    metalness: 0.2
+  });
+  const mainFloor = new THREE_LIB.Mesh(mainFloorGeo, mainFloorMat);
+  mainFloor.position.y = -0.2;
+  mainFloor.receiveShadow = true;
+  floorGroup.add(mainFloor);
+
+  // 2. Äußere rahmenlose Glasfassade mit schwarzer Aluleiste
+  const glassPerimeterGeo = new THREE_LIB.CylinderGeometry(21.5, 21.5, 1.6, 64, 1, true);
+  const glassPerimeterMat = new THREE_LIB.MeshPhysicalMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.22,
+    roughness: 0.1,
+    transmission: 0.85,
+    side: THREE_LIB.DoubleSide
+  });
+  const glassPerimeter = new THREE_LIB.Mesh(glassPerimeterGeo, glassPerimeterMat);
+  glassPerimeter.position.y = 0.8;
+  floorGroup.add(glassPerimeter);
+
+  const topRailGeo = new THREE_LIB.TorusGeometry(21.5, 0.08, 8, 64);
+  const topRailMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
+  const topRail = new THREE_LIB.Mesh(topRailGeo, topRailMat);
+  topRail.rotation.x = Math.PI / 2;
+  topRail.position.y = 1.6;
+  floorGroup.add(topRail);
+
+  // 3. Konzentrische Orientierungsringe im Boden
+  [6.5, 13.0, 19.5].forEach((r, idx) => {
+    const ringGeo = new THREE_LIB.RingGeometry(r - 0.06, r + 0.06, 64);
     const ringMat = new THREE_LIB.MeshBasicMaterial({
-      color: 0x1f2937,
+      color: idx === 1 ? 0xfbbf24 : 0x1e293b,
       side: THREE_LIB.DoubleSide,
       transparent: true,
-      opacity: 0.55
+      opacity: idx === 1 ? 0.45 : 0.25
     });
     const ring = new THREE_LIB.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.02;
-    scene.add(ring);
-  }
+    ring.position.y = 0.01;
+    floorGroup.add(ring);
+  });
 
-  // Dezent rote Plaza-Gitterlinie
-  const grid = new THREE_LIB.GridHelper(84, 42, 0xdc2626, 0x1e293b);
-  grid.position.y = 0.01;
-  grid.material.opacity = 0.2;
-  grid.material.transparent = true;
-  scene.add(grid);
+  scene.add(floorGroup);
 }
 
 /**
- * Trevor als detailreicher 3D-Hero-Mech im Iron-Man Look
+ * Trevor im Iron-Man Look in der zentralen Rotunde
  */
 function setupTrevorIronManMech(THREE_LIB) {
   trevorGroup = new THREE_LIB.Group();
   trevorGroup.position.set(0, 0, 0);
 
-  // 1. Achteckiges Kommando-Podest (Dunkelgrau mit Gold-Kante)
-  const podestGeo = new THREE_LIB.CylinderGeometry(5.2, 5.6, 0.7, 8);
+  // 1. Erhöhtes zentrales Kommando-Podest (Radius 4.2)
+  const podestGeo = new THREE_LIB.CylinderGeometry(4.2, 4.5, 0.5, 32);
   const podestMat = new THREE_LIB.MeshStandardMaterial({
-    color: 0x0f172a,
+    color: 0x090d16,
     roughness: 0.35,
-    metalness: 0.7
+    metalness: 0.75
   });
   const podest = new THREE_LIB.Mesh(podestGeo, podestMat);
-  podest.position.y = 0.35;
+  podest.position.y = 0.25;
   podest.receiveShadow = true;
   trevorGroup.add(podest);
 
-  // Karmesinrot-Goldener Leuchtring um das Podest
-  const edgeGeo = new THREE_LIB.TorusGeometry(5.2, 0.08, 8, 8);
+  // Leuchtender Gold-Karmesin Ring um Trevors Podest
+  const edgeGeo = new THREE_LIB.TorusGeometry(4.2, 0.08, 12, 32);
   const edgeMat = new THREE_LIB.MeshBasicMaterial({ color: 0xfbbf24 });
   const edge = new THREE_LIB.Mesh(edgeGeo, edgeMat);
   edge.rotation.x = Math.PI / 2;
-  edge.position.y = 0.71;
+  edge.position.y = 0.51;
   trevorGroup.add(edge);
 
-  // Holografischer runder Steuerungstisch vor Trevor
-  const tableGeo = new THREE_LIB.CylinderGeometry(1.6, 1.6, 0.1, 32);
+  // Halboffene Glas-Rotunde um Trevors Bereich
+  const rotundaGeo = new THREE_LIB.CylinderGeometry(4.0, 4.0, 1.5, 32, 1, true, -Math.PI / 1.3, Math.PI * 1.55);
+  const rotundaMat = new THREE_LIB.MeshPhysicalMaterial({
+    color: 0x0284c7,
+    transparent: true,
+    opacity: 0.25,
+    roughness: 0.1,
+    transmission: 0.8,
+    side: THREE_LIB.DoubleSide
+  });
+  const rotunda = new THREE_LIB.Mesh(rotundaGeo, rotundaMat);
+  rotunda.position.y = 1.25;
+  trevorGroup.add(rotunda);
+
+  // Holografischer Runder Taktik-Tisch vor Trevor
+  const tableGeo = new THREE_LIB.CylinderGeometry(1.4, 1.4, 0.12, 32);
   const tableMat = new THREE_LIB.MeshStandardMaterial({
     color: 0x0284c7,
     emissive: 0x0284c7,
-    emissiveIntensity: 0.8,
+    emissiveIntensity: 0.9,
     transparent: true,
-    opacity: 0.6
+    opacity: 0.65
   });
   const holoTable = new THREE_LIB.Mesh(tableGeo, tableMat);
-  holoTable.position.set(0, 1.8, 1.2);
+  holoTable.position.set(0, 1.6, 1.1);
   trevorGroup.add(holoTable);
 
-  // --- IRON-MAN RÜSTUNG (HOT-ROD-ROT & GOLD) ---
+  // --- IRON-MAN ARMOR (METALLIC-ROT & GOLD) ---
   const redArmorMat = new THREE_LIB.MeshStandardMaterial({
     color: 0xdc2626,
-    roughness: 0.2,
-    metalness: 0.88
+    roughness: 0.18,
+    metalness: 0.9
   });
-
   const goldArmorMat = new THREE_LIB.MeshStandardMaterial({
     color: 0xfbbf24,
-    roughness: 0.22,
-    metalness: 0.92
+    roughness: 0.2,
+    metalness: 0.94
   });
 
-  // Mech-Torso
   const mechBody = new THREE_LIB.Group();
-  mechBody.position.set(0, 2.5, 0);
+  mechBody.position.set(0, 2.2, 0);
 
-  const chestGeo = new THREE_LIB.BoxGeometry(1.2, 1.4, 0.9);
+  // Brustpanzer
+  const chestGeo = new THREE_LIB.BoxGeometry(1.1, 1.3, 0.85);
   const chest = new THREE_LIB.Mesh(chestGeo, redArmorMat);
   chest.castShadow = true;
   mechBody.add(chest);
 
   // Goldene Rippen
-  const ribLeftGeo = new THREE_LIB.BoxGeometry(0.2, 0.9, 0.85);
-  const ribLeft = new THREE_LIB.Mesh(ribLeftGeo, goldArmorMat);
-  ribLeft.position.set(-0.55, 0, 0);
-  mechBody.add(ribLeft);
+  [-1, 1].forEach(side => {
+    const ribGeo = new THREE_LIB.BoxGeometry(0.18, 0.85, 0.8);
+    const rib = new THREE_LIB.Mesh(ribGeo, goldArmorMat);
+    rib.position.set(side * 0.52, 0, 0);
+    mechBody.add(rib);
+  });
 
-  const ribRight = new THREE_LIB.Mesh(ribLeftGeo, goldArmorMat);
-  ribRight.position.set(0.55, 0, 0);
-  mechBody.add(ribRight);
-
-  // ARC-REACTOR (Hell strahlend Cyan/Weiß)
-  const arcRingGeo = new THREE_LIB.TorusGeometry(0.22, 0.04, 16, 32);
+  // ARC-REACTOR (Hell strahlend Cyan/Weiß auf Brust)
+  const arcRingGeo = new THREE_LIB.TorusGeometry(0.2, 0.04, 16, 32);
   const arcRingMat = new THREE_LIB.MeshBasicMaterial({ color: 0x38bdf8 });
   const arcRing = new THREE_LIB.Mesh(arcRingGeo, arcRingMat);
-  arcRing.position.set(0, 0.22, 0.47);
+  arcRing.position.set(0, 0.2, 0.44);
   mechBody.add(arcRing);
 
-  const arcCoreGeo = new THREE_LIB.CircleGeometry(0.18, 24);
+  const arcCoreGeo = new THREE_LIB.CircleGeometry(0.16, 24);
   const arcCoreMat = new THREE_LIB.MeshBasicMaterial({ color: 0xe0f2fe });
   const arcCore = new THREE_LIB.Mesh(arcCoreGeo, arcCoreMat);
-  arcCore.position.set(0, 0.22, 0.48);
+  arcCore.position.set(0, 0.2, 0.45);
   mechBody.add(arcCore);
 
-  trevorArcLight = new THREE_LIB.PointLight(0x38bdf8, 4.0, 16);
-  trevorArcLight.position.set(0, 0.22, 0.8);
+  trevorArcLight = new THREE_LIB.PointLight(0x38bdf8, 4.0, 14);
+  trevorArcLight.position.set(0, 0.2, 0.8);
   mechBody.add(trevorArcLight);
 
   // IRON-MAN HELM
   trevorHead = new THREE_LIB.Group();
-  trevorHead.position.set(0, 0.95, 0);
+  trevorHead.position.set(0, 0.9, 0);
 
-  const helmetBaseGeo = new THREE_LIB.BoxGeometry(0.7, 0.8, 0.75);
-  const helmetBase = new THREE_LIB.Mesh(helmetBaseGeo, redArmorMat);
-  trevorHead.add(helmetBase);
+  const helmetGeo = new THREE_LIB.BoxGeometry(0.65, 0.75, 0.7);
+  const helmet = new THREE_LIB.Mesh(helmetGeo, redArmorMat);
+  trevorHead.add(helmet);
 
-  // Goldene Gesichtsplatte
-  const faceplateGeo = new THREE_LIB.BoxGeometry(0.55, 0.65, 0.1);
+  const faceplateGeo = new THREE_LIB.BoxGeometry(0.5, 0.6, 0.1);
   const faceplate = new THREE_LIB.Mesh(faceplateGeo, goldArmorMat);
-  faceplate.position.set(0, -0.05, 0.36);
+  faceplate.position.set(0, -0.04, 0.33);
   trevorHead.add(faceplate);
 
   // Leuchtende Augen
-  const eyeGeo = new THREE_LIB.PlaneGeometry(0.14, 0.035);
+  const eyeGeo = new THREE_LIB.PlaneGeometry(0.13, 0.035);
   const eyeMat = new THREE_LIB.MeshBasicMaterial({ color: 0x38bdf8, side: THREE_LIB.DoubleSide });
-
-  const eyeLeft = new THREE_LIB.Mesh(eyeGeo, eyeMat);
-  eyeLeft.position.set(-0.15, -0.02, 0.42);
-  eyeLeft.rotation.z = -0.05;
-  trevorHead.add(eyeLeft);
-
-  const eyeRight = new THREE_LIB.Mesh(eyeGeo, eyeMat);
-  eyeRight.position.set(0.15, -0.02, 0.42);
-  eyeRight.rotation.z = 0.05;
-  trevorHead.add(eyeRight);
+  [-1, 1].forEach(side => {
+    const eye = new THREE_LIB.Mesh(eyeGeo, eyeMat);
+    eye.position.set(side * 0.14, -0.02, 0.39);
+    eye.rotation.z = side * 0.05;
+    trevorHead.add(eye);
+  });
 
   mechBody.add(trevorHead);
 
-  // Schultern & Repulsor-Hände
-  [-1, 1].forEach((side) => {
-    const shoulderGeo = new THREE_LIB.SphereGeometry(0.35, 16, 16);
+  // Schultern & Arme mit Repulsor-Händen
+  [-1, 1].forEach(side => {
+    const shoulderGeo = new THREE_LIB.SphereGeometry(0.32, 16, 16);
     const shoulder = new THREE_LIB.Mesh(shoulderGeo, goldArmorMat);
-    shoulder.position.set(side * 0.85, 0.45, 0);
+    shoulder.position.set(side * 0.78, 0.4, 0);
     mechBody.add(shoulder);
 
-    const armGeo = new THREE_LIB.CylinderGeometry(0.14, 0.12, 0.7, 12);
+    const armGeo = new THREE_LIB.CylinderGeometry(0.13, 0.11, 0.65, 12);
     const arm = new THREE_LIB.Mesh(armGeo, redArmorMat);
-    arm.position.set(side * 0.95, 0.05, 0.2);
+    arm.position.set(side * 0.88, 0.05, 0.18);
     arm.rotation.x = Math.PI / 4;
     mechBody.add(arm);
 
-    const handGeo = new THREE_LIB.BoxGeometry(0.2, 0.1, 0.25);
+    const handGeo = new THREE_LIB.BoxGeometry(0.18, 0.09, 0.22);
     const hand = new THREE_LIB.Mesh(handGeo, goldArmorMat);
-    hand.position.set(side * 0.6, -0.4, 0.8);
+    hand.position.set(side * 0.55, -0.38, 0.75);
     mechBody.add(hand);
 
-    const repulsorGeo = new THREE_LIB.CircleGeometry(0.08, 16);
+    const repulsorGeo = new THREE_LIB.CircleGeometry(0.07, 16);
     const repulsorMat = new THREE_LIB.MeshBasicMaterial({ color: 0x38bdf8, side: THREE_LIB.DoubleSide });
     const repulsor = new THREE_LIB.Mesh(repulsorGeo, repulsorMat);
     repulsor.rotation.x = Math.PI / 2;
-    repulsor.position.set(side * 0.6, -0.46, 0.8);
+    repulsor.position.set(side * 0.55, -0.43, 0.75);
     mechBody.add(repulsor);
     trevorHands.push(repulsor);
   });
 
   // Beine
-  [-1, 1].forEach((side) => {
-    const legGeo = new THREE_LIB.CylinderGeometry(0.18, 0.16, 1.4, 12);
+  [-1, 1].forEach(side => {
+    const legGeo = new THREE_LIB.CylinderGeometry(0.16, 0.14, 1.3, 12);
     const leg = new THREE_LIB.Mesh(legGeo, redArmorMat);
-    leg.position.set(side * 0.4, -1.2, 0);
+    leg.position.set(side * 0.35, -1.15, 0);
     mechBody.add(leg);
 
-    const kneeGeo = new THREE_LIB.BoxGeometry(0.26, 0.26, 0.26);
+    const kneeGeo = new THREE_LIB.BoxGeometry(0.24, 0.24, 0.24);
     const knee = new THREE_LIB.Mesh(kneeGeo, goldArmorMat);
-    knee.position.set(side * 0.4, -1.1, 0.1);
+    knee.position.set(side * 0.35, -1.05, 0.1);
     mechBody.add(knee);
   });
 
   mechBody.userData = { type: 'trevor', name: 'Trevor (Director)' };
   interactiveObjects.push(chest);
-  interactiveObjects.push(helmetBase);
+  interactiveObjects.push(helmet);
   trevorGroup.add(mechBody);
 
   // Schwebendes Label über Trevor
-  const trevorLabel = createFloatingLabelSprite("TREVOR (MK-VII)", "Studio Director", "#fbbf24");
-  trevorLabel.position.set(0, 4.8, 0);
+  const trevorLabel = createFloatingLabelSprite("TREVOR (MK-VII)", "Studio Director", "⚡ Befehlszentrale bereit", "#fbbf24");
+  trevorLabel.position.set(0, 4.6, 0);
   trevorGroup.add(trevorLabel);
 
   // 3D Terminal "Deine Entscheidungen"
   const terminalGroup = new THREE_LIB.Group();
-  terminalGroup.position.set(0, 0.7, 3.8);
+  terminalGroup.position.set(0, 0.5, 3.2);
 
-  const standGeo = new THREE_LIB.BoxGeometry(0.9, 1.1, 0.4);
+  const standGeo = new THREE_LIB.BoxGeometry(0.8, 1.0, 0.35);
   const standMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
   const stand = new THREE_LIB.Mesh(standGeo, standMat);
-  stand.position.y = 0.55;
+  stand.position.y = 0.5;
   terminalGroup.add(stand);
 
-  const screenGeo = new THREE_LIB.BoxGeometry(1.5, 0.85, 0.1);
+  const screenGeo = new THREE_LIB.BoxGeometry(1.4, 0.8, 0.08);
   const screenMat = new THREE_LIB.MeshStandardMaterial({
     color: 0x06b6d4,
     emissive: 0x06b6d4,
@@ -428,7 +576,7 @@ function setupTrevorIronManMech(THREE_LIB) {
     roughness: 0.2
   });
   decisionTerminalScreen = new THREE_LIB.Mesh(screenGeo, screenMat);
-  decisionTerminalScreen.position.set(0, 1.2, 0);
+  decisionTerminalScreen.position.set(0, 1.1, 0);
   decisionTerminalScreen.rotation.x = -Math.PI / 6;
   decisionTerminalScreen.userData = { type: 'decision_terminal', name: 'Deine Entscheidungen' };
   interactiveObjects.push(decisionTerminalScreen);
@@ -439,11 +587,11 @@ function setupTrevorIronManMech(THREE_LIB) {
 }
 
 /**
- * 10 realistische Architektur-Büros mit Schwebenden 3D-Labels & Avataren
+ * 10 Abteilungen kompakt und nah am Zentrum (Radius ~13)
  */
-function setupCampusDepartments(THREE_LIB, hierarchyData) {
+function setupCompactDepartments(THREE_LIB, hierarchyData) {
   const depts = hierarchyData.departments;
-  const radius = 28;
+  const radius = 13.0; // Kompakter Radius: Alles sofort sichtbar!
 
   depts.forEach((dept, idx) => {
     const angle = (idx / depts.length) * Math.PI * 2;
@@ -452,68 +600,68 @@ function setupCampusDepartments(THREE_LIB, hierarchyData) {
 
     const podGroup = new THREE_LIB.Group();
     podGroup.position.set(posX, 0, posZ);
-    podGroup.lookAt(0, 0, 0);
+    podGroup.lookAt(0, 0, 0); // Blickwinkel zur Mitte gerichtet
 
-    // 1. Schwebendes 3D-Billboard Label über dem Raum
-    const roomLabel = createFloatingLabelSprite(dept.name, dept.chef_agent.name, dept.color);
-    roomLabel.position.set(0, 4.6, 0);
+    // 1. Schwebendes 3D-Billboard Label mit Live-Sprechblase (Micro-Status)
+    const microStatus = dept.micro_status || '💬 Bereit für Anweisungen';
+    const roomLabel = createFloatingLabelSprite(dept.name, dept.chef_agent.name, microStatus, dept.color);
+    roomLabel.position.set(0, 4.4, 0);
     podGroup.add(roomLabel);
+    deptBillboards[dept.id] = roomLabel;
 
     // Eigene dezente Raumbeleuchtung in Abteilungsfarbe
     const deptColor = parseInt(dept.color.replace('#', '0x'), 16);
-    const roomLight = new THREE_LIB.PointLight(deptColor, 1.6, 14);
-    roomLight.position.set(0, 3.2, 0);
+    const roomLight = new THREE_LIB.PointLight(deptColor, 1.4, 10);
+    roomLight.position.set(0, 2.8, 0);
     podGroup.add(roomLight);
 
-    // 2. Bodenplatte (Holz, Stein, Tech-Server)
+    // 2. Abteilungs-Teppich / Bodenplatte (abgerundet, edel)
     let floorMat;
     if (dept.floor_type === 'wood') {
-      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.4, metalness: 0.1 });
+      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x78350f, roughness: 0.45, metalness: 0.1 });
     } else if (dept.floor_type === 'tech_servers') {
-      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.6 });
+      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x020617, roughness: 0.25, metalness: 0.6 });
     } else {
-      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7, metalness: 0.2 });
+      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.65, metalness: 0.2 });
     }
 
-    const plateGeo = new THREE_LIB.CylinderGeometry(5.2, 5.5, 0.35, 24);
+    const plateGeo = new THREE_LIB.CylinderGeometry(3.8, 4.0, 0.2, 24);
     const plate = new THREE_LIB.Mesh(plateGeo, floorMat);
-    plate.position.y = 0.17;
+    plate.position.y = 0.1;
     plate.receiveShadow = true;
     plate.userData = { type: 'department', deptId: dept.id, name: dept.name, easy_explanation: dept.easy_explanation };
     interactiveObjects.push(plate);
     podGroup.add(plate);
 
-    // Farbige Kantenleiste
-    const borderGeo = new THREE_LIB.TorusGeometry(5.2, 0.06, 8, 32);
+    // Akzent-Kantenring
+    const borderGeo = new THREE_LIB.TorusGeometry(3.8, 0.05, 8, 32);
     const borderMat = new THREE_LIB.MeshBasicMaterial({ color: deptColor });
     const border = new THREE_LIB.Mesh(borderGeo, borderMat);
     border.rotation.x = Math.PI / 2;
-    border.position.y = 0.36;
+    border.position.y = 0.21;
     podGroup.add(border);
 
-    // 3. Glas-Trennwände mit schwarzem Aluminium-Rahmen
-    const glassGeo = new THREE_LIB.CylinderGeometry(5.0, 5.0, 2.0, 24, 1, true, -Math.PI / 1.5, Math.PI * 1.33);
+    // 3. Halbohe Glas-Trennwände mit schwarzem Aluminium-Rahmen
+    const glassGeo = new THREE_LIB.CylinderGeometry(3.7, 3.7, 1.5, 24, 1, true, -Math.PI / 1.5, Math.PI * 1.33);
     const glassMat = new THREE_LIB.MeshPhysicalMaterial({
       color: 0x0f172a,
       transparent: true,
-      opacity: 0.28,
+      opacity: 0.3,
       roughness: 0.1,
-      metalness: 0.2,
-      transmission: 0.7,
-      ior: 1.4,
+      transmission: 0.75,
       side: THREE_LIB.DoubleSide
     });
     const glass = new THREE_LIB.Mesh(glassGeo, glassMat);
-    glass.position.y = 1.25;
+    glass.position.y = 0.95;
     podGroup.add(glass);
 
-    // Requisiten (Pflanzen, Server-Racks, Whiteboards)
+    // 4. Raum-Ausstattung: Requisiten, Pflanzen & Server
     setupRoomProps(THREE_LIB, podGroup, dept);
 
-    // Chef-Terminal
+    // 5. Chef-Station mit Amber-Audit Monitor
     setupChefStation(THREE_LIB, podGroup, dept);
 
-    // Spezial-PCs mit 3D-Avataren
+    // 6. Spezial-PCs mit leuchtenden Monitoren & Entwicklern
     setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept);
 
     scene.add(podGroup);
@@ -521,44 +669,44 @@ function setupCampusDepartments(THREE_LIB, hierarchyData) {
 }
 
 function setupRoomProps(THREE_LIB, podGroup, dept) {
-  // Pflanzentopf
-  const potGeo = new THREE_LIB.CylinderGeometry(0.35, 0.25, 0.6, 12);
+  // Moderner Pflanzentopf (Grüne Akzente im Open-Space Büro)
+  const potGeo = new THREE_LIB.CylinderGeometry(0.28, 0.2, 0.45, 12);
   const potMat = new THREE_LIB.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
   const pot = new THREE_LIB.Mesh(potGeo, potMat);
-  pot.position.set(-3.6, 0.5, 1.8);
+  pot.position.set(-2.8, 0.42, 1.2);
   podGroup.add(pot);
 
-  const plantGeo = new THREE_LIB.DodecahedronGeometry(0.55, 1);
-  const plantMat = new THREE_LIB.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
+  const plantGeo = new THREE_LIB.DodecahedronGeometry(0.42, 1);
+  const plantMat = new THREE_LIB.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.8 });
   const plant = new THREE_LIB.Mesh(plantGeo, plantMat);
-  plant.position.set(-3.6, 0.95, 1.8);
+  plant.position.set(-2.8, 0.8, 1.2);
   podGroup.add(plant);
 
-  // Server-Racks im Backend & DB
+  // Server-Racks mit blinkenden LEDs in Backend, DB & Security
   if (dept.id === 5 || dept.id === 6 || dept.id === 8) {
-    const rackGeo = new THREE_LIB.BoxGeometry(0.9, 2.2, 0.7);
-    const rackMat = new THREE_LIB.MeshStandardMaterial({ color: 0x020617, metalness: 0.8, roughness: 0.3 });
+    const rackGeo = new THREE_LIB.BoxGeometry(0.7, 1.8, 0.55);
+    const rackMat = new THREE_LIB.MeshStandardMaterial({ color: 0x020617, metalness: 0.85, roughness: 0.25 });
     const rack = new THREE_LIB.Mesh(rackGeo, rackMat);
-    rack.position.set(3.6, 1.2, 1.5);
+    rack.position.set(2.8, 1.0, 1.0);
     podGroup.add(rack);
 
     for (let i = 0; i < 4; i++) {
-      const ledGeo = new THREE_LIB.CircleGeometry(0.04, 8);
+      const ledGeo = new THREE_LIB.CircleGeometry(0.035, 8);
       const ledMat = new THREE_LIB.MeshBasicMaterial({ color: i % 2 === 0 ? 0x10b981 : 0x06b6d4 });
       const led = new THREE_LIB.Mesh(ledGeo, ledMat);
-      led.position.set(3.6 - 0.2 + (i * 0.12), 1.8, 1.86);
+      led.position.set(2.8 - 0.15 + (i * 0.1), 1.5, 1.29);
       led.rotation.y = -Math.PI / 2;
       podGroup.add(led);
       blinkingLeds.push(led);
     }
   }
 
-  // Whiteboard in Design & Ideen
-  if (dept.id === 1 || dept.id === 3) {
-    const boardGeo = new THREE_LIB.BoxGeometry(1.6, 1.2, 0.05);
+  // Whiteboard / Kanban-Board in Planung & Design
+  if (dept.id === 1 || dept.id === 3 || dept.id === 10) {
+    const boardGeo = new THREE_LIB.BoxGeometry(1.2, 0.9, 0.04);
     const boardMat = new THREE_LIB.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.2 });
     const board = new THREE_LIB.Mesh(boardGeo, boardMat);
-    board.position.set(3.4, 1.5, 1.5);
+    board.position.set(2.6, 1.2, 1.0);
     board.rotation.y = -Math.PI / 3;
     podGroup.add(board);
   }
@@ -567,23 +715,26 @@ function setupRoomProps(THREE_LIB, podGroup, dept) {
 function setupChefStation(THREE_LIB, podGroup, dept) {
   const chef = dept.chef_agent;
   const chefGroup = new THREE_LIB.Group();
-  chefGroup.position.set(0, 0.35, 3.2);
+  chefGroup.position.set(0, 0.2, 2.4);
 
-  const deskGeo = new THREE_LIB.BoxGeometry(1.8, 0.8, 0.7);
+  // Chef-Schreibtisch
+  const deskGeo = new THREE_LIB.BoxGeometry(1.4, 0.65, 0.6);
   const deskMat = new THREE_LIB.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
   const desk = new THREE_LIB.Mesh(deskGeo, deskMat);
-  desk.position.y = 0.4;
+  desk.position.y = 0.32;
   chefGroup.add(desk);
 
-  const screenGeo = new THREE_LIB.BoxGeometry(1.3, 0.65, 0.08);
+  // Widescreen Chef-Monitor
+  const screenGeo = new THREE_LIB.BoxGeometry(1.1, 0.55, 0.06);
   const screenMat = new THREE_LIB.MeshStandardMaterial({
     color: 0x1e293b,
     emissive: 0x1e293b,
     emissiveIntensity: 0.6,
-    roughness: 0.2
+    roughness: 0.2,
+    map: serverScreenTexture || null
   });
   const screen = new THREE_LIB.Mesh(screenGeo, screenMat);
-  screen.position.set(0, 0.98, -0.1);
+  screen.position.set(0, 0.85, -0.05);
   screen.userData = {
     type: 'chef',
     chefId: chef.id,
@@ -594,8 +745,9 @@ function setupChefStation(THREE_LIB, podGroup, dept) {
   chefGroup.add(screen);
   interactiveObjects.push(screen);
 
+  // Chef-Avatar
   const avatar = createStylizedDeveloperAvatar(THREE_LIB, dept.color, true);
-  avatar.position.set(0, 0.1, 0.55);
+  avatar.position.set(0, 0.1, 0.45);
   chefGroup.add(avatar);
 
   chefMeshMap[chef.id] = { screen, avatarArms: avatar.userData.arms };
@@ -607,66 +759,55 @@ function setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept) {
 
   dept.specialist_pcs.forEach((pc, idx) => {
     const pcGroup = new THREE_LIB.Group();
-    const angle = -Math.PI * 0.4 + (idx / (pcCount - 1 || 1)) * (Math.PI * 0.8);
-    const dist = 2.65;
+    const angle = -Math.PI * 0.38 + (idx / (pcCount - 1 || 1)) * (Math.PI * 0.76);
+    const dist = 2.1;
     const posX = Math.sin(angle) * dist;
     const posZ = -Math.cos(angle) * dist;
 
-    pcGroup.position.set(posX, 0.35, posZ);
+    pcGroup.position.set(posX, 0.2, posZ);
     pcGroup.rotation.y = angle + Math.PI;
 
     // Schreibtisch
-    const deskGeo = new THREE_LIB.BoxGeometry(1.3, 0.7, 0.65);
+    const deskGeo = new THREE_LIB.BoxGeometry(1.05, 0.6, 0.55);
     const deskMat = new THREE_LIB.MeshStandardMaterial({ color: 0x111827, roughness: 0.5 });
     const desk = new THREE_LIB.Mesh(deskGeo, deskMat);
-    desk.position.y = 0.35;
+    desk.position.y = 0.3;
     pcGroup.add(desk);
 
-    // Dual-Monitore
-    const monStandGeo = new THREE_LIB.CylinderGeometry(0.04, 0.08, 0.28, 8);
-    const monStand = new THREE_LIB.Mesh(monStandGeo, deskMat);
-    monStand.position.set(0, 0.75, 0);
-    pcGroup.add(monStand);
-
-    const screenGeo = new THREE_LIB.BoxGeometry(0.55, 0.38, 0.04);
+    // Dual-Monitore mit Code-Textur
+    const screenGeo = new THREE_LIB.BoxGeometry(0.46, 0.32, 0.035);
     const screenMat = new THREE_LIB.MeshStandardMaterial({
       color: 0x0f172a,
       emissive: 0x0f172a,
-      emissiveIntensity: 0.5,
-      roughness: 0.2
+      emissiveIntensity: 0.6,
+      roughness: 0.2,
+      map: codeScreenTexture || null
     });
 
     const screenLeft = new THREE_LIB.Mesh(screenGeo, screenMat.clone());
-    screenLeft.position.set(-0.3, 0.98, 0.05);
-    screenLeft.rotation.y = 0.15;
+    screenLeft.position.set(-0.25, 0.8, 0.04);
+    screenLeft.rotation.y = 0.14;
     screenLeft.userData = { type: 'pc', pcId: pc.id, deptId: dept.id, name: pc.name, easy_explanation: pc.easy_explanation };
     pcGroup.add(screenLeft);
     interactiveObjects.push(screenLeft);
 
     const screenRight = new THREE_LIB.Mesh(screenGeo, screenMat.clone());
-    screenRight.position.set(0.3, 0.98, 0.05);
-    screenRight.rotation.y = -0.15;
+    screenRight.position.set(0.25, 0.8, 0.04);
+    screenRight.rotation.y = -0.14;
     screenRight.userData = { type: 'pc', pcId: pc.id, deptId: dept.id, name: pc.name, easy_explanation: pc.easy_explanation };
     pcGroup.add(screenRight);
     interactiveObjects.push(screenRight);
 
-    // Tastatur
-    const kbGeo = new THREE_LIB.BoxGeometry(0.45, 0.02, 0.18);
-    const kbMat = new THREE_LIB.MeshStandardMaterial({ color: 0x334155 });
-    const kb = new THREE_LIB.Mesh(kbGeo, kbMat);
-    kb.position.set(0, 0.71, 0.15);
-    pcGroup.add(kb);
-
     // Bürostuhl
-    const chairGeo = new THREE_LIB.CylinderGeometry(0.28, 0.28, 0.45, 12);
+    const chairGeo = new THREE_LIB.CylinderGeometry(0.24, 0.24, 0.38, 12);
     const chairMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.6 });
     const chair = new THREE_LIB.Mesh(chairGeo, chairMat);
-    chair.position.set(0, 0.23, 0.55);
+    chair.position.set(0, 0.19, 0.45);
     pcGroup.add(chair);
 
     // Entwickler-Avatar
     const avatar = createStylizedDeveloperAvatar(THREE_LIB, dept.color, false);
-    avatar.position.set(0, 0.23, 0.55);
+    avatar.position.set(0, 0.19, 0.45);
     pcGroup.add(avatar);
     developerAvatars.push(avatar);
 
@@ -684,29 +825,23 @@ function createStylizedDeveloperAvatar(THREE_LIB, deptColorHex, isChef = false) 
   const avatarGroup = new THREE_LIB.Group();
 
   const torsoColor = isChef ? 0x0f172a : parseInt(deptColorHex.replace('#', '0x'), 16);
-  const torsoGeo = new THREE_LIB.BoxGeometry(0.42, 0.55, 0.28);
+  const torsoGeo = new THREE_LIB.BoxGeometry(0.36, 0.46, 0.24);
   const torsoMat = new THREE_LIB.MeshStandardMaterial({ color: torsoColor, roughness: 0.7 });
   const torso = new THREE_LIB.Mesh(torsoGeo, torsoMat);
-  torso.position.y = 0.5;
+  torso.position.y = 0.42;
   avatarGroup.add(torso);
 
-  const headGeo = new THREE_LIB.SphereGeometry(0.18, 16, 16);
+  const headGeo = new THREE_LIB.SphereGeometry(0.15, 16, 16);
   const headMat = new THREE_LIB.MeshStandardMaterial({ color: 0xfbcfe8, roughness: 0.6 });
   const head = new THREE_LIB.Mesh(headGeo, headMat);
-  head.position.y = 0.9;
+  head.position.y = 0.76;
   avatarGroup.add(head);
-
-  const hairGeo = new THREE_LIB.BoxGeometry(0.38, 0.15, 0.38);
-  const hairMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
-  const hair = new THREE_LIB.Mesh(hairGeo, hairMat);
-  hair.position.y = 1.0;
-  avatarGroup.add(hair);
 
   const armsGroup = new THREE_LIB.Group();
   [-1, 1].forEach((side) => {
-    const armGeo = new THREE_LIB.CylinderGeometry(0.06, 0.05, 0.35, 8);
+    const armGeo = new THREE_LIB.CylinderGeometry(0.05, 0.045, 0.3, 8);
     const arm = new THREE_LIB.Mesh(armGeo, torsoMat);
-    arm.position.set(side * 0.24, 0.42, -0.15);
+    arm.position.set(side * 0.2, 0.36, -0.12);
     arm.rotation.x = Math.PI / 2.8;
     armsGroup.add(arm);
   });
@@ -716,44 +851,36 @@ function createStylizedDeveloperAvatar(THREE_LIB, deptColorHex, isChef = false) 
   return avatarGroup;
 }
 
-function setupDataPipelines(THREE_LIB, hierarchyData) {
-  const depts = hierarchyData.departments;
-  const radius = 28;
+/**
+ * Schießt leuchtende Datenpartikel von einer Abteilung zu Trevor in die Mitte
+ */
+export function triggerDataStreamToTrevor(deptId) {
+  const THREE_LIB = window.THREE;
+  if (!THREE_LIB || !scene) return;
 
-  depts.forEach((dept, idx) => {
-    const angle = (idx / depts.length) * Math.PI * 2;
-    const endX = Math.cos(angle) * (radius - 5.2);
-    const endZ = Math.sin(angle) * (radius - 5.2);
-    const startX = Math.cos(angle) * 5.2;
-    const startZ = Math.sin(angle) * 5.2;
+  const depts = STUDIO_HIERARCHY.departments;
+  const idx = depts.findIndex(d => d.id === deptId);
+  if (idx === -1) return;
 
-    const points = [
-      new THREE_LIB.Vector3(startX, 0.06, startZ),
-      new THREE_LIB.Vector3(endX, 0.06, endZ)
-    ];
-    const lineGeo = new THREE_LIB.BufferGeometry().setFromPoints(points);
-    const lineMat = new THREE_LIB.LineBasicMaterial({
-      color: 0xdc2626,
-      transparent: true,
-      opacity: 0.5
-    });
-    const line = new THREE_LIB.Line(lineGeo, lineMat);
-    scene.add(line);
+  const angle = (idx / depts.length) * Math.PI * 2;
+  const startX = Math.cos(angle) * 11.5;
+  const startZ = Math.sin(angle) * 11.5;
 
-    const pGeo = new THREE_LIB.SphereGeometry(0.22, 12, 12);
+  for (let i = 0; i < 5; i++) {
+    const pGeo = new THREE_LIB.SphereGeometry(0.24, 12, 12);
     const pMat = new THREE_LIB.MeshBasicMaterial({ color: 0x38bdf8 });
     const p = new THREE_LIB.Mesh(pGeo, pMat);
-    p.position.set(startX, 0.1, startZ);
+    p.position.set(startX, 1.2, startZ);
     scene.add(p);
 
-    dataParticleStreams.push({
+    dynamicParticleStreams.push({
       mesh: p,
-      start: new THREE_LIB.Vector3(startX, 0.1, startZ),
-      end: new THREE_LIB.Vector3(endX, 0.1, endZ),
-      progress: Math.random(),
-      speed: 0.005 + Math.random() * 0.004
+      start: new THREE_LIB.Vector3(startX, 1.2, startZ),
+      end: new THREE_LIB.Vector3(0, 2.2, 0), // Trevors Arc-Reactor
+      progress: -(i * 0.18),
+      speed: 0.022
     });
-  });
+  }
 }
 
 function setupRaycasting(THREE_LIB, onAgentClick, onTrevorClick) {
@@ -777,13 +904,13 @@ function setupRaycasting(THREE_LIB, onAgentClick, onTrevorClick) {
       if (data.type === 'trevor' || data.type === 'decision_terminal') {
         if (onTrevorClick) onTrevorClick();
       } else if (data.type === 'pc') {
-        zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 14);
+        zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 11);
         if (onAgentClick) onAgentClick(data.pcId, 'pc', data.deptId);
       } else if (data.type === 'chef') {
-        zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 14);
+        zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 11);
         if (onAgentClick) onAgentClick(data.chefId, 'chef', data.deptId);
       } else if (data.type === 'department') {
-        zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 20);
+        zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 16);
         if (onAgentClick) onAgentClick(`dept_${data.deptId}`, 'department', data.deptId);
       }
     }
@@ -800,7 +927,7 @@ function setupRaycasting(THREE_LIB, onAgentClick, onTrevorClick) {
   });
 }
 
-function zoomToPosition(THREE_LIB, targetVec, distance = 15) {
+function zoomToPosition(THREE_LIB, targetVec, distance = 12) {
   targetLookAt = targetVec.clone();
   targetCameraPos = targetVec.clone().add(new THREE_LIB.Vector3(0, distance * 0.7, distance));
 }
@@ -819,7 +946,7 @@ function setupCameraButtons() {
   if (btnZoomOut && controls) btnZoomOut.addEventListener('click', () => camera.position.multiplyScalar(1.15));
   if (btnReset) {
     btnReset.addEventListener('click', () => {
-      targetCameraPos = new THREE.Vector3(0, 38, 48);
+      targetCameraPos = new THREE.Vector3(0, 24, 25);
       targetLookAt = new THREE.Vector3(0, 1.2, 0);
     });
   }
@@ -857,9 +984,9 @@ export function updateAgentStatusIn3D(agentId, type, status) {
       screenRight.material.emissive.setHex(0x10b981);
       screenRight.material.emissiveIntensity = 1.2;
     } else {
-      screenLeft.material.emissive.setHex(0x1e3a8a);
+      screenLeft.material.emissive.setHex(0x0f172a);
       screenLeft.material.emissiveIntensity = 0.5;
-      screenRight.material.emissive.setHex(0x1e3a8a);
+      screenRight.material.emissive.setHex(0x0f172a);
       screenRight.material.emissiveIntensity = 0.5;
     }
   } else if (type === 'chef' && chefMeshMap[agentId]) {
@@ -895,7 +1022,7 @@ function animate() {
   const time = performance.now() * 0.001;
 
   if (trevorGroup && !isQuietMode) {
-    trevorGroup.position.y = Math.sin(time * 2.2) * 0.06;
+    trevorGroup.position.y = Math.sin(time * 2.2) * 0.05;
     if (trevorArcLight) {
       trevorArcLight.intensity = 3.5 + Math.sin(time * 5.0) * 0.8;
     }
@@ -910,12 +1037,21 @@ function animate() {
     });
   }
 
-  if (!isQuietMode) {
-    dataParticleStreams.forEach(stream => {
+  // Animierte Daten-Partikel zu Trevor
+  if (!isQuietMode && dynamicParticleStreams.length > 0) {
+    for (let i = dynamicParticleStreams.length - 1; i >= 0; i--) {
+      const stream = dynamicParticleStreams[i];
       stream.progress += stream.speed;
-      if (stream.progress > 1) stream.progress = 0;
-      stream.mesh.position.lerpVectors(stream.start, stream.end, stream.progress);
-    });
+      if (stream.progress >= 0 && stream.progress <= 1) {
+        stream.mesh.visible = true;
+        stream.mesh.position.lerpVectors(stream.start, stream.end, stream.progress);
+      } else if (stream.progress > 1) {
+        scene.remove(stream.mesh);
+        dynamicParticleStreams.splice(i, 1);
+      } else {
+        stream.mesh.visible = false;
+      }
+    }
   }
 
   if (targetCameraPos && targetLookAt) {
@@ -934,7 +1070,7 @@ function animate() {
 function onWindowResize() {
   if (!containerEl || !camera || !renderer) return;
   const width = containerEl.clientWidth || Math.round(window.innerWidth * 0.72) || 1200;
-  const height = containerEl.clientHeight || Math.max(window.innerHeight - 170, 600) || 700;
+  const height = containerEl.clientHeight || Math.max(window.innerHeight - 170, 580) || 650;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);

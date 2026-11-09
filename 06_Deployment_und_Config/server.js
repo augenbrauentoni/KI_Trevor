@@ -6,7 +6,7 @@
  * - Serviert das Dark-Slate/Red 3D Frontend & alle Abteilungs-Daten
  * - Unterstützt Bypass-Tunnel-Header für Localtunnel & Ngrok (Unterwegs-Zugriff)
  * - Erkennt lokale WLAN-IPs für sofortigen Smartphone-Zugriff im Netzwerk
- * - Healthcheck für Render.com (/api/status)
+ * - REST-APIs für Tasks, Direktanweisungen an Abteilungen, Historie & Freigaben
  */
 
 import http from 'http';
@@ -15,13 +15,20 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 
+import {
+  startTask,
+  startDepartmentInstruction,
+  handleUserDecision,
+  getTaskHistory
+} from '../04_KI_Engine_und_Bridges/workflowOrchestrator.js';
+import { dbBridge } from '../04_KI_Engine_und_Bridges/supabaseClient.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 
 const PORT = process.env.PORT || 3000;
 
-// Ermittle lokale WLAN / LAN IP
 function getLocalNetworkIp() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
@@ -36,7 +43,6 @@ function getLocalNetworkIp() {
 
 const localIp = getLocalNetworkIp();
 
-// MIME-Type Mapping
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -48,6 +54,20 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon',
   '.md': 'text/markdown; charset=utf-8'
 };
+
+function parseBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body || '{}'));
+      } catch {
+        resolve({});
+      }
+    });
+  });
+}
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -80,10 +100,10 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({
       status: 'ok',
       service: 'Trevor AI Software Studio & Command Center',
-      version: '2.0.0 (Iron-Man & Campus Upgrade)',
+      version: '2.5.0 (Phase 7 Modern Office Edition)',
       timestamp: new Date().toISOString(),
       departments_count: 10,
-      total_units: 44, // 1 Trevor + 10 Chefs + 33 PCs
+      total_units: 44,
       local_wifi_url: `http://${localIp}:${PORT}`,
       current_checkpoint: checkpointSnapshot
     }, null, 2));
@@ -95,6 +115,110 @@ const server = http.createServer(async (req, res) => {
     if (fs.existsSync(hierarchyFile)) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       fs.createReadStream(hierarchyFile).pipe(res);
+      return;
+    }
+  }
+
+  // Task-Historie abfragen
+  if (pathname === '/api/task/history' && req.method === 'GET') {
+    try {
+      const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+      const history = await getTaskHistory(limit);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, tasks: history }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
+  // Direkte Abteilungs-Anweisung starten (Bottom-Up)
+  if (pathname === '/api/task/department-instruction' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { departmentId, pcId, instruction, targetProject } = body;
+
+      if (!departmentId || !instruction) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'departmentId und instruction erforderlich.' }));
+        return;
+      }
+
+      const result = await startDepartmentInstruction({
+        departmentId: parseInt(departmentId, 10),
+        pcId: pcId || null,
+        instruction,
+        targetProject: targetProject || 'KI_Trevor'
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, task: result }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
+  // Regulären Studio-Task starten (Top-Down)
+  if (pathname === '/api/task/start' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { prompt, projectId } = body;
+
+      if (!prompt) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'prompt erforderlich.' }));
+        return;
+      }
+
+      const result = await startTask(prompt, projectId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, task: result }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
+  // Benutzerentscheidung verarbeiten (JA / NEIN)
+  if (pathname === '/api/task/decision' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { taskId, decision, feedback } = body;
+
+      if (!taskId || !decision) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'taskId und decision (JA/NEIN) erforderlich.' }));
+        return;
+      }
+
+      const result = await handleUserDecision(taskId, decision, feedback || '');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, result }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
+  // Projekt-Liste
+  if (pathname === '/api/projects' && req.method === 'GET') {
+    try {
+      const projects = await dbBridge.getProjects();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, projects }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
       return;
     }
   }
@@ -135,15 +259,13 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-// Auf 0.0.0.0 lauschen, damit auch mobile Geräte im WLAN zugreifen können
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n=============================================================================`);
-  console.log(`🚀 TREVOR – AI SOFTWARE STUDIO (IRON-MAN & CAMPUS EDITION V2.0)`);
+  console.log(`  TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER (V2.5.0)`);
   console.log(`=============================================================================`);
-  console.log(`• Web-Studio & 3D Campus (Lokal):    http://localhost:${PORT}`);
-  console.log(`• Mobile / WLAN (Handy/Tablet):     http://${localIp}:${PORT}`);
-  console.log(`• Healthcheck API:                  http://localhost:${PORT}/api/status`);
-  console.log(`• Struktur:                         10 deutsche Abteilungen | 43 Agenten + Trevor`);
-  console.log(`• Status:                           Idle-Training aktiv & bereit für Aufträge`);
+  console.log(`  [OK] Lokaler Zugriff:    http://localhost:${PORT}`);
+  console.log(`  [OK] Lokales WLAN:       http://${localIp}:${PORT}`);
+  console.log(`  [OK] API Status:         http://localhost:${PORT}/api/status`);
+  console.log(`  [OK] 10 Abteilungen & 33 Spezial-PCs & Trevor Core bereit`);
   console.log(`=============================================================================\n`);
 });

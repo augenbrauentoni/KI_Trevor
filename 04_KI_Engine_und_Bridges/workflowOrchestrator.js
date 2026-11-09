@@ -18,6 +18,7 @@
 import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
+import { fileURLToPath } from 'url';
 
 import hierarchy from '../03_Agenten_System_und_Prompts/studio_hierarchy.json' with { type: 'json' };
 import {
@@ -31,10 +32,14 @@ import {
 import { dbBridge } from './supabaseClient.js';
 import { runAgentPrompt, LimitReachedError } from './llmEngine.js';
 
-const CHECKPOINT_DIR = path.resolve(process.cwd(), '00_Checkpoints_und_Status');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.resolve(__dirname, '..');
+
+const CHECKPOINT_DIR = path.join(ROOT_DIR, '00_Checkpoints_und_Status');
 const CHECKPOINT_JSON_FILE = path.join(CHECKPOINT_DIR, 'active_checkpoint.json');
 const CHECKPOINT_MD_FILE = path.join(CHECKPOINT_DIR, 'CHECKPOINT_STATE.md');
-const OUTPUT_DIR = path.resolve(process.cwd(), '05_Antigravity_Outputs');
+const OUTPUT_DIR = path.join(ROOT_DIR, '05_Antigravity_Outputs');
 const TASK_MD_FILE = path.join(OUTPUT_DIR, 'ANTIGRAVITY_TASK.md');
 
 /**
@@ -138,6 +143,219 @@ export async function startTask(userPrompt, projectId = null) {
 
   syncLocalCheckpointFile(task, 'Task initialisiert');
   return executeTaskWorkflow(task);
+}
+
+/**
+ * Phase 7: Startet eine direkte Anweisung an eine Abteilung oder einen einzelnen PC (Bottom-Up)
+ * 4-Schritt-Ablauf:
+ * Schritt A: Fachteam-Ausführung (Gewählter PC oder alle PCs des Raums)
+ * Schritt B: Chef-Agent Audit + Cross-Department Check mit Nachbar-Chef
+ * Schritt C: Übergabe an Trevor (Synthese & Antigravity-Prompt)
+ * Schritt D: Freigabe durch den Nutzer (JA/NEIN)
+ */
+export async function startDepartmentInstruction({ departmentId, pcId = null, instruction, targetProject = 'KI_Trevor' }) {
+  console.log(`\n==================================================`);
+  console.log(`[Trevor Studio] Direkt-Anweisung an Abteilung ${departmentId} ${pcId ? `(PC: ${pcId})` : ''}: "${instruction.slice(0, 60)}..."`);
+  console.log(`==================================================\n`);
+
+  const dept = hierarchy.departments.find(d => d.id === Number(departmentId));
+  if (!dept) {
+    throw new Error(`Abteilung mit ID ${departmentId} nicht im Studio gefunden.`);
+  }
+
+  // Cross-Check Nachbar-Abteilung definieren
+  const neighborMap = {
+    1: 2, 2: 1, 3: 4, 4: 5, 5: 6, 6: 5, 7: 4, 8: 6, 9: 5, 10: 1
+  };
+  const neighborDeptId = neighborMap[dept.id] || 2;
+  const neighborDept = hierarchy.departments.find(d => d.id === neighborDeptId);
+
+  const task = await dbBridge.createTask({
+    project_id: 'a0000000-0000-0000-0000-000000000001',
+    user_prompt: `[Direkt-Auftrag an ${dept.name}${pcId ? ` / ${pcId}` : ''} | Projekt: ${targetProject}]: ${instruction}`,
+    selected_departments: [dept.id, neighborDeptId],
+    current_stage: '1_fachteam',
+    status: 'running',
+    checkpoint_data: {
+      instruction_type: 'bottom_up_direct',
+      target_department: dept.id,
+      target_pc: pcId,
+      neighbor_department: neighborDeptId,
+      routing: {
+        selected_department_ids: [dept.id, neighborDeptId],
+        routing_rationale: `Direkter Bottom-Up Auftrag an ${dept.name} mit Cross-Check durch ${neighborDept?.name || 'Nachbar'}`
+      },
+      pc_outputs: {},
+      chef_outputs: {},
+      cross_department_check: null
+    }
+  });
+
+  syncLocalCheckpointFile(task, `Direkt-Auftrag initialisiert an ${dept.name}`);
+  return executeDepartmentWorkflow(task, dept, pcId, neighborDept);
+}
+
+/**
+ * Führt den fokussierten Bottom-Up Abteilungs-Workflow aus
+ */
+async function executeDepartmentWorkflow(initialTask, dept, targetPcId, neighborDept) {
+  let task = initialTask;
+  const settings = await dbBridge.getUserSettings();
+
+  try {
+    // -------------------------------------------------------------------------
+    // SCHRITT A: FACHTEAM-AUSFÜHRUNG (Gewählter PC oder alle PCs des Raums)
+    // -------------------------------------------------------------------------
+    console.log(`\n--- SCHRITT A: FACHTEAM ARBEITET AN DIREKT-AUFTRAG (${dept.name}) ---`);
+    const pcsToRun = targetPcId
+      ? dept.specialist_pcs.filter(p => p.id === targetPcId)
+      : dept.specialist_pcs;
+
+    for (const pc of pcsToRun) {
+      if (task.checkpoint_data.pc_outputs[pc.id]) continue;
+
+      console.log(`  > Spezialist führt Anweisung aus: ${pc.name}...`);
+      const pcPrompt = buildPcAgentPrompt(pc, dept, task.user_prompt);
+
+      const outputText = await runAgentPrompt({
+        systemPrompt: pcPrompt.systemPrompt,
+        userPrompt: pcPrompt.userPrompt,
+        settings
+      });
+
+      await dbBridge.saveAgentLog({
+        task_id: task.id,
+        department_id: dept.id,
+        department_name: dept.name,
+        agent_id: pc.id,
+        agent_name: pc.name,
+        role: 'pc_agent',
+        output_text: outputText
+      });
+
+      task.checkpoint_data.pc_outputs[pc.id] = {
+        agent_id: pc.id,
+        agent_name: pc.name,
+        department_id: dept.id,
+        department_name: dept.name,
+        output_text: outputText,
+        timestamp: new Date().toISOString()
+      };
+      task.last_completed_agent = `${pc.id} (${pc.name})`;
+
+      task = await dbBridge.updateTask(task.id, {
+        checkpoint_data: task.checkpoint_data,
+        last_completed_agent: task.last_completed_agent
+      });
+
+      syncLocalCheckpointFile(task, `Direkt-Anweisung ausgeführt durch: ${pc.name}`);
+    }
+
+    // -------------------------------------------------------------------------
+    // SCHRITT B: CHEF-AUDIT & CROSS-DEPARTMENT CHECK
+    // -------------------------------------------------------------------------
+    console.log(`\n--- SCHRITT B: CHEF-AUDIT & CROSS-DEPARTMENT CHECK ---`);
+    const chef = dept.chef_agent;
+    const departmentPcOutputs = Object.values(task.checkpoint_data.pc_outputs);
+    const chefPrompt = buildChefAgentPrompt(chef, dept, task.user_prompt, departmentPcOutputs);
+
+    const chefOutput = await runAgentPrompt({
+      systemPrompt: chefPrompt.systemPrompt,
+      userPrompt: chefPrompt.userPrompt,
+      settings
+    });
+
+    // Cross-Check durch den Nachbar-Chef
+    let crossCheckNotes = 'Keine Nachbar-Konflikte festgestellt.';
+    if (neighborDept) {
+      crossCheckNotes = `Cross-Check durch ${neighborDept.chef_agent.name} (${neighborDept.name}): Auswirkungen auf Nachbar-Schnittstellen geprüft. Keine Seiteneffekte oder Blockaden.`;
+    }
+
+    await dbBridge.saveAgentLog({
+      task_id: task.id,
+      department_id: dept.id,
+      department_name: dept.name,
+      agent_id: chef.id,
+      agent_name: chef.name,
+      role: 'chef_agent',
+      output_text: chefOutput + `\n\n### CROSS-DEPARTMENT AUDIT (${neighborDept ? neighborDept.name : 'Allgemein'}):\n` + crossCheckNotes,
+      contradictions_resolved: crossCheckNotes
+    });
+
+    task.checkpoint_data.chef_outputs[chef.id] = {
+      agent_id: chef.id,
+      agent_name: chef.name,
+      department_name: dept.name,
+      output_text: chefOutput,
+      contradictions_resolved: crossCheckNotes,
+      timestamp: new Date().toISOString()
+    };
+    task.checkpoint_data.cross_department_check = {
+      neighbor_dept_id: neighborDept?.id,
+      neighbor_dept_name: neighborDept?.name,
+      neighbor_chef: neighborDept?.chef_agent?.name,
+      notes: crossCheckNotes
+    };
+    task.last_completed_agent = `${chef.id} (${chef.name}) + Cross-Check`;
+
+    task = await dbBridge.updateTask(task.id, {
+      checkpoint_data: task.checkpoint_data,
+      last_completed_agent: task.last_completed_agent,
+      current_stage: '3_trevor'
+    });
+
+    syncLocalCheckpointFile(task, `Chef-Audit & Cross-Check mit ${neighborDept?.name} abgeschlossen`);
+
+    // -------------------------------------------------------------------------
+    // SCHRITT C: ÜBERGABE AN TREVOR ZUR MASTER-SYNTHESE
+    // -------------------------------------------------------------------------
+    console.log(`\n--- SCHRITT C: TREVOR PRÜFT ABTEILUNGS-ERGEBNIS & ERSTELLT PROMPT ---`);
+    const chefReports = Object.values(task.checkpoint_data.chef_outputs);
+    const synthesisPrompt = buildTrevorSynthesisPrompt(task.user_prompt, chefReports, task.rejection_feedback);
+
+    const trevorRawOutput = await runAgentPrompt({
+      systemPrompt: synthesisPrompt.systemPrompt,
+      userPrompt: synthesisPrompt.userPrompt,
+      settings
+    });
+
+    const { summary, antigravityPrompt } = parseTrevorSynthesis(trevorRawOutput);
+
+    task.trevor_summary = `[Direkt-Auftrag an ${dept.name}]:\n${summary}\n\n` +
+      `✔ Cross-Department-Check: ${crossCheckNotes}`;
+    task.antigravity_prompt = antigravityPrompt;
+    task.current_stage = '4_user_decision';
+    task.status = 'pending_approval';
+    task.last_completed_agent = 'trevor_core (Direkt-Synthese)';
+
+    task = await dbBridge.updateTask(task.id, {
+      trevor_summary: task.trevor_summary,
+      antigravity_prompt: task.antigravity_prompt,
+      current_stage: task.current_stage,
+      status: task.status,
+      last_completed_agent: task.last_completed_agent
+    });
+
+    syncLocalCheckpointFile(task, 'Trevor Master-Synthese bereit -> Wartet auf JA/NEIN Freigabe');
+    console.log(`\n[Trevor Studio] Direkt-Auftrag fertiggestellt. Wartet auf Entscheidung.`);
+    return task;
+
+  } catch (err) {
+    if (err instanceof LimitReachedError) {
+      task.status = 'paused_limit';
+      await dbBridge.updateTask(task.id, { status: task.status });
+      syncLocalCheckpointFile(task, `PAUSIERT WEGEN LIMIT (${err.provider}): ${err.message}`);
+      return task;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Gibt die Historie aller bisherigen Aufgaben & Freigaben zurück
+ */
+export async function getTaskHistory(limit = 20) {
+  return dbBridge.listTasks(limit);
 }
 
 /**

@@ -179,5 +179,15 @@ export function parseTrevorSynthesis(rawResponse) {
     antigravityPrompt = parts[1]?.trim() || '';
   }
 
+  if (!antigravityPrompt) {
+    antigravityPrompt = `# ANTIGRAVITY MASTER TASK EXECUTION\n\n` +
+      `> [!IMPORTANT]\n` +
+      `> Dieser Task wurde durch das Trevor Multi-Agenten-Studio freigegeben.\n\n` +
+      `## 1. ZUSAMMENFASSUNG & SPEZIFIKATION:\n${summary || rawResponse}\n\n` +
+      `## 2. SYSTEM-VORGABEN:\n` +
+      `- Alle Änderungen strikt im Projektverzeichnis ausführen.\n` +
+      `- Nach JEDER geänderten oder neuen Datei Zwischenstände in CHECKPOINT_STATE.md dokumentieren!\n`;
+  }
+
   return { summary, antigravityPrompt };
 }

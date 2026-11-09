@@ -8,9 +8,21 @@
  * wird automatisch der lokale Speicher (localStorage / lokales Dateisystem) genutzt.
  */
 
-import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+let createClient = null;
+try {
+  const supabaseMod = await import('@supabase/supabase-js');
+  createClient = supabaseMod.createClient;
+} catch {
+  // @supabase/supabase-js optional: Zero-Dependency-Fallback aktiv
+}
+
+const __filename = typeof import.meta.url === 'string' ? fileURLToPath(import.meta.url) : '';
+const __dirname = __filename ? path.dirname(__filename) : '';
+const ROOT_DIR = __dirname ? path.resolve(__dirname, '..') : process.cwd();
 
 // Standard-Konfiguration (über Environment-Variablen oder Schul-Defaults anpassbar)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://mock-school-supabase.internal';
@@ -20,7 +32,7 @@ let supabaseInstance = null;
 let isOfflineFallbackActive = false;
 
 // Lokaler Dateipfad für Offline-Fallback in Node.js
-const LOCAL_STORAGE_DIR = path.resolve(process.cwd(), '00_Checkpoints_und_Status');
+const LOCAL_STORAGE_DIR = path.join(ROOT_DIR, '00_Checkpoints_und_Status');
 const LOCAL_DB_FILE = path.join(LOCAL_STORAGE_DIR, 'local_db_fallback.json');
 
 // In-Memory & File-Backed Mock Database
@@ -156,6 +168,18 @@ export const dbBridge = {
       }
     }
     return localDbState.tasks.find(t => t.id === taskId) || null;
+  },
+
+  async listTasks(limit = 20) {
+    if (!isOfflineFallbackActive && supabaseInstance) {
+      try {
+        const { data, error } = await supabaseInstance.from('tasks').select('*').order('created_at', { ascending: false }).limit(limit);
+        if (!error && data) return data;
+      } catch (e) {
+        console.warn('[Trevor DB] Supabase listTasks fehlgeschlagen, nutze lokal:', e.message);
+      }
+    }
+    return [...localDbState.tasks].reverse().slice(0, limit);
   },
 
   async updateTask(taskId, updates) {
