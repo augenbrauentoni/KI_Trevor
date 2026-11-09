@@ -2,14 +2,15 @@
  * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
  * File: 02_Frontend_UI_und_3D_Studio/app.js
  * 
- * Haupt-Controller V2.0:
- * - 10 deutsche Abteilungen & 43 Spezialisten
- * - Klick-Inspektor ("Wofür bin ich zuständig?", "Was mache ich in dieser Sekunde?", "📚 Gelerntes Wissen")
- * - Autonomer Leerlauf-Trainings-Modus (Idle Training) an bestehenden Projekten
- * - Three.js 3D-Campus mit Trevor im Iron-Man Look
- * - Cloud-Queue & Remote-Sync-Unterstützung für Freigaben von unterwegs
+ * Haupt-Controller V2.1 (Hotfix & Synchrones Rendering):
+ * - 10 deutsche Abteilungs-Pills & 2D-Grid rendern 100% synchron bei Seitenaufruf
+ * - 3D Campus bindet Trevor (Iron-Man) & 10 Glas-Büros ohne Netzwerk-Lag ein
+ * - Klick-Inspektor mit "Wofür bin ich zuständig?" & "Was mache ich in dieser Sekunde?"
+ * - Autonomes Idle-Training an vorhandenen Projekten
+ * - Cloud-Queue für Freigaben von unterwegs
  */
 
+import { STUDIO_HIERARCHY } from './hierarchyData.js';
 import { init3DStudio, updateAgentStatusIn3D, setStageIn3D } from './studio3D.js';
 import {
   startIdleTraining,
@@ -19,13 +20,10 @@ import {
   getAllLearnedKnowledgeSummary
 } from '../04_KI_Engine_und_Bridges/idleTrainer.js';
 
-// Fallback Hierarchy
-let hierarchyState = null;
-
-// Globaler Anwendungs-Status
+// Globaler Anwendungs-Status mit synchronem Daten-Fundament
 const state = {
-  hierarchy: null,
-  activeView: '3d', // '3d' | 'grid'
+  hierarchy: STUDIO_HIERARCHY, // Sofort verfügbar, kein 404-Crash!
+  activeView: '3d',
   selectedDeptFilter: 'all',
   searchQuery: '',
   activeTask: null,
@@ -42,63 +40,42 @@ const state = {
 };
 
 // =============================================================================
-// INITIALISIERUNG
+// INITIALISIERUNG: SOFORTIGES SYNCHRONES RENDERN
 // =============================================================================
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('[Trevor App] Initialisiere Studio-Shell...');
+
   loadLocalSettings();
-  await loadStudioHierarchy();
+
+  // 1. Sofortiges Rendern der 10 Pills & des 2D-Grids
   renderDepartmentPills();
   renderWorkstationsGrid();
   setupEventListeners();
   checkExistingCheckpoint();
   updateUIThemeSettings();
 
-  // 3D Campus initialisieren
+  // 2. Sofortiges Rendern der Three.js 3D-Bühne
   try {
     init3DStudio(state.hierarchy, handleAgentClickFrom3D, openTrevorModal);
   } catch (err) {
-    console.warn('[Trevor UI] 3D Studio Initialisierung verzögert:', err);
+    console.error('[Trevor App] Fehler beim Starten des 3D-Campus:', err);
   }
 
-  // Starte autonomes Leerlauf-Training an vorhandenen Projekten
-  startIdleTraining(state.hierarchy.departments, 5000);
+  // 3. Autonomes Leerlauf-Training starten
+  try {
+    startIdleTraining(state.hierarchy.departments, 5000);
+  } catch (err) {
+    console.warn('[Trevor App] Idle-Training Warnung:', err);
+  }
 });
 
 function loadLocalSettings() {
-  const saved = localStorage.getItem('trevor_user_settings');
-  if (saved) {
-    try {
-      state.settings = { ...state.settings, ...JSON.parse(saved) };
-    } catch { /* ignore */ }
-  }
-}
-
-async function loadStudioHierarchy() {
   try {
-    const res = await fetch('../03_Agenten_System_und_Prompts/studio_hierarchy.json');
-    if (res.ok) {
-      state.hierarchy = await res.json();
-      return;
+    const saved = localStorage.getItem('trevor_user_settings');
+    if (saved) {
+      state.settings = { ...state.settings, ...JSON.parse(saved) };
     }
-  } catch {
-    console.log('[Trevor UI] Nutze Fallback-Hierarchie.');
-  }
-
-  // Fallback falls fetch fehlschlägt
-  state.hierarchy = {
-    departments: [
-      { id: 1, name: "1. Ideen & Planung", easy_explanation: "Prüft deine Idee und plant alle Funktionen", color: "#3b82f6", chef_agent: { id: "chef_plan", name: "Planungs-Chef", easy_explanation: "Prüft alle Ideen auf Machbarkeit" }, specialist_pcs: [{ id: "pc_plan_1", name: "Ideen-Prüfer", easy_explanation: "Testet deine Idee auf Logik" }, { id: "pc_plan_2", name: "Funktions-Planer", easy_explanation: "Erstellt die Feature-Liste" }, { id: "pc_plan_3", name: "Machbarkeits-Checker", easy_explanation: "Prüft Technik und Zeit" }] },
-      { id: 2, name: "2. Bauplan & Technik", easy_explanation: "Legt Ordnerstruktur und Sprachen fest", color: "#6366f1", chef_agent: { id: "chef_arch", name: "Chef-Architekt", easy_explanation: "Überwacht das Fundament" }, specialist_pcs: [{ id: "pc_arch_1", name: "Technik-Wähler", easy_explanation: "Wählt Programmiersprachen" }, { id: "pc_arch_2", name: "Ordner-Planer", easy_explanation: "Plant Ordnerstruktur" }, { id: "pc_arch_3", name: "Schnittstellen-Planer", easy_explanation: "Definiert APIs" }] },
-      { id: 3, name: "3. Optik & Bedienung", easy_explanation: "Entwirft Farben und einfache Bedienbarkeit", color: "#f59e0b", chef_agent: { id: "chef_design", name: "Design-Chef", easy_explanation: "Sorgt für modernsten Look" }, specialist_pcs: [{ id: "pc_design_1", name: "Layout-Zeichner", easy_explanation: "Zeichnet Bildschirme" }, { id: "pc_design_2", name: "Farben-Profi", easy_explanation: "Gestaltet Dark-Slate & Red" }, { id: "pc_design_3", name: "Handy-Prüfer", easy_explanation: "Prüft Smartphone-Ansicht" }] },
-      { id: 4, name: "4. Sichtbare Webseite (Frontend)", easy_explanation: "Programmiert alles, was man im Browser sieht", color: "#10b981", chef_agent: { id: "chef_frontend", name: "Frontend-Chef", easy_explanation: "Leitet den Bau der UI" }, specialist_pcs: [{ id: "pc_front_1", name: "Seiten-Bauer", easy_explanation: "Baut Buttons und Texte" }, { id: "pc_front_2", name: "Klick-Programmierer", easy_explanation: "Programmiert Interaktionen" }, { id: "pc_front_3", name: "3D-Bauer", easy_explanation: "Baut 3D-Campus" }, { id: "pc_front_4", name: "Ladezeiten-Beschleuniger", easy_explanation: "Optimiert Performance" }] },
-      { id: 5, name: "5. Server & Hintergrund-Logik (Backend)", easy_explanation: "Programmiert Berechnungen im Hintergrund", color: "#06b6d4", chef_agent: { id: "chef_backend", name: "Backend-Chef", easy_explanation: "Überwacht Server und APIs" }, specialist_pcs: [{ id: "pc_back_1", name: "Datenwege-Bauer", easy_explanation: "Erstellt API-Routen" }, { id: "pc_back_2", name: "Rechenlogik-Programmierer", easy_explanation: "Programmiert Logik" }, { id: "pc_back_3", name: "Echtzeit-Sync-Profi", easy_explanation: "Realtime-Sync" }, { id: "pc_back_4", name: "Login-Wächter", easy_explanation: "Session & Auth" }] },
-      { id: 6, name: "6. Datenbank & Speicher", easy_explanation: "Baut sichere Datenbank-Tabellen", color: "#8b5cf6", chef_agent: { id: "chef_data", name: "Datenbank-Chef", easy_explanation: "Garantiert Datenintegrität" }, specialist_pcs: [{ id: "pc_data_1", name: "Tabellen-Architekt", easy_explanation: "Entwirft Tabellen" }, { id: "pc_data_2", name: "Such-Beschleuniger", easy_explanation: "Setzt Indizes" }, { id: "pc_data_3", name: "Backup-Planer", easy_explanation: "Sichert vor Datenverlust" }] },
-      { id: 7, name: "7. KI & Antigravity-Übersetzer", easy_explanation: "Übersetzt Pläne in perfekte Antigravity-Befehle", color: "#ec4899", chef_agent: { id: "chef_ai", name: "KI-Chef", easy_explanation: "Steuert LLMs & Prompts" }, specialist_pcs: [{ id: "pc_ai_1", name: "Antigravity-Prompt-Bauer", easy_explanation: "Formuliert Master-Prompt" }, { id: "pc_ai_2", name: "KI-Regel-Optimierer", easy_explanation: "Verankert Anti-Limit-Regeln" }, { id: "pc_ai_3", name: "Modell-Verknüpfer", easy_explanation: "Gemini & Ollama Bridge" }] },
-      { id: 8, name: "8. Sicherheit & Datenschutz", easy_explanation: "Schützt vor Hackern und Datenlecks", color: "#ef4444", chef_agent: { id: "chef_security", name: "Sicherheits-Chef", easy_explanation: "Sichert das Gesamtsystem" }, specialist_pcs: [{ id: "pc_sec_1", name: "Schutzschild-Prüfer", easy_explanation: "Sucht Sicherheitslücken" }, { id: "pc_sec_2", name: "Datenschutz-Wächter", easy_explanation: "DSGVO & RLS" }, { id: "pc_sec_3", name: "Schlüssel-Wächter", easy_explanation: "Schützt Passwörter" }] },
-      { id: 9, name: "9. Fehlersuche & Qualitäts-Check", easy_explanation: "Testet Code auf Herz und Nieren", color: "#14b8a6", chef_agent: { id: "chef_qa", name: "Test-Chef", easy_explanation: "Gibt Code nach Tests frei" }, specialist_pcs: [{ id: "pc_qa_1", name: "Funktions-Tester", easy_explanation: "Schreibt Unit-Tests" }, { id: "pc_qa_2", name: "Fehler-Jäger", easy_explanation: "Findet Bugs und Crashes" }, { id: "pc_qa_3", name: "Härtetest-Simulator", easy_explanation: "Simuliert Ausfälle" }, { id: "pc_qa_4", name: "Code-Prüfer", easy_explanation: "Prüft Lesbarkeit" }] },
-      { id: 10, name: "10. Veröffentlichung & Online-Stellung", easy_explanation: "Macht die App startklar für Internet & Render", color: "#e11d48", chef_agent: { id: "chef_release", name: "Release-Chef", easy_explanation: "Veröffentlicht das Projekt" }, specialist_pcs: [{ id: "pc_rel_1", name: "Online-Profi", easy_explanation: "Render & GitHub Setup" }, { id: "pc_rel_2", name: "Paket-Verwalter", easy_explanation: "npm & Versionen" }, { id: "pc_rel_3", name: "Anleitungs-Schreiber", easy_explanation: "Schreibt README.md" }] }
-    ]
-  };
+  } catch { /* ignore */ }
 }
 
 // =============================================================================
@@ -150,7 +127,7 @@ function renderWorkstationsGrid() {
     card.dataset.deptId = dept.id;
 
     let pcListHtml = '';
-    dept.specialist_pcs.forEach((pc, idx) => {
+    dept.specialist_pcs.forEach((pc) => {
       pcListHtml += `
         <div class="pc-item" data-pc-id="${pc.id}" data-dept-id="${dept.id}">
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -207,7 +184,6 @@ function renderWorkstationsGrid() {
     container.appendChild(card);
   });
 
-  // Klick-Events auf Karten öffnen den Inspektor
   container.querySelectorAll('.pc-item').forEach(el => {
     el.addEventListener('click', () => {
       openAgentInspector(el.dataset.pcId, 'pc', parseInt(el.dataset.deptId));
@@ -242,7 +218,7 @@ function filterWorkstations() {
 }
 
 // =============================================================================
-// KLICK-INSPEKTOR ("WAS MACHT DIESER RAUM / PC GERADE?")
+// KLICK-INSPEKTOR
 // =============================================================================
 function handleAgentClickFrom3D(id, type, deptId) {
   openAgentInspector(id, type, deptId);
@@ -288,7 +264,6 @@ function openAgentInspector(agentId, type, deptId) {
   title.innerText = `${agentObj.name} (${deptObj.name})`;
   easyExp.innerText = agentObj.easy_explanation || 'Konzentriert sich auf seine Kernaufgabe im Studio.';
 
-  // Prüfe, ob aktuell ein Nutzer-Auftrag läuft
   if (state.activeTask && state.activeTask.status === 'running') {
     const isWorking = state.activeTask.checkpoint_data?.pc_outputs?.[agentId] || state.activeTask.checkpoint_data?.chef_outputs?.[agentId];
     if (isWorking) {
@@ -299,13 +274,11 @@ function openAgentInspector(agentId, type, deptId) {
       liveDetail.innerText = `Verarbeitet Prompt: "${state.activeTask.user_prompt.slice(0, 60)}..."`;
     }
   } else {
-    // Autonomer Idle-Trainings-Modus
     const training = getAgentCurrentActivity(agentId);
     liveAct.innerHTML = `<span>🧠 Trainiert autonom an: <strong>${training.projectName}</strong></span>`;
     liveDetail.innerText = `${training.currentAction} -> ${training.insight}`;
   }
 
-  // Protokoll-Anzeige
   const savedLog = state.agentLogs[agentId] ||
     (state.activeTask?.checkpoint_data?.pc_outputs?.[agentId]?.output_text) ||
     (state.activeTask?.checkpoint_data?.chef_outputs?.[agentId]?.output_text) ||
@@ -320,7 +293,6 @@ function openAgentInspector(agentId, type, deptId) {
 
   content.innerText = savedLog;
 
-  // Gelerntes Wissen (Tab 2 befüllen)
   const insights = getAgentLearnedInsights(agentId);
   if (insights.length === 0) {
     learnedList.innerHTML = `
@@ -338,7 +310,6 @@ function openAgentInspector(agentId, type, deptId) {
     `).join('');
   }
 
-  // Standardmäßig Tab 1 aktiv
   switchInspectorTab('live-work');
   modal.classList.add('open');
 }
@@ -374,10 +345,8 @@ async function dispatchNewTask() {
     return;
   }
 
-  // Stoppe Idle-Training während des aktiven Kunden-Auftrags
   stopIdleTraining();
 
-  // UI Umschaltung auf Progress
   document.getElementById('section-task-input').style.display = 'none';
   document.getElementById('section-task-progress').style.display = 'flex';
   document.getElementById('section-decision').style.display = 'none';
@@ -390,7 +359,7 @@ async function dispatchNewTask() {
   state.activeTask = {
     id: taskId,
     user_prompt: userPrompt,
-    selected_departments: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // Alle relevanten Räume
+    selected_departments: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     current_stage: '1_fachteam',
     status: 'running',
     checkpoint_data: { pc_outputs: {}, chef_outputs: {} },
@@ -441,7 +410,6 @@ async function runLiveWorkflowSimulation(task) {
         `  department: "${dept.name}",\n` +
         `  verified: true,\n` +
         `  code: () => {\n` +
-        `    // Saubere Implementierung für: ${task.user_prompt.slice(0, 45)}...\n` +
         `    return { status: "ready", anti_limit_checked: true };\n` +
         `  }\n` +
         `};\n`;
@@ -482,7 +450,7 @@ async function runLiveWorkflowSimulation(task) {
     await sleep(400);
 
     const chefOutput = `### 1. QUALITÄTS-AUDIT & WIDERSPRUCHS-BEREINIGUNG (${dept.name.toUpperCase()})\n` +
-      `- Untersuchte Spezialisten: ${dept.specialist_pcs.map(p => p.name).join(', ')}\n` +
+      `- Geprüft durch: ${chef.name}\n` +
       `- Konflikte: Alle Schnittstellen harmonisiert. Keine Widersprüche.\n` +
       `- Freigabe: Vollständig konform mit Antigravity Clean Code.\n\n` +
       `### 2. KONSOLIDIERTER ABTEILUNGS-BLUEPRINT\n` +
@@ -508,7 +476,7 @@ async function runLiveWorkflowSimulation(task) {
     saveLocalCheckpoint();
   }
 
-  // --- STUFE 03: TREVOR MASTER-SYNTHESE (MIT GELERNTEM WISSEN) ---
+  // --- STUFE 03: TREVOR MASTER-SYNTHESE ---
   task.current_stage = '3_trevor';
   updateTrackerStage(3);
   setStageIn3D(3);
@@ -562,32 +530,27 @@ async function runLiveWorkflowSimulation(task) {
 }
 
 // =============================================================================
-// STUFE 04: JA / NEIN ENTSCHEIDUNGS-HANDLER (MIT REMOTE-CLOUD-QUEUE)
+// STUFE 04: JA / NEIN ENTSCHEIDUNGS-HANDLER
 // =============================================================================
 async function handleUserDecisionClick(decision) {
   if (decision === 'JA') {
     const promptText = state.activeTask?.antigravity_prompt || '';
     
-    // 1. In lokale Zwischenablage kopieren
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(promptText);
       }
     } catch { /* ignore */ }
 
-    // 2. Cloud-Queue für Unterwegs-Modus aktivieren
     state.activeTask.status = 'approved_ready_for_execution';
     saveLocalCheckpoint();
 
-    // 3. UI-Erfolgsbanner
     document.getElementById('decision-success-banner').style.display = 'flex';
     document.getElementById('decision-export-tools').style.display = 'flex';
     document.getElementById('decision-actions-row').style.display = 'none';
     document.getElementById('decision-feedback-box').style.display = 'none';
 
     updateCheckpointBadge('Freigegeben ("JA") – An Heim-Station & Antigravity übergeben', false);
-
-    // Starte Idle-Training wieder
     startIdleTraining(state.hierarchy.departments, 6000);
 
   } else if (decision === 'NEIN') {
@@ -655,9 +618,9 @@ function saveLocalCheckpoint() {
 }
 
 function checkExistingCheckpoint() {
-  const saved = localStorage.getItem('trevor_active_checkpoint');
-  if (saved) {
-    try {
+  try {
+    const saved = localStorage.getItem('trevor_active_checkpoint');
+    if (saved) {
       const task = JSON.parse(saved);
       state.activeTask = task;
       if (task.status === 'paused_limit') {
@@ -667,8 +630,8 @@ function checkExistingCheckpoint() {
       } else if (task.status === 'pending_approval') {
         updateCheckpointBadge('Wartet auf Entscheidung (JA/NEIN)', false);
       }
-    } catch { /* ignore */ }
-  }
+    }
+  } catch { /* ignore */ }
 }
 
 function resumePausedTask() {
@@ -756,7 +719,6 @@ function openChefReportsModal() {
 }
 
 function setupEventListeners() {
-  // Suche
   const searchInput = document.getElementById('global-search-input');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -765,7 +727,6 @@ function setupEventListeners() {
     });
   }
 
-  // View Switcher (3D vs Arbeitsplätze)
   const btn3D = document.getElementById('btn-view-3d');
   const btnGrid = document.getElementById('btn-view-grid');
   const canvas3D = document.getElementById('threejs-canvas-container');
@@ -787,18 +748,12 @@ function setupEventListeners() {
     grid2D.style.display = 'grid';
   });
 
-  // Trevor öffnen
   document.getElementById('btn-sidebar-open-trevor').addEventListener('click', openTrevorModal);
   document.getElementById('btn-sidebar-trevor-terminal').addEventListener('click', openTrevorModal);
   document.getElementById('btn-sidebar-chef-reports').addEventListener('click', openChefReportsModal);
-
-  // Resume Button bei Limit
   document.getElementById('btn-resume-limit').addEventListener('click', resumePausedTask);
-
-  // Task Submission
   document.getElementById('btn-dispatch-task').addEventListener('click', dispatchNewTask);
 
-  // Code-Preview Toggle
   document.getElementById('btn-toggle-prompt-preview').addEventListener('click', () => {
     const content = document.getElementById('code-preview-content');
     const indicator = document.getElementById('code-preview-indicator');
@@ -811,20 +766,16 @@ function setupEventListeners() {
     }
   });
 
-  // JA / NEIN Entscheidungen
   document.getElementById('btn-decision-yes').addEventListener('click', () => handleUserDecisionClick('JA'));
   document.getElementById('btn-decision-no').addEventListener('click', () => handleUserDecisionClick('NEIN'));
   document.getElementById('btn-submit-feedback').addEventListener('click', submitRejectionFeedback);
 
-  // Export Tools
   document.getElementById('btn-download-task').addEventListener('click', downloadTaskFile);
   document.getElementById('btn-export-direct').addEventListener('click', writeDirectToFileSystem);
 
-  // Inspector Tabs
   document.getElementById('tab-btn-live-work').addEventListener('click', () => switchInspectorTab('live-work'));
   document.getElementById('tab-btn-learned').addEventListener('click', () => switchInspectorTab('learned'));
 
-  // Mobile Sidebar Toggle
   const mobileToggle = document.getElementById('btn-mobile-sidebar-toggle');
   const sidebar = document.getElementById('sidebar-command-center');
   if (mobileToggle && sidebar) {
@@ -833,7 +784,6 @@ function setupEventListeners() {
     });
   }
 
-  // Modal Close Buttons
   document.querySelectorAll('.modal-close-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const modalId = btn.dataset.modal;
@@ -842,7 +792,6 @@ function setupEventListeners() {
     });
   });
 
-  // Settings Modal & Engine Umschalter
   const engineBtn = document.getElementById('engine-mode-btn');
   const settingsModal = document.getElementById('modal-settings');
   const openSettingsBtn = document.getElementById('btn-open-settings');

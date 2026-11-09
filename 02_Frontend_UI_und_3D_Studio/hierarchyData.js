@@ -1,0 +1,535 @@
+/**
+ * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
+ * File: 02_Frontend_UI_und_3D_Studio/hierarchyData.js
+ * 
+ * Feste, netzwerkunabhängige Hierarchie-Definition (100% Offline- & Zero-Network-Garantie):
+ * - 10 deutsche Abteilungen mit verständlichen Namen & easy_explanation
+ * - 10 Chef-Agenten
+ * - 33 Spezial-PCs mit Fachprofilen
+ * - Trevor Core (Iron-Man MK-VII Edition)
+ */
+
+export const STUDIO_HIERARCHY = {
+  studio_meta: {
+    name: "Trevor – AI Software Studio & Multi-Agent Command Center",
+    version: "2.0.0",
+    theme: {
+      background: "#06080e",
+      surface: "#0f1420",
+      accent: "#ef4444",
+      accent_gold: "#fbbf24",
+      arc_reactor: "#38bdf8",
+      border: "#1f2937"
+    }
+  },
+  trevor: {
+    id: "trevor_core",
+    name: "Trevor",
+    title: "Studio Director (Iron-Man Armor)",
+    color: "#dc2626",
+    accent_color: "#fbbf24",
+    reactor_color: "#38bdf8",
+    role: "Studio-Leiter, Aufgaben-Router, Zusammenfasser & Entscheidungs-Vorbereiter",
+    easy_explanation: "Trevor leitet das 43-Agenten-Studio im Iron-Man-Look. Er analysiert deine Aufträge, verteilt Aufgaben an die richtigen Räume, bündelt Ergebnisse und legt dir am Ende die fertige Freigabe (JA/NEIN) vor.",
+    position_3d: { x: 0, y: 1.2, z: 0 }
+  },
+  departments: [
+    {
+      id: 1,
+      code: "dept_plan",
+      name: "1. Ideen & Planung",
+      description: "Prüft deine Idee und plant alle Funktionen",
+      easy_explanation: "Hier wird deine Projektidee auf Herz und Nieren geprüft, in logische Funktionen zerlegt und ein klarer Ablaufplan erstellt.",
+      color: "#3b82f6",
+      floor_type: "wood",
+      chef_agent: {
+        id: "chef_plan",
+        name: "Planungs-Chef",
+        title: "Leiter Ideen & Konzeption",
+        role: "chef_agent",
+        department_id: 1,
+        focus: "Prüft Ideen auf Machbarkeit und leitet das Planungsteam",
+        easy_explanation: "Prüft alle Ideen auf Machbarkeit, löst Widersprüche und leitet das Planungsteam."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_plan_1",
+          name: "Ideen-Prüfer",
+          title: "Ideen- & Nutzen-Analyst",
+          role: "pc_agent",
+          department_id: 1,
+          focus: "Prüft Idee auf Logik, Zielgruppe und Nutzen",
+          easy_explanation: "Testet deine Idee auf Logik, echten Nutzen und beste Erfolgsaussichten."
+        },
+        {
+          id: "pc_plan_2",
+          name: "Funktions-Planer",
+          title: "Feature- & Roadmap-Architekt",
+          role: "pc_agent",
+          department_id: 1,
+          focus: "Erstellt vollständigen Feature-Katalog",
+          easy_explanation: "Erstellt die Liste aller Funktionen und Knöpfe, die für dein Projekt gebraucht werden."
+        },
+        {
+          id: "pc_plan_3",
+          name: "Machbarkeits-Checker",
+          title: "Scope- & Ressourcen-Prüfer",
+          role: "pc_agent",
+          department_id: 1,
+          focus: "Validiert Umsetzbarkeit und Zeitaufwand",
+          easy_explanation: "Prüft, ob die Technik, Schnittstellen und Zeit für diese Idee realistisch ausreichen."
+        }
+      ]
+    },
+    {
+      id: 2,
+      code: "dept_arch",
+      name: "2. Bauplan & Technik",
+      description: "Legt Ordnerstruktur, Sprachen und Systemaufbau fest",
+      easy_explanation: "Entwirft das technische Fundament: Welche Frameworks werden genutzt, wie sieht der Verzeichnisbaum aus und wie kommunizieren Systeme?",
+      color: "#6366f1",
+      floor_type: "stone",
+      chef_agent: {
+        id: "chef_arch",
+        name: "Chef-Architekt",
+        title: "Leitender Systemarchitekt",
+        role: "chef_agent",
+        department_id: 2,
+        focus: "Überwacht das technische Fundament und den Gesamtbauplan",
+        easy_explanation: "Überwacht das gesamte technische Fundament, harmonisiert Schnittstellen und gibt den Bauplan frei."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_arch_1",
+          name: "Technik-Wähler",
+          title: "Tech-Stack & Library Auditor",
+          role: "pc_agent",
+          department_id: 2,
+          focus: "Wählt Runtimes, Frameworks und minimale Dependencies",
+          easy_explanation: "Wählt die besten Programmiersprachen und schlankesten Bibliotheken ohne unnötigen Ballast."
+        },
+        {
+          id: "pc_arch_2",
+          name: "Ordner- & Struktur-Planer",
+          "title": "Directory & Modular Layout Engineer",
+          role: "pc_agent",
+          department_id: 2,
+          focus: "Strukturiert Projekt-Ordner und Namenskonventionen",
+          easy_explanation: "Plant eine saubere, übersichtliche Datei- und Ordnerstruktur für das gesamte Projekt."
+        },
+        {
+          id: "pc_arch_3",
+          name: "Schnittstellen-Planer",
+          title: "API-Topology & Protocol Specialist",
+          role: "pc_agent",
+          department_id: 2,
+          focus: "Definiert Datenverträge zwischen Frontend und Backend",
+          easy_explanation: "Definiert, wie Frontend, Backend und externe APIs exakt miteinander Daten austauschen."
+        }
+      ]
+    },
+    {
+      id: 3,
+      code: "dept_design",
+      name: "3. Optik & Bedienung",
+      description: "Entwirft Farben, Buttons und einfache Bedienbarkeit",
+      easy_explanation: "Hier entsteht das Erscheinungsbild der App: intuitive Navigation, ergonomische Bedienelemente und edler Dark-Mode mit Karmesinrot-Glows.",
+      color: "#f59e0b",
+      floor_type: "wood",
+      chef_agent: {
+        id: "chef_design",
+        name: "Design-Chef",
+        title: "Head of Visual Design & UX",
+        role: "chef_agent",
+        department_id: 3,
+        focus: "Sorgt für modernsten Look, klare Farbwelten und erstklassige Usability",
+        easy_explanation: "Sorgt für eine moderne Farbästhetik, verständliche Nutzerführung und einheitliche Design-Tokens."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_design_1",
+          name: "Layout-Zeichner",
+          title: "Wireframe & Component Layout Artist",
+          role: "pc_agent",
+          department_id: 3,
+          focus: "Zeichnet Bildschirme, Abstände und Hierarchien",
+          easy_explanation: "Zeichnet den perfekten Aufbau aller Seiten, Menüs und Eingabefelder."
+        },
+        {
+          id: "pc_design_2",
+          name: "Farben- & Dark-Mode-Profi",
+          title: "Dark-Slate & Contrast Styler",
+          role: "pc_agent",
+          department_id: 3,
+          focus: "Definiert Dark-Slate, Glassmorphismus und Red Glow",
+          easy_explanation: "Gestaltet die Dark-Slate & Neon-Akzente sowie perfekte Kontraste für augenschonendes Arbeiten."
+        },
+        {
+          id: "pc_design_3",
+          name: "Handy- & PC-Ansicht-Prüfer",
+          title: "Responsive & Mobile Usability Tester",
+          role: "pc_agent",
+          department_id: 3,
+          focus: "Optimiert Breakpoints und Touch-Ziele",
+          easy_explanation: "Garantiert, dass die Bedienung auf Smartphones, Tablets und großen Monitoren gleichermaßen genial ist."
+        }
+      ]
+    },
+    {
+      id: 4,
+      code: "dept_frontend",
+      name: "4. Sichtbare Webseite (Frontend)",
+      description: "Programmiert alles, was man im Browser sieht und anklickt",
+      easy_explanation: "Baut die interaktiven Benutzeroberflächen mit modernstem HTML, Tailwind CSS, React und Three.js 3D-Grafiken.",
+      color: "#10b981",
+      floor_type: "stone",
+      chef_agent: {
+        id: "chef_frontend",
+        name: "Frontend-Chef",
+        title: "Lead Frontend Engineer",
+        role: "chef_agent",
+        department_id: 4,
+        focus: "Leitet den Bau der Benutzeroberfläche und der Klick-Erlebnisse",
+        easy_explanation: "Führt das Frontend-Team, optimiert State-Management und stellt flüssige Interaktionen sicher."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_front_1",
+          name: "Seiten- & Button-Bauer",
+          title: "UI Component Builder",
+          role: "pc_agent",
+          department_id: 4,
+          focus: "Schreibt saubere UI-Komponenten und Layout-Container",
+          easy_explanation: "Programmiert React-Komponenten, Schaltflächen, Tabellen und Texte."
+        },
+        {
+          id: "pc_front_2",
+          name: "Klick-Logik-Programmierer",
+          title: "State & Event Flow Specialist",
+          role: "pc_agent",
+          department_id: 4,
+          focus: "Programmiert Hooks, Formulare und Klick-Reaktionen",
+          easy_explanation: "Programmiert Formular-Aktionen, Dialoge, Modals und sofortige Nutzerreaktionen."
+        },
+        {
+          id: "pc_front_3",
+          name: "3D- & Animations-Bauer",
+          title: "Three.js & Canvas Animator",
+          role: "pc_agent",
+          department_id: 4,
+          focus: "Baut 3D-Campus, Partikel und flüssige Übergänge",
+          easy_explanation: "Erschafft dynamische 3D-Szenen mit Three.js, Beleuchtung und flüssige Übergänge."
+        },
+        {
+          id: "pc_front_4",
+          name: "Ladezeiten-Beschleuniger",
+          title: "Frontend Bundle & Asset Optimizer",
+          role: "pc_agent",
+          department_id: 4,
+          focus: "Minimiert Skripte, cacht Assets und verhindert Rerender-Lag",
+          easy_explanation: "Optimiert Code und Grafiken für blitzschnelle Ladezeiten unter einer Sekunde."
+        }
+      ]
+    },
+    {
+      id: 5,
+      code: "dept_backend",
+      name: "5. Server & Hintergrund-Logik (Backend)",
+      description: "Programmiert die Berechnungen und Datenverarbeitung im Hintergrund",
+      easy_explanation: "Schreibt die sicheren Server-Routen, APIs, Geschäftslogiken und synchronisiert Datenströme in Echtzeit.",
+      color: "#06b6d4",
+      floor_type: "tech_servers",
+      chef_agent: {
+        id: "chef_backend",
+        name: "Backend-Chef",
+        title: "Chief Backend Architect",
+        role: "chef_agent",
+        department_id: 5,
+        focus: "Überwacht Server-Routen, Berechnungen und Datenschnittstellen",
+        easy_explanation: "Sichert robuste Serverarchitekturen, Antwortzeiten im Millisekundenbereich und fehlerfreie APIs."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_back_1",
+          name: "Datenwege-Bauer (API)",
+          title: "REST & Endpoint Architect",
+          role: "pc_agent",
+          department_id: 5,
+          focus: "Schreibt REST/JSON-Routen und Fehler-Codes",
+          easy_explanation: "Erstellt die stabilen Datenautobahnen zwischen Frontend und Datenbank."
+        },
+        {
+          id: "pc_back_2",
+          name: "Rechenlogik-Programmierer",
+          title: "Core Business Logic Developer",
+          role: "pc_agent",
+          department_id: 5,
+          focus: "Programmiert algorithmische Workflows und Filter",
+          easy_explanation: "Programmiert die geschäftliche Logik und komplexe Berechnungen im Hintergrund."
+        },
+        {
+          id: "pc_back_3",
+          name: "Echtzeit-Sync-Profi",
+          title: "WebSocket & Realtime Specialist",
+          role: "pc_agent",
+          department_id: 5,
+          focus: "Verwaltet Realtime-Subscriptions und Push-Events",
+          easy_explanation: "Sorgt dafür, dass Änderungen ohne Neuladen der Seite sofort auf allen Geräten sichtbar sind."
+        },
+        {
+          id: "pc_back_4",
+          name: "Login- & Rechte-Wächter",
+          title: "Auth & RBAC Middleware Specialist",
+          role: "pc_agent",
+          department_id: 5,
+          focus: "Sichert Session-Token, JWTs und Zugriffsrechte",
+          easy_explanation: "Verwaltet Benutzer-Logins, Rollen und wer welche Daten einsehen oder ändern darf."
+        }
+      ]
+    },
+    {
+      id: 6,
+      code: "dept_data",
+      name: "6. Datenbank & Speicher",
+      description: "Baut die Tabellen, in denen alle Daten sicher gespeichert werden",
+      easy_explanation: "Konzipiert relationale PostgreSQL-Tabellen in Supabase, legt Indizes an und sichert Daten durch Row Level Security ab.",
+      color: "#8b5cf6",
+      floor_type: "tech_servers",
+      chef_agent: {
+        id: "chef_data",
+        name: "Datenbank-Chef",
+        title: "Lead Database Architect",
+        role: "chef_agent",
+        department_id: 6,
+        focus: "Garantiert blitzschnelle und unzerstörbare Datenbankstrukturen",
+        easy_explanation: "Prüft Datenintegrität, Normalisierung und verhindert Dateninkonsistenzen."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_data_1",
+          name: "Tabellen-Architekt",
+          title: "PostgreSQL Schema Modeler",
+          role: "pc_agent",
+          department_id: 6,
+          focus: "Schreibt DDL-Tabellen, Foreign Keys und Trigger",
+          easy_explanation: "Entwirft saubere Supabase- & PostgreSQL-Tabellen mit sicheren Verknüpfungen."
+        },
+        {
+          id: "pc_data_2",
+          name: "Such-Beschleuniger",
+          title: "Index & Query Tuning Specialist",
+          role: "pc_agent",
+          department_id: 6,
+          focus: "Setzt B-Tree/GIN Indizes und optimiert Abfragen",
+          easy_explanation: "Setzt smarte Indizes, damit Suchanfragen selbst bei tausenden Datensätzen in Millisekunden laden."
+        },
+        {
+          id: "pc_data_3",
+          name: "Backup- & Sicherungs-Planer",
+          title: "Disaster Recovery & Migration Guard",
+          role: "pc_agent",
+          department_id: 6,
+          focus: "Schreibt atomare Migrationen und Rollback-Skripte",
+          easy_explanation: "Sichert Datenstände gegen Abstürze ab und plant automatische Wiederherstellungsschritte."
+        }
+      ]
+    },
+    {
+      id: 7,
+      code: "dept_ai",
+      name: "7. KI & Antigravity-Übersetzer",
+      description: "Übersetzt alle Pläne in perfekte Befehle für Antigravity",
+      easy_explanation: "Verbindet Google Gemini Cloud und lokale Ollama-Modelle und formuliert den sofort ausführbaren Master-Prompt für Antigravity.",
+      color: "#ec4899",
+      floor_type: "stone",
+      chef_agent: {
+        id: "chef_ai",
+        name: "KI-Chef",
+        title: "Chief AI & Prompt Architect",
+        role: "chef_agent",
+        department_id: 7,
+        focus: "Koordiniert die Prompterstellung und steuert LLMs optimal",
+        easy_explanation: "Stellt sicher, dass Prompts messerscharf sind, keine Token verschwendet werden und Antigravity fehlerfrei baut."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_ai_1",
+          name: "Antigravity-Prompt-Bauer",
+          title: "Master Prompt Synthesizer",
+          role: "pc_agent",
+          department_id: 7,
+          focus: "Kompiliert fertige Architektur-Pläne in Antigravity-Code",
+          easy_explanation: "Formuliert den schlüsselfertigen, sofort ausführbaren Master-Prompt mit konkretem Code für Antigravity."
+        },
+        {
+          id: "pc_ai_2",
+          name: "KI-Regel-Optimierer",
+          title: "Anti-Limit & Clean-Code Guard",
+          role: "pc_agent",
+          department_id: 7,
+          focus: "Bettet Anti-Limit-Zwischenstände in jeden Schritt ein",
+          easy_explanation: "Verankert Clean-Code und die Pflicht zu Zwischenständen in CHECKPOINT_STATE.md in jedem Prompt."
+        },
+        {
+          id: "pc_ai_3",
+          name: "Sprachmodell-Verknüpfer",
+          title: "Dual-Engine Bridge Specialist",
+          role: "pc_agent",
+          department_id: 7,
+          focus: "Steuert Gemini 2.5 Flash und Ollama Llama 3 Inferenz",
+          easy_explanation: "Verbindet blitzschnelle Gemini-Cloud mit 100% privater Ollama-Lokal-Inferenz."
+        }
+      ]
+    },
+    {
+      id: 8,
+      code: "dept_security",
+      name: "8. Sicherheit & Datenschutz",
+      description: "Schützt das Projekt vor Hackern, Fehlern und Datenlecks",
+      easy_explanation: "Prüft Code auf Sicherheitslücken (OWASP Top 10), schützt API-Schlüssel und sichert Supabase mit strikten RLS-Policies.",
+      color: "#ef4444",
+      floor_type: "tech_servers",
+      chef_agent: {
+        id: "chef_security",
+        name: "Sicherheits-Chef",
+        title: "Chief Information Security Officer",
+        role: "chef_agent",
+        department_id: 8,
+        focus: "Sichert das Gesamtsystem gegen alle Cyber-Bedrohungen ab",
+        easy_explanation: "Gibt keinen Code frei, der Sicherheitslücken, ungeschützte Routen oder riskante Rechte aufweist."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_sec_1",
+          name: "Schutzschild-Prüfer",
+          title: "Vulnerability & Penetration Scanner",
+          role: "pc_agent",
+          department_id: 8,
+          focus: "Scannt auf SQL-Injection, XSS und CSRF Lücken",
+          easy_explanation: "Sucht Sicherheitslücken und verhindert, dass Angreifer fremde Daten abfangen können."
+        },
+        {
+          id: "pc_sec_2",
+          name: "Datenschutz-Wächter",
+          title: "RLS & Privacy Policy Engineer",
+          role: "pc_agent",
+          department_id: 8,
+          focus: "Formuliert Postgres Row-Level-Security Regeln",
+          easy_explanation: "Achtet auf DSGVO-Konformität und sorgt dafür, dass jeder Nutzer nur seine eigenen Daten sieht."
+        },
+        {
+          id: "pc_sec_3",
+          name: "Passwort- & Schlüssel-Wächter",
+          title: "Secrets & Environment Vault Keeper",
+          role: "pc_agent",
+          department_id: 8,
+          focus: "Verhindert Leaks in .env, Logs oder Git-Commits",
+          easy_explanation: "Verhindert, dass geheime API-Keys oder Passwörter im Quellcode oder im Internet landen."
+        }
+      ]
+    },
+    {
+      id: 9,
+      code: "dept_qa",
+      name: "9. Fehlersuche & Qualitäts-Check",
+      description: "Testet den Code auf Herz und Nieren und sucht Bugs",
+      easy_explanation: "Schreibt automatisierte Tests, simuliert Verbindungsabbrüche und stellt sicher, dass kein Programmierfehler unbemerkt bleibt.",
+      color: "#14b8a6",
+      floor_type: "wood",
+      chef_agent: {
+        id: "chef_qa",
+        name: "Test-Chef",
+        title: "Director of Quality Assurance",
+        role: "chef_agent",
+        department_id: 9,
+        focus: "Gibt Code erst frei, wenn alle Tests bestanden sind",
+        easy_explanation: "Überprüft alle Testergebnisse und gibt ein Feature erst frei, wenn es zu 100% stabil läuft."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_qa_1",
+          name: "Automatischer Funktions-Tester",
+          title: "Unit & Integration Test Specialist",
+          role: "pc_agent",
+          department_id: 9,
+          focus: "Schreibt isolierte Vitest- und Unit-Tests",
+          easy_explanation: "Schreibt automatisierte Tests, die jede einzelne Funktion und jeden Button isoliert prüfen."
+        },
+        {
+          id: "pc_qa_2",
+          name: "Fehler-Jäger (Bug-Hunter)",
+          title: "Edge Case & Regression Hunter",
+          role: "pc_agent",
+          department_id: 9,
+          focus: "Sucht Grenzwerte, falsche Eingaben und Crashes",
+          easy_explanation: "Findet versteckte Programmierfehler, falsche Formulareingaben und unvorhergesehene Abstürze."
+        },
+        {
+          id: "pc_qa_3",
+          name: "Härtetest-Simulator",
+          title: "Chaos & Network Dropout Simulator",
+          role: "pc_agent",
+          department_id: 9,
+          focus: "Simuliert Rate-Limits, Lag und Speicherüberlastung",
+          easy_explanation: "Simuliert schlechten Empfang, Schul-WLAN-Ausfälle und extreme Belastungen auf der Seite."
+        },
+        {
+          id: "pc_qa_4",
+          name: "Code-Qualitäts-Prüfer",
+          title: "Linter & Clean Code Auditor",
+          role: "pc_agent",
+          department_id: 9,
+          focus: "Prüft Typsicherheit, DRY und Lesbarkeit",
+          easy_explanation: "Prüft Lesbarkeit, Typsicherheit und stellt sicher, dass der Code sauber wie aus dem Lehrbuch ist."
+        }
+      ]
+    },
+    {
+      id: 10,
+      code: "dept_release",
+      name: "10. Veröffentlichung & Online-Stellung",
+      description: "Macht die App startklar für das Internet, GitHub und Render",
+      easy_explanation: "Erstellt Deployment-Konfigurationen, package.json-Skripte, GitHub Actions und Anleitungen für die sofortige Bereitstellung im Web.",
+      color: "#e11d48",
+      floor_type: "stone",
+      chef_agent: {
+        id: "chef_release",
+        name: "Release-Chef",
+        title: "Lead DevOps & Release Governor",
+        role: "chef_agent",
+        department_id: 10,
+        focus: "Veröffentlicht das fertige Projekt ins weltweite Web",
+        easy_explanation: "Sorgt dafür, dass das fertige Programm weltweit online erreichbar und fehlerfrei gestartet werden kann."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_rel_1",
+          name: "Online-Stellungs-Profi (Render/GitHub)",
+          title: "Cloud Deployment Engineer",
+          role: "pc_agent",
+          department_id: 10,
+          focus: "Schreibt render.yaml und CI/CD Automatisierungen",
+          easy_explanation: "Richtet das 1-Klick-Deployment auf Render und automatisierte GitHub-Pipelines ein."
+        },
+        {
+          id: "pc_rel_2",
+          name: "Paket- & Update-Verwalter",
+          title: "Dependency & Build Governor",
+          role: "pc_agent",
+          department_id: 10,
+          focus: "Verwaltet package.json und Build-Skripte",
+          easy_explanation: "Verwaltet npm-Pakete, Versionsstände und stellt reproduzierbare Builds sicher."
+        },
+        {
+          id: "pc_rel_3",
+          name: "Anleitungs-Schreiber",
+          title: "Technical Documentation Specialist",
+          role: "pc_agent",
+          department_id: 10,
+          focus: "Verfasst 1-Klick Start-Anleitungen und README.md",
+          easy_explanation: "Schreibt verständliche Schritt-für-Schritt-Anleitungen, damit jeder das Projekt sofort bedienen kann."
+        }
+      ]
+    }
+  ]
+};

@@ -324,10 +324,20 @@ body {
    VIEW 1: 3D STUDIO CANVAS CONTAINER
    ============================================================================= */
 #threejs-canvas-container {
+  position: relative;
   width: 100%;
   height: calc(100% - 48px);
-  position: relative;
-  background: radial-gradient(circle at center, #0f172a 0%, #06080e 80%);
+  min-height: 600px;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #0f172a 0%, #06080e 85%);
+}
+
+#threejs-canvas-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+  z-index: 10;
 }
 
 .canvas-controls-overlay {

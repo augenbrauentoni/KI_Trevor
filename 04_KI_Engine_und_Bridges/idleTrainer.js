@@ -14,9 +14,8 @@
  * im Live-Klick-Inspektor sowie für neue Antigravity-Aufträge bereit.
  */
 
-import { dbBridge } from './supabaseClient.js';
-
-// Pool bestehender Projekte für das Idle-Training
+// Autonomer Leerlauf-Trainings-Modus (Idle Training):
+// Wenn kein aktiver Kunden-Auftrag läuft, trainieren die 10 Abteilungen
 export const TRAINING_PROJECTS = [
   {
     id: "proj_ki_trevor",
