@@ -1,92 +1,86 @@
-# TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
+# TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER (V2.0)
 
-> **Ein elitäres, KI-gestütztes Software-Architektur-Studio mit 10 Abteilungen, 44 Agenten-Einheiten, Three.js 3D-Campus und einem strikten 4-Stufen-Workflow.**
+> **Ein elitäres, KI-gestütztes Software-Architektur-Studio mit 10 Abteilungen, 44 Agenten-Einheiten, Three.js 3D-Campus, Trevor als Iron-Man Mech, autonomem Leerlauf-Training und Live-Mobile-Zugriff.**
 
 ---
 
-## 🌟 1. System-Übersicht & Architektur
-
-TREVOR bündelt die geballte Expertise eines modernen Software-Studios in einer interaktiven Cyberpunk-Kommandozentrale:
+## 🌟 1. System-Übersicht & Neuerungen in Version 2.0
 
 ```text
 Desktop/KI_Trevor/
 ├── 00_Checkpoints_und_Status/      # Atomare Zwischenstände (CHECKPOINT_STATE.md) & Anti-Limit-Snapshots
 ├── 01_Datenbank_Supabase/          # SQL-Migrationen, Schemata, RLS & Seed-Daten (schema.sql)
-├── 02_Frontend_UI_und_3D_Studio/   # Three.js 3D-Campus (studio3D.js), Dark-Slate UI & JA/NEIN-Terminal
-├── 03_Agenten_System_und_Prompts/  # Trevor, 10 Chef-Agenten, 33 Spezial-PCs (studio_hierarchy.json & Prompts)
-├── 04_KI_Engine_und_Bridges/       # Gemini Cloud, Ollama Local Bridge, Supabase Client & Orchestrator
+├── 02_Frontend_UI_und_3D_Studio/   # 3D-Campus (studio3D.js), Klick-Inspektor, Dark-Slate/Gold UI & JA/NEIN-Terminal
+├── 03_Agenten_System_und_Prompts/  # Trevor, 10 Chef-Agenten, 33 Spezial-PCs mit 'easy_explanation'
+├── 04_KI_Engine_und_Bridges/       # Gemini Cloud, Ollama Bridge, idleTrainer.js & remoteSyncWatcher.js
 ├── 05_Antigravity_Outputs/         # Freigegebene Master-Prompts (ANTIGRAVITY_TASK.md)
 └── 06_Deployment_und_Config/       # Server (server.js), Render-Blueprint (render.yaml) & .env.example
 ```
 
-### Die Studio-Einheiten (44 Instanzen):
-1. **Trevor Core:** Studio-Director (`trevor_core`, Karmesinrot `#ef4444`, Zentrum).
-2. **10 Software-Abteilungen:** Stern-/Hexagon-Architektur rund um Trevor:
-   - **Raum 1:** System-Architektur & High-Level Design (Chef: Archon | 3 PCs)
-   - **Raum 2:** Backend & API Engineering (Chef: Vektor | 3 PCs)
-   - **Raum 3:** Frontend UI, UX & 3D Studio (Chefin: Lumina | 4 PCs)
-   - **Raum 4:** Database & Supabase Engineering (Chef: Chronos | 3 PCs)
-   - **Raum 5:** Security, Auth & Compliance (Chef: Aegis | 3 PCs)
-   - **Raum 6:** DevOps, CI/CD & Deployment (Chef: Nexus | 3 PCs)
-   - **Raum 7:** QA, Testing & Edge Cases (Chef: Sentinel | 3 PCs)
-   - **Raum 8:** KI-Engine & Prompt Optimization (Chefin: Synapse | 4 PCs)
-   - **Raum 9:** Documentation & Developer Experience (Chef: Scribe | 3 PCs)
-   - **Raum 10:** Antigravity Code Synthesis (Chef: Katalyst | 4 PCs)
-   *(Summe: 1 Trevor + 10 Chef-Agenten + 33 Spezial-PCs = 44 Einheiten)*
+---
+
+## 🏛️ 2. Die 10 Abteilungen & Spezialisten (Glasklare deutsche Bezeichnungen)
+
+1. **1. Ideen & Planung:** Prüft deine Idee und plant alle Funktionen.
+   - *Chef:* Planungs-Chef | *PCs:* Ideen-Prüfer, Funktions-Planer, Machbarkeits-Checker
+2. **2. Bauplan & Technik:** Legt Ordnerstruktur, Sprachen und Systemaufbau fest.
+   - *Chef:* Chef-Architekt | *PCs:* Technik-Wähler, Ordner- & Struktur-Planer, Schnittstellen-Planer
+3. **3. Optik & Bedienung:** Entwirft Farben, Buttons und einfache Bedienbarkeit.
+   - *Chef:* Design-Chef | *PCs:* Layout-Zeichner, Farben- & Dark-Mode-Profi, Handy- & PC-Ansicht-Prüfer
+4. **4. Sichtbare Webseite (Frontend):** Programmiert alles, was man im Browser sieht und anklickt.
+   - *Chef:* Frontend-Chef | *PCs:* Seiten- & Button-Bauer, Klick-Logik-Programmierer, 3D- & Animations-Bauer, Ladezeiten-Beschleuniger
+5. **5. Server & Hintergrund-Logik (Backend):** Programmiert Berechnungen und Datenverarbeitung.
+   - *Chef:* Backend-Chef | *PCs:* Datenwege-Bauer (API), Rechenlogik-Programmierer, Echtzeit-Sync-Profi, Login- & Rechte-Wächter
+6. **6. Datenbank & Speicher:** Baut die Tabellen, in denen alle Daten sicher gespeichert werden.
+   - *Chef:* Datenbank-Chef | *PCs:* Tabellen-Architekt, Such-Beschleuniger, Backup- & Sicherungs-Planer
+7. **7. KI & Antigravity-Übersetzer:** Übersetzt alle Pläne in perfekte Befehle für Antigravity.
+   - *Chef:* KI-Chef | *PCs:* Antigravity-Prompt-Bauer, KI-Regel-Optimierer, Sprachmodell-Verknüpfer
+8. **8. Sicherheit & Datenschutz:** Schützt das Projekt vor Hackern, Fehlern und Datenlecks.
+   - *Chef:* Sicherheits-Chef | *PCs:* Schutzschild-Prüfer, Datenschutz-Wächter, Passwort- & Schlüssel-Wächter
+9. **9. Fehlersuche & Qualitäts-Check:** Testet den Code auf Herz und Nieren und sucht Bugs.
+   - *Chef:* Test-Chef | *PCs:* Automatischer Funktions-Tester, Fehler-Jäger (Bug-Hunter), Härtetest-Simulator, Code-Qualitäts-Prüfer
+10. **10. Veröffentlichung & Online-Stellung:** Macht die App startklar für Internet, GitHub und Render.
+    - *Chef:* Release-Chef | *PCs:* Online-Stellungs-Profi (Render/GitHub), Paket- & Update-Verwalter, Anleitungs-Schreiber
 
 ---
 
-## ⚡ 2. Schnelleinstieg (1-Klick Start)
+## 🧊 3. Realistischer 3D-Campus & Trevor als Iron-Man Mech
 
-### Option A: Über den mitgelieferten Zero-Dependency Webserver (Empfohlen)
-Öffne ein Terminal (PowerShell / Bash) im Projektordner:
-```bash
-npm start
-# oder direkt mit Node:
-node 06_Deployment_und_Config/server.js
-```
-Öffne anschließend im Browser: **[http://localhost:3000](http://localhost:3000)**
-
-### Option B: Direktes Öffnen ohne Webserver
-Öffne einfach per Doppelklick die Datei:
-`Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html`
+- **Trevor Core:** Modelliert als 3D-Hero-Mech in **Hot-Rod-Rot (`#dc2626`) und Gold-Titan (`#fbbf24`)** mit metallischem Glanz, rot-goldener Helmschale, blau-weiß leuchtenden Augen-Schlitzen und einem hell strahlenden **Arc-Reactor** in der Brust.
+- **Büro-Pods:** Warme Holz- und Schieferstein-Böden, edle schwarze Aluminium-Rahmen mit Glas-Wänden, Grünpflanzen in den Ecken, Server-Racks mit blinkenden LEDs und Whiteboards.
+- **Arbeitsplätze:** Jeder Platz mit Schreibtisch, ergonomischem Bürostuhl, Dual-Widescreen-Monitoren und einem sitzenden, animierten **3D-Entwickler-Avatar**!
 
 ---
 
-## 🔄 3. Der 4-Stufen-Workflow
+## 🔬 4. Live-Klick-Inspektor ("Was macht dieser Raum / PC gerade?")
 
-| Stufe | Rolle | Funktion |
-| :--- | :--- | :--- |
-| **01** | **Fachteam** | 33 Spezial-PCs erarbeiten Code, Schemata & Tests. Monitore leuchten Cyan (`#06b6d4`). |
-| **02** | **Chef-Agent** | 10 Abteilungsleiter prüfen Ergebnisse, beseitigen Widersprüche und erstellen Blueprints. Leuchten Amber (`#f59e0b`). |
-| **03** | **Trevor** | Synthetisiert das Gesamtergebnis zu `trevor_summary` und dem ausführbaren `antigravity_prompt`. |
-| **04** | **Du entscheidest** | **NUR JA ODER NEIN:** Verbindliche Freigabe durch dich als Projektinhaber. |
-
-### Freigabe (`JA`):
-- Kopiert den kompletten Antigravity Master-Prompt direkt in deine Zwischenablage (<kbd>Strg + V</kbd>).
-- Speichert den Prompt automatisch als `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md`.
-- Schaltet Buttons für direkten Dateisystem-Export frei.
-
-### Ablehnung (`NEIN`):
-- Ermöglicht die Eingabe eines kurzen Korrektur-Hinweises.
-- Startet den Workflow nahtlos ab Stufe 02 (Chef-Ebene) neu.
+Klicke im 3D-Campus oder 2D-Grid auf einen beliebigen Raum oder Spezialisten:
+1. **Name & Abteilung:** Zeigt die genaue Rolle und Raumnummer.
+2. **"Wofür bin ich zuständig?":** Einfache, alltagstaugliche Erklärung aus `easy_explanation`.
+3. **"Was mache ich in dieser Sekunde?":**
+   - *Bei laufendem Auftrag:* Aktueller Arbeitsschritt und generiertes Fachprotokoll.
+   - *Im Leerlauf:* Zeigt live, an welchem Projekt (z. B. *Fussballschulen-Manager*) der Spezialist gerade autonom übt!
+4. **"📚 Gelerntes Wissen (Training)":** Tab mit allen gesammelten Optimierungs-Erkenntnissen des Spezialisten.
 
 ---
 
-## 🛡️ 4. Anti-Limit-Fangnetz & Resume-Engine
+## 🧠 5. Autonomes Leerlauf-Training (Idle-Training)
 
-- **Atomare Checkpoints:** Nach **jedem einzelnen PC-Agenten** und **jedem einzelnen Chef-Agenten** wird der Zwischenstand sofort in Supabase und in `00_Checkpoints_und_Status/CHECKPOINT_STATE.md` festgeschrieben.
-- **Nahtloses Resume:** Tritt ein Rate-Limit (`429` / Quota) auf, friert das System den Task am exakten Punkt ein. Über den Button **`[ ⏯️ Ab Zwischenstand fortsetzen ]`** geht es sofort ohne Datenverlust weiter!
-
----
-
-## ☁️ 5. Dual-Engine: Schule vs. Zuhause
-
-- **In der Schule / Mobil:** Umschalter auf `[ ☁️ Gemini Cloud ]`. Nutzt `gemini-2.5-flash` für blitzschnelle Berechnungen (oder den intelligenten Offline-Simulator bei fehlender Internetverbindung).
-- **Zu Hause (Offline):** Umschalter auf `[ 🖥️ Ollama Lokal ]`. Nutzt deine lokale Llama 3 Inferenz unter `http://localhost:11434`.
+- Wenn kein Nutzer-Auftrag aktiv ist, trainieren die 10 Abteilungen automatisch an bestehenden Projekten (*KI_Trevor*, *Fussballschulen-Manager*, *LernfeldTrainer*, *Class Kart GP*).
+- Erkenntnisse werden als `learned_insights` gesichert und fließen automatisch in Trevors neue Antigravity-Prompts ein!
 
 ---
 
-## 🚀 6. Cloud-Deployment auf Render
+## 📱 6. Live-Zugriff von unterwegs & in der Schule
 
-Das Repository enthält eine schlüsselfertige [`render.yaml`](./render.yaml). Verbinde einfach dein GitHub-Repository mit Render.com – der Web-Service baut und startet vollautomatisch.
+### Live-URLs für das Studio:
+1. **Lokal am PC:** [http://localhost:3000](http://localhost:3000)
+2. **Im lokalen WLAN (Smartphone / Tablet):** `http://192.168.178.53:3000`
+3. **Weltweit von unterwegs (5G / Schule / Mobil):**
+   👉 **`https://better-mirrors-wonder.loca.lt`**
+   *(Bypass-Passwort bei erster Abfrage: `88.67.105.95`)*
+4. **Cloud-Hosting (Render Blueprint):** Vollständig vorkonfiguriert in [`render.yaml`](./render.yaml) für `https://trevor-ai-studio.onrender.com`.
+
+### Cloud-Queue ("Von unterwegs auf 'JA' klicken"):
+Klickst du unterwegs am Smartphone auf **"JA"**, wird der Auftrag in Supabase mit `approved_ready_for_execution` markiert.
+Der **`remoteSyncWatcher.js`** auf deinem Heim-PC erkennt dies sofort, speichert die Datei `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md` und befüllt deine lokale Zwischenablage!

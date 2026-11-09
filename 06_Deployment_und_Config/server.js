@@ -3,15 +3,16 @@
  * File: 06_Deployment_und_Config/server.js
  * 
  * Standalone Web- & API-Server für Trevor:
- * - Benötigt KEINE externen Abhängigkeiten zum Start (nutzt native Node.js Module)
- * - Startet sofort lokal mit: node 06_Deployment_und_Config/server.js oder npm start
- * - Serviert das Dark-Slate/Red 3D Frontend unter http://localhost:3000
- * - Bietet Healthcheck-Routen für Render (/api/status)
+ * - Serviert das Dark-Slate/Red 3D Frontend & alle Abteilungs-Daten
+ * - Unterstützt Bypass-Tunnel-Header für Localtunnel & Ngrok (Unterwegs-Zugriff)
+ * - Erkennt lokale WLAN-IPs für sofortigen Smartphone-Zugriff im Netzwerk
+ * - Healthcheck für Render.com (/api/status)
  */
 
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +20,21 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 
 const PORT = process.env.PORT || 3000;
+
+// Ermittle lokale WLAN / LAN IP
+function getLocalNetworkIp() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const net of interfaces[name]) {
+      if (net.family === 'IPv4' && !net.internal && !net.address.startsWith('169.254')) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+const localIp = getLocalNetworkIp();
 
 // MIME-Type Mapping
 const MIME_TYPES = {
@@ -37,10 +53,12 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   let pathname = decodeURIComponent(url.pathname);
 
-  // CORS-Header für flexible Dev-Verbindungen
+  // CORS-Header & Tunnel-Bypass für mobiles Arbeiten von unterwegs
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Bypass-Tunnel-Reminder, ngrok-skip-browser-warning');
+  res.setHeader('Bypass-Tunnel-Reminder', 'true');
+  res.setHeader('ngrok-skip-browser-warning', 'true');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -62,10 +80,11 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({
       status: 'ok',
       service: 'Trevor AI Software Studio & Command Center',
-      version: '1.0.0',
+      version: '2.0.0 (Iron-Man & Campus Upgrade)',
       timestamp: new Date().toISOString(),
       departments_count: 10,
       total_units: 44, // 1 Trevor + 10 Chefs + 33 PCs
+      local_wifi_url: `http://${localIp}:${PORT}`,
       current_checkpoint: checkpointSnapshot
     }, null, 2));
     return;
@@ -81,7 +100,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   // --- STATISCHE DATEIEN AUSLIEFERN ---
-  // Default: Weiterleitung von "/" auf index.html im Frontend-Ordner
   let filePath;
   if (pathname === '/' || pathname === '/index.html') {
     filePath = path.join(ROOT_DIR, '02_Frontend_UI_und_3D_Studio', 'index.html');
@@ -89,19 +107,19 @@ const server = http.createServer(async (req, res) => {
     filePath = path.join(ROOT_DIR, pathname);
   } else if (pathname.startsWith('/03_Agenten_System_und_Prompts/')) {
     filePath = path.join(ROOT_DIR, pathname);
+  } else if (pathname.startsWith('/04_KI_Engine_und_Bridges/')) {
+    filePath = path.join(ROOT_DIR, pathname);
   } else if (pathname.startsWith('/00_Checkpoints_und_Status/')) {
     filePath = path.join(ROOT_DIR, pathname);
   } else if (pathname.startsWith('/05_Antigravity_Outputs/')) {
     filePath = path.join(ROOT_DIR, pathname);
   } else {
-    // Suche primär im Frontend-Ordner
     filePath = path.join(ROOT_DIR, '02_Frontend_UI_und_3D_Studio', pathname);
     if (!fs.existsSync(filePath)) {
       filePath = path.join(ROOT_DIR, pathname);
     }
   }
 
-  // Prüfe Existenz der angeforderten Datei
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
@@ -117,13 +135,15 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
+// Auf 0.0.0.0 lauschen, damit auch mobile Geräte im WLAN zugreifen können
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n=============================================================================`);
-  console.log(`🚀 TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER`);
+  console.log(`🚀 TREVOR – AI SOFTWARE STUDIO (IRON-MAN & CAMPUS EDITION V2.0)`);
   console.log(`=============================================================================`);
-  console.log(`• Web-Studio & 3D Campus:   http://localhost:${PORT}`);
-  console.log(`• Healthcheck API:          http://localhost:${PORT}/api/status`);
-  console.log(`• Studio-Struktur:          10 Abteilungen | 43 Agenten + Trevor (44 Einheiten)`);
-  console.log(`• Status:                   Bereit für Software-Aufträge (Gemini & Ollama)`);
+  console.log(`• Web-Studio & 3D Campus (Lokal):    http://localhost:${PORT}`);
+  console.log(`• Mobile / WLAN (Handy/Tablet):     http://${localIp}:${PORT}`);
+  console.log(`• Healthcheck API:                  http://localhost:${PORT}/api/status`);
+  console.log(`• Struktur:                         10 deutsche Abteilungen | 43 Agenten + Trevor`);
+  console.log(`• Status:                           Idle-Training aktiv & bereit für Aufträge`);
   console.log(`=============================================================================\n`);
 });
