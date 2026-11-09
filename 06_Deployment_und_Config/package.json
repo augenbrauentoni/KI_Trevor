@@ -1,0 +1,27 @@
+{
+  "name": "trevor-ai-software-studio",
+  "version": "1.0.0",
+  "description": "Trevor – AI Software Studio & Multi-Agent Command Center (10 Departments, 43 Agents + Trevor, Three.js 3D Campus, Gemini & Ollama Engine)",
+  "main": "06_Deployment_und_Config/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node 06_Deployment_und_Config/server.js",
+    "dev": "node 06_Deployment_und_Config/server.js",
+    "orchestrator:test": "node 04_KI_Engine_und_Bridges/workflowOrchestrator.js",
+    "check": "node -c 02_Frontend_UI_und_3D_Studio/app.js && node -c 02_Frontend_UI_und_3D_Studio/studio3D.js && node -c 04_KI_Engine_und_Bridges/llmEngine.js"
+  },
+  "keywords": [
+    "trevor",
+    "multi-agent",
+    "threejs",
+    "gemini",
+    "ollama",
+    "supabase",
+    "antigravity"
+  ],
+  "author": "Trevor Studio AI",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

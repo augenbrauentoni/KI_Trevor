@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TREVOR – AI Software Studio & Multi-Agent Command Center</title>
+  <link rel="stylesheet" href="./styles.css">
+  <!-- Three.js CDN für Phase 4 3D-Campus -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- OrbitControls CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <!-- =========================================================================
+       1. TOP BAR & FILTER NAVIGATION
+       ========================================================================= -->
+  <header class="top-header">
+    <div class="top-bar-row-1">
+      <div class="brand-section">
+        <div class="brand-logo-badge">TREVOR</div>
+        <div>
+          <h1 style="font-size: 14px; font-weight: 800; letter-spacing: 0.5px;">COMMAND CENTER</h1>
+          <p style="font-size: 10px; color: var(--text-dim);">Multi-Agent Software Architecture Studio</p>
+        </div>
+      </div>
+
+      <!-- Live-Suchfeld -->
+      <div class="search-input-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="global-search-input" class="search-input" placeholder="Bereich oder Agent finden (z. B. Supabase, Docker, Security)...">
+      </div>
+
+      <!-- Engine & Checkpoint Controls -->
+      <div class="header-right-controls">
+        <button id="engine-mode-btn" class="engine-mode-pill" title="Klicken zum Umschalten oder Konfigurieren">
+          <span id="engine-mode-icon">☁️</span>
+          <span id="engine-mode-label">Gemini Cloud (Schule)</span>
+        </button>
+        <button id="btn-open-settings" class="ctrl-btn" title="Einstellungen öffnen">⚙️</button>
+
+        <div id="checkpoint-badge" class="checkpoint-badge">
+          <span>💾</span>
+          <span id="checkpoint-text">Zwischenstand gesichert: Bereit</span>
+        </div>
+
+        <button id="btn-resume-limit" class="btn-resume-pulse" style="display: none;">
+          ⏯️ Ab Zwischenstand fortsetzen
+        </button>
+      </div>
+    </div>
+
+    <!-- Abteilungs-Pills (Räume 1 bis 10) -->
+    <nav class="dept-pills-row" id="dept-pills-container">
+      <button class="dept-pill-btn active" data-dept-id="all">
+        <span class="status-dot ready"></span> Alle 10 Bereiche
+      </button>
+      <!-- Wird dynamisch durch app.js befüllt -->
+    </nav>
+  </header>
+
+  <!-- =========================================================================
+       2. HAUPTBEREICH: SPLIT-LAYOUT (75% STUDIO / 25% SIDEBAR)
+       ========================================================================= -->
+  <div class="studio-main-wrapper">
+
+    <!-- LINKS: HAUPTSTÜHNE (3D-STUDIO ODER 2D-ARBEITSPLÄTZE) -->
+    <main class="studio-stage-container">
+      <div class="stage-top-header">
+        <div class="stage-title">
+          <span style="color: var(--accent-red); font-size: 16px;">•</span>
+          <span>Dein digitales Entwicklungsstudio</span>
+        </div>
+
+        <div class="view-mode-toggle">
+          <button id="btn-view-3d" class="view-toggle-btn active">🧊 3D-Studio</button>
+          <button id="btn-view-grid" class="view-toggle-btn">⊞ Arbeitsplätze</button>
+        </div>
+      </div>
+
+      <!-- ANSICHT 1: 3D STUDIO CANVAS (PHASE 4 VORBEREITUNG) -->
+      <div id="threejs-canvas-container">
+        <!-- 3D Canvas wird von Three.js hier injiziert -->
+        
+        <div class="canvas-controls-overlay">
+          <button id="ctrl-rot-left" class="ctrl-btn" title="Kamera links drehen">⟲ Links drehen</button>
+          <button id="ctrl-rot-right" class="ctrl-btn" title="Kamera rechts drehen">⟳ Rechts drehen</button>
+          <button id="ctrl-zoom-in" class="ctrl-btn" title="Zoom In">+</button>
+          <button id="ctrl-zoom-out" class="ctrl-btn" title="Zoom Out">−</button>
+          <button id="ctrl-reset-cam" class="ctrl-btn" title="Kamera zurücksetzen">Ganzes Studio</button>
+          <button id="ctrl-quiet-toggle" class="ctrl-btn" title="Ruhige Ansicht ein/aus">Ruhige Ansicht</button>
+        </div>
+
+        <div class="canvas-footer-stats">
+          <span>10 Bereiche · 43 Agenten + Trevor · 3D Campus V1.0</span>
+        </div>
+      </div>
+
+      <!-- ANSICHT 2: 2D ARBEITSPLÄTZE GRID (VOLLSTÄNDIG INTERAKTIV) -->
+      <div id="workstations-grid-container" style="display: none;">
+        <!-- Dynamisch gerendert durch app.js -->
+      </div>
+    </main>
+
+    <!-- RECHTS: KOMMANDO-SIDEBAR ("DEIN ARBEITSPLATZ" MIT TREVOR) -->
+    <aside class="sidebar-command-center">
+      <div>
+        <div class="sidebar-header-row">
+          <span>DEIN ARBEITSPLATZ</span>
+          <span style="color: var(--accent-red);">01 / STUDIO</span>
+        </div>
+
+        <!-- Trevor Hero Box mit rot pulsierendem Energiekern -->
+        <div class="trevor-hero-box">
+          <div class="trevor-presence-row">
+            <div class="trevor-orb-container">
+              <div class="trevor-orb-ring"></div>
+              <div class="trevor-orb"></div>
+            </div>
+            <div class="trevor-presence-text">
+              <h2>Trevor.</h2>
+              <p>• Dein Hauptagent & Studio-Leiter</p>
+            </div>
+          </div>
+
+          <p class="trevor-lead-text">
+            Besprich dein Projekt mit Trevor oder wähle einen Arbeitsplatz, um die belegte Arbeit des Teams zu prüfen.
+          </p>
+
+          <button id="btn-sidebar-open-trevor" class="btn-work-with-trevor">
+            <span>💬 Mit Trevor arbeiten</span>
+            <span>→</span>
+          </button>
+        </div>
+
+        <!-- 4-Stufen Workflow Tracker -->
+        <div class="workflow-tracker-box">
+          <div class="workflow-tracker-title">So arbeitet dein Studio</div>
+
+          <div id="tracker-stage-1" class="stage-step">
+            <div class="stage-num">01</div>
+            <div class="stage-step-info">
+              <h4>Fachteam</h4>
+              <p>Spezial-PCs sichten und bereiten intern vor</p>
+            </div>
+          </div>
+
+          <div id="tracker-stage-2" class="stage-step">
+            <div class="stage-num">02</div>
+            <div class="stage-step-info">
+              <h4>Chef-Agent</h4>
+              <p>Prüft Ergebnisse und Widersprüche</p>
+            </div>
+          </div>
+
+          <div id="tracker-stage-3" class="stage-step">
+            <div class="stage-num">03</div>
+            <div class="stage-step-info">
+              <h4>Trevor</h4>
+              <p>Bündelt die nächsten Schritte für dich</p>
+            </div>
+          </div>
+
+          <div id="tracker-stage-4" class="stage-step">
+            <div class="stage-num">04</div>
+            <div class="stage-step-info">
+              <h4>Du entscheidest</h4>
+              <p>Verbindliches braucht deine Freigabe (JA / NEIN)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer-Links der Sidebar -->
+      <div class="sidebar-footer-links">
+        <button id="btn-sidebar-chef-reports" class="footer-link-btn">
+          <span>Chef-Arbeitsplatz</span>
+          <span>→</span>
+        </button>
+        <button id="btn-sidebar-trevor-terminal" class="footer-link-btn">
+          <span>Trevor-Arbeitsplatz & Entscheidung</span>
+          <span>→</span>
+        </button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- =========================================================================
+       3. MODAL: TREVORS AUFTRAGS- & JA/NEIN-ENTSCHEIDUNGS-TERMINAL
+       ========================================================================= -->
+  <div id="modal-trevor-terminal" class="modal-overlay">
+    <div class="terminal-modal-card">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <span style="color: var(--accent-red); font-size: 20px;">🛡️</span>
+          <span>TREVOR COMMAND TERMINAL & DECISION HUB</span>
+        </div>
+        <button class="ctrl-btn modal-close-btn" data-modal="modal-trevor-terminal">✕</button>
+      </div>
+
+      <div class="terminal-body">
+        
+        <!-- BEREICH A: NEUER AUFTRAG -->
+        <div id="section-task-input" style="display: flex; flex-direction: column; gap: 10px;">
+          <label style="font-size: 13px; font-weight: 700; color: #fff;">
+            Dein Software-Auftrag an Trevor:
+          </label>
+          <textarea id="task-prompt-input" class="prompt-textarea" placeholder="Beschreibe dein Feature, Fullstack-Modul, Datenbankmodell oder Bugfix. Z. B.: 'Baue eine Supabase Auth-Pipeline mit Role-Based-Access-Control, React Dark-Mode-UI und Docker-Deployment.'"></textarea>
+          <div style="display: flex; justify-content: flex-end;">
+            <button id="btn-dispatch-task" class="btn-submit-task">
+              <span>🚀 Auftrag an Trevor & Team übergeben</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- BEREICH B: LIVE-FORTSCHRITT & ECHTZEIT-ZWISCHENSTAND -->
+        <div id="section-task-progress" class="progress-card" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="progress-status-label" style="font-size: 12px; font-weight: 700; color: var(--accent-cyan);">
+              Workflow initialisiert...
+            </span>
+            <span id="progress-percent-label" style="font-size: 12px; font-weight: 600; color: #fff;">0%</span>
+          </div>
+
+          <div class="progress-bar-bg">
+            <div id="progress-bar-fill" class="progress-bar-fill"></div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
+            <span id="progress-active-agent">Warte auf Agenten...</span>
+            <span style="color: #34d399;">✔ Zwischenstand in Supabase & lokal gesichert</span>
+          </div>
+        </div>
+
+        <!-- BEREICH C: STUFE 04 - DEINE ENTSCHEIDUNG (NUR JA ODER NEIN) -->
+        <div id="section-decision" style="display: none; flex-direction: column; gap: 14px;">
+          
+          <!-- Trevors Executive Summary -->
+          <div class="decision-summary-box">
+            <h3 style="font-size: 14px; font-weight: 800; color: var(--accent-red); margin-bottom: 8px;">
+              📋 TREVORS EXECUTIVE SUMMARY FÜR DICH:
+            </h3>
+            <div id="decision-summary-text"></div>
+          </div>
+
+          <!-- Vorschau auf den Antigravity Master-Prompt (aufklappbar) -->
+          <div class="code-preview-collapsible">
+            <div class="code-preview-header" id="btn-toggle-prompt-preview">
+              <span>💻 GENERIERTER ANTIGRAVITY MASTER-PROMPT (VORSCHAU)</span>
+              <span id="code-preview-indicator">▼ Aufklappen</span>
+            </div>
+            <pre class="code-preview-content" id="code-preview-content" style="display: none;"></pre>
+          </div>
+
+          <!-- Erfolgs-Banner nach Freigabe -->
+          <div id="decision-success-banner" class="success-banner">
+            <span>🎉</span>
+            <div>
+              <strong>Prompt kopiert & unter <code>05_Antigravity_Outputs/ANTIGRAVITY_TASK.md</code> abgelegt!</strong>
+              <div style="font-size: 11px; margin-top: 2px;">Füge den Prompt jetzt einfach mit <kbd>Strg + V</kbd> in Antigravity ein.</div>
+            </div>
+          </div>
+
+          <!-- Download & File-System Buttons -->
+          <div id="decision-export-tools" style="display: none; gap: 10px;">
+            <button id="btn-export-direct" class="ctrl-btn" style="flex: 1; padding: 8px;">
+              📁 Direkt in lokalen Projektordner schreiben
+            </button>
+            <button id="btn-download-task" class="ctrl-btn" style="flex: 1; padding: 8px;">
+              ⬇️ Als ANTIGRAVITY_TASK.md herunterladen
+            </button>
+          </div>
+
+          <!-- Optionale Korrektur-Box bei NEIN -->
+          <div id="decision-feedback-box" class="feedback-box">
+            <label style="font-size: 12px; font-weight: 700; color: #f87171;">
+              Kunden-Hinweis an Trevor (Was soll geändert werden?):
+            </label>
+            <textarea id="feedback-input" class="prompt-textarea" style="min-height: 70px;" placeholder="Z. B.: Bitte mehr Fokus auf JWT Session-Sicherheit und Tailwind Dark-Mode..."></textarea>
+            <button id="btn-submit-feedback" class="btn-submit-task" style="align-self: flex-start; background: #b91c1c;">
+              🔄 Korrektur an Chef-Agenten übermitteln
+            </button>
+          </div>
+
+          <!-- Die zwei großen Entscheidungs-Buttons -->
+          <div id="decision-actions-row" class="decision-actions-row">
+            <button id="btn-decision-yes" class="btn-decision-yes">
+              <span>✅ JA – FREIGEBEN & AN ANTIGRAVITY ÜBERGEBEN</span>
+            </button>
+            <button id="btn-decision-no" class="btn-decision-no">
+              <span>❌ NEIN – ABLEHNEN & ÜBERARBEITEN LASSEN</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       4. MODAL: AGENT LOG INSPECTOR
+       ========================================================================= -->
+  <div id="modal-agent-inspector" class="modal-overlay">
+    <div class="terminal-modal-card" style="max-width: 700px;">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <span style="color: var(--accent-cyan);">🔬</span>
+          <span id="inspector-agent-title">AGENTEN-PROTOKOLL</span>
+        </div>
+        <button class="ctrl-btn modal-close-btn" data-modal="modal-agent-inspector">✕</button>
+      </div>
+      <div class="terminal-body">
+        <div style="font-size: 12px; color: var(--text-muted);" id="inspector-agent-meta"></div>
+        <pre class="code-preview-content" id="inspector-agent-content" style="max-height: 450px; display: block;"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       5. MODAL: CHEF REPORTS ÜBERSICHT
+       ========================================================================= -->
+  <div id="modal-chef-reports" class="modal-overlay">
+    <div class="terminal-modal-card" style="max-width: 800px;">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <span style="color: var(--accent-amber);">👑</span>
+          <span>CHEF-AGENTEN BERICHTE & WIDERSPRUCHS-AUDIT</span>
+        </div>
+        <button class="ctrl-btn modal-close-btn" data-modal="modal-chef-reports">✕</button>
+      </div>
+      <div class="terminal-body" id="chef-reports-list" style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Dynamisch befüllt -->
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       6. MODAL: SYSTEM- & KI-EINSTELLUNGEN
+       ========================================================================= -->
+  <div id="modal-settings" class="modal-overlay">
+    <div class="terminal-modal-card" style="max-width: 520px;">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <span>⚙️</span>
+          <span>KI- & SYSTEM-EINSTELLUNGEN</span>
+        </div>
+        <button class="ctrl-btn modal-close-btn" data-modal="modal-settings">✕</button>
+      </div>
+      <div class="terminal-body" style="gap: 14px;">
+        <div>
+          <label style="font-size: 12px; font-weight: 600; color: #fff;">Aktiver LLM-Modus:</label>
+          <select id="settings-llm-mode" class="search-input" style="margin-top: 6px;">
+            <option value="gemini">☁️ Gemini Cloud API (Schule / Mobil)</option>
+            <option value="ollama">🖥️ Ollama Local Bridge (Home / Offline)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size: 12px; font-weight: 600; color: #fff;">Gemini Modell:</label>
+          <input type="text" id="settings-gemini-model" class="search-input" value="gemini-2.5-flash" style="margin-top: 6px;">
+        </div>
+
+        <div>
+          <label style="font-size: 12px; font-weight: 600; color: #fff;">Gemini API-Key (optional, überschreibt .env):</label>
+          <input type="password" id="settings-gemini-key" class="search-input" placeholder="AIzaSy..." style="margin-top: 6px;">
+        </div>
+
+        <div>
+          <label style="font-size: 12px; font-weight: 600; color: #fff;">Ollama URL:</label>
+          <input type="text" id="settings-ollama-url" class="search-input" value="http://localhost:11434" style="margin-top: 6px;">
+        </div>
+
+        <div>
+          <label style="font-size: 12px; font-weight: 600; color: #fff;">Ollama Modell:</label>
+          <input type="text" id="settings-ollama-model" class="search-input" value="llama3" style="margin-top: 6px;">
+        </div>
+
+        <button id="btn-save-settings" class="btn-submit-task" style="margin-top: 10px; width: 100%; justify-content: center;">
+          Speichern & Übernehmen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controller Script -->
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
