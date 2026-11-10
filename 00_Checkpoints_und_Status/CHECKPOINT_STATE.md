@@ -1,44 +1,61 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Master-Fix zu 100 % ERFOLGREICH ABGESCHLOSSEN & LIVE 🚀
-- **Datum / Letztes Update:** 2026-11-10 16:23:45
+- **Status:** Export-Funktion & Lokale Bridge zu 100 % ERFOLGREICH INTEGRIERT & VERIFIZIERT 🚀
+- **Datum / Letztes Update:** 2026-11-10 17:08:30
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
 
-## 1. Master-Fix Zusammenfassung der behobenen Fehlerquellen
+## 1. Neueste Integration: Export-Funktion & Lokale Bridge (`02_Frontend_UI_und_3D_Studio/app.js`)
 
-### 1. Pfad-Fix & Datei-Verifizierung (`idleTrainer.js`)
-- **Physische Bereitstellung:** [`idleTrainer.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/idleTrainer.js) wurde physisch direkt im Ordner `02_Frontend_UI_und_3D_Studio/` abgelegt.
-- **Bereinigter Skript-Import:** In [`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) wurde der Import auf `<script defer src="./idleTrainer.js"></script>` umgestellt.
-- **Modul-Import in app.js:** [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) importiert nun sauber und direkt über `./idleTrainer.js` ohne fehleranfällige Parent-Directory-Sprünge (`../`).
-- **Doppelte Kompatibilität:** `idleTrainer.js` exportiert alle Funktionen als ES-Modul und registriert sich zusätzlich am globalen `window`-Objekt für maximale Skript-Kompatibilität.
+### 1. `exportTaskToLocalDisk(taskMarkdown)`
+- **Endpunkt-Anbindung:** Sendet einen `POST`-Request mit `{ content: taskMarkdown }` an `http://localhost:3001/api/export-task` (und unterstützt als redundanter Server-Fallback `http://localhost:3000/api/export-task`).
+- **Header:** `Content-Type: application/json; charset=utf-8`.
+- **Erfolgsbehandlung:**
+  - Schreibt bei Erfolg die Datei direkt nach `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md`.
+  - Loggt den Erfolg in der Browser-Konsole: `[Trevor App] Lokaler Datei-Export erfolgreich: <path>`.
+  - Zeigt eine visuelle Erfolgsmeldung im UI (Erfolgs-Banner im Terminal sowie Floating Toast-Benachrichtigung).
+- **Fehler- & Offline-Handling (Fallback):**
+  - Fängt Netzwerkfehler oder Nichterreichbarkeit der Bridge im `catch`-Block ab.
+  - Loggt eine aussagekräftige Warnung in der Konsole.
+  - Ruft vollautomatisch `triggerBrowserDownload(taskMarkdown, 'ANTIGRAVITY_TASK.md')` auf, sodass niemals Daten verloren gehen.
 
-### 2. Three.js Duplikat & Import-Konflikt eliminiert
-- **Ursache:** Die gleichzeitige Einbindung von `<script type="importmap">` (lud Three.js `0.160.0` als ESM) und `<script src="...three.min.js">` (lud Three.js `r128` als UMD) erzeugte in der Konsole die Warnung *"Multiple instances of Three.js being imported"*.
-- **Lösung:**
-  - Die redundante Importmap wurde restlos aus [`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) entfernt.
-  - Im `<head>` wird ausschließlich die verifizierte, autoritative CDN-Version (Three.js `r128` + OrbitControls) geladen.
-  - In [`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js) wurde der asynchrone `import('three/addons/controls/OrbitControls.js')`-Zweig entfernt und durch das saubere `window.THREE.OrbitControls` ersetzt.
-  - Die Browser-Konsole läuft nun vollkommen frei von Instanz-Warnungen.
+### 2. `triggerBrowserDownload(content, filename)`
+- **Blob-Erstellung:** Erzeugt einen `Blob` mit `type: 'text/markdown;charset=utf-8'`.
+- **Programmatischer Klick:** Erzeugt ein unsichtbares `<a>`-Element via `URL.createObjectURL(blob)`, setzt `download = filename` (Standard: `ANTIGRAVITY_TASK.md`), klickt programmatisch (`link.click()`) und räumt mit `URL.revokeObjectURL(url)` sauber auf.
 
-### 3. DOM-Lade-Sicherheit & Reparatur blockierter Eingabefelder
-- **Timing-Schutz:** In [`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) wurden die Skripte mit `defer` eingebunden.
-- **State-Check in app.js:** [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) kapselt die Initialisierung in `bootTrevorApp()` und prüft aktiv `document.readyState`:
-  - Wenn `document.readyState === 'loading'`, wird auf `DOMContentLoaded` gewartet.
-  - Falls das DOM bereits geladen ist (`interactive` oder `complete`), startet die Initialisierung sofort.
-  - Dadurch werden blockierte Eingabefelder, nicht registrierte Event-Listener und Klick-Verzögerungen zuverlässig behoben.
-
-### 4. Aktiver Render-Loop in `studio3D.js`
-- **Kontinuierlicher Loop:** `animate()` ruft `animationFrameId = requestAnimationFrame(animate)` am Schleifenanfang auf.
-- **Controls & Szene:** `controls.update()` und `renderer.render(scene, camera)` laufen kontinuierlich mit 60 FPS.
-- **Mehrfach-Schutz:** Beim Neuinitialisieren von `init3DStudio()` wird ein vorheriger Loop über `cancelAnimationFrame` abgebrochen, sodass niemals doppelte Loops gestapelt werden.
+### 3. Event-Listener & Schutz vor doppeltem Absenden
+- **`#btn-decision-yes` (JA-Freigabe-Button):**
+  - Verhindert Doppel-Klicks (`btn.disabled = true; opacity = 0.6; cursor = not-allowed`).
+  - Führt den lokalen Export via `exportTaskToLocalDisk(promptText)` automatisch direkt nach der Freigabe aus.
+- **`#btn-export-direct` (Direkt-Export-Button):**
+  - Zeigt visuellen Status `⏳ Exportiere auf Festplatte...`.
+  - Blockiert Klicks während des Requests und reaktiviert sich nach Abschluss im `finally`-Block.
+- **`#btn-download-task` (Download-Button):**
+  - Zeigt visuellen Status `⏳ Bereite Download vor...`.
+  - Ruft `exportTaskToLocalDisk` auf (Bridge-Versuch mit Fallback auf Browser-Download).
+  - Ebenfalls gegen Mehrfachklicks gesichert.
+- **Globale Registrierung:** Beide Funktionen sind als ES-Modul exportiert und zusätzlich an `window.exportTaskToLocalDisk` und `window.triggerBrowserDownload` gebunden.
 
 ---
 
-## 2. Live-Zugriff & URLs
-- **Lokal (PC):** `http://localhost:3000`
+## 2. Lokale Bridge & Server-Endpunkte
+
+### 1. `04_KI_Engine_und_Bridges/localBridgeServer.js` (Port 3001)
+- Auf ES-Modul-Syntax umgestellt (`import` statt `require`), kompatibel mit Node.js 24 ESM.
+- Startet HTTP-Server auf Port 3001 mit vollem CORS-Support (`Access-Control-Allow-Origin: *`).
+- `GET /api/status`: Liefert Server-Status und absoluten Ziel-Pfad.
+- `POST /api/export-task`: Schreibt den empfangenen Markdown-Prompt synchron in `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md`.
+
+### 2. `06_Deployment_und_Config/server.js` (Port 3000)
+- Endpunkt `POST /api/export-task` hinzugefügt, sodass der Export auch über Port 3000 direkt funktioniert.
+
+---
+
+## 3. Aktive Prozesse & Live-URLs
+
+- **Web-Frontend & API (Port 3000):** `http://localhost:3000` (Aktiv als Task `task-667`)
+- **Lokale Bridge (Port 3001):** `http://localhost:3001` (Aktiv als Task `task-642`)
 - **Heimnetz / WLAN:** `http://192.168.178.53:3000`
-- **Unterwegs / Remote (Weltweit):** `https://famous-sloths-peel.loca.lt` (Bypass-Passwort: `88.67.105.95`)
-- **Server-Prozess:** Node.js Webserver auf Port 3000 (Aktiv als Daemon, Task `task-539`)
-- **Localtunnel-Prozess:** Aktiv & verbunden (Aktiv als Daemon, Task `task-541`)
+- **Weltweiter Tunnel:** `https://famous-sloths-peel.loca.lt` (Bypass-Passwort: `88.67.105.95`)
+- **Ziel-Datei für Antigravity:** `C:\Users\User\Desktop\KI_Trevor\05_Antigravity_Outputs\ANTIGRAVITY_TASK.md`

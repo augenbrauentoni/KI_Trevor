@@ -753,6 +753,14 @@ async function runLiveWorkflowSimulation(task) {
 // =============================================================================
 async function handleUserDecisionClick(decision) {
   if (decision === 'JA') {
+    const btnYes = document.getElementById('btn-decision-yes');
+    if (btnYes) {
+      if (btnYes.disabled) return;
+      btnYes.disabled = true;
+      btnYes.style.opacity = '0.6';
+      btnYes.style.cursor = 'not-allowed';
+    }
+
     const promptText = state.activeTask?.antigravity_prompt || '';
 
     try {
@@ -775,6 +783,13 @@ async function handleUserDecisionClick(decision) {
       });
     } catch { /* ignore */ }
 
+    // Automatisch auf lokale Festplatte exportieren (oder Fallback Browser-Download)
+    try {
+      await exportTaskToLocalDisk(promptText);
+    } catch (exportErr) {
+      console.warn('[Trevor App] Fehler beim automatischen Task-Export nach Freigabe:', exportErr);
+    }
+
     document.getElementById('decision-success-banner').style.display = 'flex';
     document.getElementById('decision-export-tools').style.display = 'flex';
     document.getElementById('decision-actions-row').style.display = 'none';
@@ -782,6 +797,12 @@ async function handleUserDecisionClick(decision) {
 
     updateCheckpointBadge('Freigegeben ("JA") – An Antigravity & Datei übergeben', false);
     startIdleTraining(state.hierarchy.departments, 6000);
+
+    if (btnYes) {
+      btnYes.disabled = false;
+      btnYes.style.opacity = '1';
+      btnYes.style.cursor = 'pointer';
+    }
 
   } else if (decision === 'NEIN') {
     const feedbackBox = document.getElementById('decision-feedback-box');
@@ -938,39 +959,134 @@ function getLocalTaskArchive() {
 }
 
 // =============================================================================
-// EXPORT & CHECKPOINT HELPER
+// EXPORT & CHECKPOINT HELPER (LOKALE BRIDGE & BROWSER-DOWNLOAD FALLBACK)
 // =============================================================================
+
+/**
+ * Erstellt einen Blob und stößt den Browser-Download an.
+ * @param {string} content - Markdown-Inhalt
+ * @param {string} filename - Zu speichernder Dateiname
+ */
+export function triggerBrowserDownload(content, filename = 'ANTIGRAVITY_TASK.md') {
+  try {
+    const rawContent = (content !== undefined && content !== null) ? content : (state.activeTask?.antigravity_prompt || '');
+    const blob = new Blob([rawContent], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || 'ANTIGRAVITY_TASK.md';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    console.log(`[Trevor App] Browser-Download ausgeführt: ${filename || 'ANTIGRAVITY_TASK.md'}`);
+  } catch (err) {
+    console.error('[Trevor App] Fehler bei triggerBrowserDownload:', err);
+  }
+}
+
+/**
+ * Sendet einen POST-Request mit { content: taskMarkdown } an http://localhost:3001/api/export-task.
+ * Fällt bei Fehlern oder unerreichbarem Server automatisch auf triggerBrowserDownload zurück.
+ * @param {string} taskMarkdown - Zu exportierender Inhalt
+ */
+export async function exportTaskToLocalDisk(taskMarkdown) {
+  const content = (taskMarkdown !== undefined && taskMarkdown !== null && taskMarkdown !== '') 
+    ? taskMarkdown 
+    : (state.activeTask?.antigravity_prompt || '');
+
+  try {
+    const resp = await fetch('http://localhost:3001/api/export-task', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ content })
+    });
+
+    if (!resp.ok) {
+      throw new Error(`HTTP Status ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    if (data && data.success === true) {
+      const savedPath = data.path || data.filePath || '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md';
+      console.log(`[Trevor App] Lokaler Datei-Export erfolgreich: ${savedPath}`);
+      showExportNotification(`✔ Lokaler Datei-Export erfolgreich:\n${savedPath}`, 'success');
+      return { success: true, path: savedPath };
+    } else {
+      throw new Error(data?.error || 'Server meldete Misserfolg');
+    }
+  } catch (err) {
+    console.warn('[Trevor App] Lokaler Bridge-Server (Port 3001) nicht erreichbar oder Fehler:', err.message);
+    console.warn('[Trevor App] Starte automatischen Fallback: triggerBrowserDownload(taskMarkdown, "ANTIGRAVITY_TASK.md")');
+
+    showExportNotification('⚠️ Bridge (Port 3001) nicht aktiv – Browser-Download gestartet!', 'warning');
+    triggerBrowserDownload(content, 'ANTIGRAVITY_TASK.md');
+    return { success: false, fallback: true, error: err.message };
+  }
+}
+
+function showExportNotification(message, type = 'success') {
+  // Banner im Terminal anpassen, falls vorhanden
+  const successBanner = document.getElementById('decision-success-banner');
+  if (successBanner) {
+    const strong = successBanner.querySelector('strong');
+    if (strong) {
+      strong.innerText = message.replace('\n', ' ');
+    }
+  }
+
+  // Toast für globale Anzeige im Canvas / Studio
+  let container = document.getElementById('trevor-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'trevor-toast-container';
+    container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  const bg = type === 'success' ? '#064e3b' : (type === 'warning' ? '#78350f' : '#7f1d1d');
+  const border = type === 'success' ? '#10b981' : (type === 'warning' ? '#f59e0b' : '#ef4444');
+  toast.style.cssText = `
+    background: ${bg};
+    color: #fff;
+    border: 1px solid ${border};
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    white-space: pre-line;
+    pointer-events: auto;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(10px);
+    opacity: 0;
+  `;
+  toast.innerText = message;
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 350);
+  }, 4500);
+}
+
 function downloadTaskFile() {
   const content = state.activeTask?.antigravity_prompt || '';
-  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'ANTIGRAVITY_TASK.md';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  triggerBrowserDownload(content, 'ANTIGRAVITY_TASK.md');
 }
 
 async function writeDirectToFileSystem() {
   const content = state.activeTask?.antigravity_prompt || '';
-  try {
-    if (window.showSaveFilePicker) {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'ANTIGRAVITY_TASK.md',
-        types: [{ description: 'Markdown File', accept: { 'text/markdown': ['.md'] } }]
-      });
-      const writable = await handle.createWritable();
-      await writable.write(content);
-      await writable.close();
-      alert('Erfolgreich direkt im Projektordner gespeichert!');
-    } else {
-      downloadTaskFile();
-    }
-  } catch (err) {
-    if (err.name !== 'AbortError') downloadTaskFile();
-  }
+  await exportTaskToLocalDisk(content);
 }
 
 function saveLocalCheckpoint() {
@@ -1173,12 +1289,71 @@ function setupEventListeners() {
     }
   });
 
-  document.getElementById('btn-decision-yes').addEventListener('click', () => handleUserDecisionClick('JA'));
-  document.getElementById('btn-decision-no').addEventListener('click', () => handleUserDecisionClick('NEIN'));
-  document.getElementById('btn-submit-feedback').addEventListener('click', submitRejectionFeedback);
+  const btnDecisionYes = document.getElementById('btn-decision-yes');
+  if (btnDecisionYes) {
+    btnDecisionYes.addEventListener('click', async () => {
+      if (btnDecisionYes.disabled) return;
+      await handleUserDecisionClick('JA');
+    });
+  }
 
-  document.getElementById('btn-download-task').addEventListener('click', downloadTaskFile);
-  document.getElementById('btn-export-direct').addEventListener('click', writeDirectToFileSystem);
+  const btnDecisionNo = document.getElementById('btn-decision-no');
+  if (btnDecisionNo) {
+    btnDecisionNo.addEventListener('click', () => handleUserDecisionClick('NEIN'));
+  }
+
+  const btnSubmitFeedback = document.getElementById('btn-submit-feedback');
+  if (btnSubmitFeedback) {
+    btnSubmitFeedback.addEventListener('click', submitRejectionFeedback);
+  }
+
+  const btnDownloadTask = document.getElementById('btn-download-task');
+  if (btnDownloadTask) {
+    btnDownloadTask.addEventListener('click', async () => {
+      if (btnDownloadTask.disabled) return;
+      btnDownloadTask.disabled = true;
+      const originalText = btnDownloadTask.innerText;
+      btnDownloadTask.innerText = '⏳ Bereite Download vor...';
+      btnDownloadTask.style.opacity = '0.6';
+      btnDownloadTask.style.cursor = 'not-allowed';
+
+      try {
+        const prompt = state.activeTask?.antigravity_prompt || '';
+        await exportTaskToLocalDisk(prompt);
+      } catch (err) {
+        console.error('[Trevor App] Fehler bei Download-Klick:', err);
+      } finally {
+        btnDownloadTask.disabled = false;
+        btnDownloadTask.innerText = originalText;
+        btnDownloadTask.style.opacity = '1';
+        btnDownloadTask.style.cursor = 'pointer';
+      }
+    });
+  }
+
+  const btnExportDirect = document.getElementById('btn-export-direct');
+  if (btnExportDirect) {
+    btnExportDirect.addEventListener('click', async () => {
+      if (btnExportDirect.disabled) return;
+      btnExportDirect.disabled = true;
+      const originalText = btnExportDirect.innerText;
+      btnExportDirect.innerText = '⏳ Exportiere auf Festplatte...';
+      btnExportDirect.style.opacity = '0.6';
+      btnExportDirect.style.cursor = 'not-allowed';
+
+      try {
+        const prompt = state.activeTask?.antigravity_prompt || '';
+        await exportTaskToLocalDisk(prompt);
+      } catch (err) {
+        console.error('[Trevor App] Fehler bei Direkt-Export:', err);
+      } finally {
+        btnExportDirect.disabled = false;
+        btnExportDirect.innerText = originalText;
+        btnExportDirect.style.opacity = '1';
+        btnExportDirect.style.cursor = 'pointer';
+      }
+    });
+  }
 
   // Inspektor-Tabs
   document.getElementById('tab-btn-live-work').addEventListener('click', () => switchInspectorTab('live-work'));
@@ -1258,4 +1433,10 @@ function escapeHtml(str) {
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Globale Fenster-Exporte für maximale Interoperabilität
+if (typeof window !== 'undefined') {
+  window.exportTaskToLocalDisk = exportTaskToLocalDisk;
+  window.triggerBrowserDownload = triggerBrowserDownload;
 }

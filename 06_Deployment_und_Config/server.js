@@ -134,6 +134,36 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // Task-Export-Endpunkt (schreibt direkt in 05_Antigravity_Outputs/ANTIGRAVITY_TASK.md)
+  if (pathname === '/api/export-task' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const taskContent = body.content || '';
+      const outputDir = path.join(ROOT_DIR, '05_Antigravity_Outputs');
+      const outputFile = path.join(outputDir, 'ANTIGRAVITY_TASK.md');
+
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+
+      fs.writeFileSync(outputFile, taskContent, 'utf-8');
+      console.log(`[Server] Task erfolgreich exportiert nach: ${outputFile}`);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        message: 'Task erfolgreich in 05_Antigravity_Outputs gespeichert',
+        path: outputFile,
+        timestamp: new Date().toISOString()
+      }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
   // Direkte Abteilungs-Anweisung starten (Bottom-Up)
   if (pathname === '/api/task/department-instruction' && req.method === 'POST') {
     try {
