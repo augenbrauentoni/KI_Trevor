@@ -355,6 +355,34 @@
               <div id="decision-summary-text"></div>
             </div>
 
+            <!-- INTERAKTIVE PROMPT-ROADMAP (SCHRITTE-CHECKLISTE) -->
+            <div id="decision-roadmap-box" class="roadmap-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="font-size: 13px; font-weight: 800; color: var(--arc-cyan); display: flex; align-items: center; gap: 6px;">
+                  <span>🗺️</span> INTERAKTIVE PROMPT-ROADMAP (SCHRITTE AUSWÄHLEN)
+                </h4>
+                <div style="display: flex; gap: 6px;">
+                  <button id="btn-roadmap-all-yes" class="ctrl-btn" style="padding: 3px 8px; font-size: 11px;">Alle [JA]</button>
+                  <button id="btn-roadmap-all-no" class="ctrl-btn" style="padding: 3px 8px; font-size: 11px;">Alle [NEIN]</button>
+                </div>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 10px;">
+                Entscheide für jeden Schritt einzeln mit <strong>[JA] / [NEIN]</strong>. Nur ausgewählte Schritte werden für Antigravity exportiert:
+              </div>
+
+              <!-- Dynamische Liste der Schritte -->
+              <div id="roadmap-steps-list" class="roadmap-steps-list">
+                <!-- Wird dynamisch aus task.checkpoint_data.structured_steps befüllt -->
+              </div>
+
+              <!-- Button für dynamischen Teil-Export -->
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button id="btn-export-selected-steps" class="btn-submit-task" style="flex: 1; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+                  <span>🚀 Ausgewählte Schritte für Antigravity exportieren</span>
+                </button>
+              </div>
+            </div>
+
             <!-- Aufklappbare Antigravity Master-Prompt Vorschau -->
             <div class="code-preview-collapsible">
               <div class="code-preview-header" id="btn-toggle-prompt-preview">

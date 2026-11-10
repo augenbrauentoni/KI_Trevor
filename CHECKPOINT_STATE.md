@@ -1,61 +1,63 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Export-Funktion & Lokale Bridge zu 100 % ERFOLGREICH INTEGRIERT & VERIFIZIERT 🚀
-- **Datum / Letztes Update:** 2026-11-10 17:08:30
+- **Status:** Hierarchische Orchestrierung & Interaktive Roadmap zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
+- **Datum / Letztes Update:** 2026-11-10 17:40:30
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
 
-## 1. Neueste Integration: Export-Funktion & Lokale Bridge (`02_Frontend_UI_und_3D_Studio/app.js`)
+## 1. Hierarchische Orchestrierungs-Pipeline (`04_KI_Engine_und_Bridges/workflowOrchestrator.js`)
 
-### 1. `exportTaskToLocalDisk(taskMarkdown)`
-- **Endpunkt-Anbindung:** Sendet einen `POST`-Request mit `{ content: taskMarkdown }` an `http://localhost:3001/api/export-task` (und unterstützt als redundanter Server-Fallback `http://localhost:3000/api/export-task`).
-- **Header:** `Content-Type: application/json; charset=utf-8`.
-- **Erfolgsbehandlung:**
-  - Schreibt bei Erfolg die Datei direkt nach `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md`.
-  - Loggt den Erfolg in der Browser-Konsole: `[Trevor App] Lokaler Datei-Export erfolgreich: <path>`.
-  - Zeigt eine visuelle Erfolgsmeldung im UI (Erfolgs-Banner im Terminal sowie Floating Toast-Benachrichtigung).
-- **Fehler- & Offline-Handling (Fallback):**
-  - Fängt Netzwerkfehler oder Nichterreichbarkeit der Bridge im `catch`-Block ab.
-  - Loggt eine aussagekräftige Warnung in der Konsole.
-  - Ruft vollautomatisch `triggerBrowserDownload(taskMarkdown, 'ANTIGRAVITY_TASK.md')` auf, sodass niemals Daten verloren gehen.
+Die Klasse [`WorkflowOrchestrator`](file:///C:/Users/User/Desktop/KI_Trevor/04_KI_Engine_und_Bridges/workflowOrchestrator.js) bildet die 4-stufige Verarbeitungskette modular ab:
 
-### 2. `triggerBrowserDownload(content, filename)`
-- **Blob-Erstellung:** Erzeugt einen `Blob` mit `type: 'text/markdown;charset=utf-8'`.
-- **Programmatischer Klick:** Erzeugt ein unsichtbares `<a>`-Element via `URL.createObjectURL(blob)`, setzt `download = filename` (Standard: `ANTIGRAVITY_TASK.md`), klickt programmatisch (`link.click()`) und räumt mit `URL.revokeObjectURL(url)` sauber auf.
+1. **`dispatchTask(userTask)`**:
+   - Trevor analysiert den Kundenauftrag und zerlegt ihn deterministisch in Department-Tasks (z. B. "3D & UI", "KI & Bridges", "Architektur", "Datenbank & Speicher").
+   - Jeder Department-Task enthält die Abteilungs-ID, Lead-Agent (Chef), zugeordnete Spezial-PCs (Workers), Zielordner und fachspezifischen Auftrag.
 
-### 3. Event-Listener & Schutz vor doppeltem Absenden
-- **`#btn-decision-yes` (JA-Freigabe-Button):**
-  - Verhindert Doppel-Klicks (`btn.disabled = true; opacity = 0.6; cursor = not-allowed`).
-  - Führt den lokalen Export via `exportTaskToLocalDisk(promptText)` automatisch direkt nach der Freigabe aus.
-- **`#btn-export-direct` (Direkt-Export-Button):**
-  - Zeigt visuellen Status `⏳ Exportiere auf Festplatte...`.
-  - Blockiert Klicks während des Requests und reaktiviert sich nach Abschluss im `finally`-Block.
-- **`#btn-download-task` (Download-Button):**
-  - Zeigt visuellen Status `⏳ Bereite Download vor...`.
-  - Ruft `exportTaskToLocalDisk` auf (Bridge-Versuch mit Fallback auf Browser-Download).
-  - Ebenfalls gegen Mehrfachklicks gesichert.
-- **Globale Registrierung:** Beide Funktionen sind als ES-Modul exportiert und zusätzlich an `window.exportTaskToLocalDisk` und `window.triggerBrowserDownload` gebunden.
+2. **`executeWorkerTasks(subTasks, task)`**:
+   - Die zuständigen Sub-Agenten (Spezial-PCs) bearbeiten parallel oder sequentiell ihre Teilaufgaben.
+   - Atomare Speicherung im Checkpoint (`task.checkpoint_data.pc_outputs[pc.id]`) sichert jeden Schritt gegen Limits oder Verbindungsabbrüche ab.
+
+3. **`aggregateDepartmentResults(workerOutputs, task)`**:
+   - Die Abteilungsleiter (Leads) sammeln die Ausgaben ihrer Agenten ein, prüfen auf Widersprüche, Redundanzen und Logikfehler und konsolidieren das Ergebnis.
+   - Aufgelöste Konflikte werden in `contradictions_resolved` hinterlegt.
+
+4. **`synthesizeFinalPlan(departmentReports, task)`**:
+   - Trevor fasst alles zu einer Liste strukturierter Einzelmaßnahmen zusammen.
+   - Jeder Punkt erhält eine eindeutige ID (`STEP-01`, `STEP-02`, ...), Titel, Beschreibung, Ziel-Datei (`target_file`), Abteilungszuordnung (`department`) und Status (`enabled: true`).
 
 ---
 
-## 2. Lokale Bridge & Server-Endpunkte
+## 2. Interaktive Prompt-Roadmap & Dynamischer Export (`02_Frontend_UI_und_3D_Studio/`)
 
-### 1. `04_KI_Engine_und_Bridges/localBridgeServer.js` (Port 3001)
-- Auf ES-Modul-Syntax umgestellt (`import` statt `require`), kompatibel mit Node.js 24 ESM.
-- Startet HTTP-Server auf Port 3001 mit vollem CORS-Support (`Access-Control-Allow-Origin: *`).
-- `GET /api/status`: Liefert Server-Status und absoluten Ziel-Pfad.
-- `POST /api/export-task`: Schreibt den empfangenen Markdown-Prompt synchron in `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md`.
+1. **UI-Rendering nach Trevor-Antwort (`renderInteractiveRoadmap`)**:
+   - Im Trevor Command Terminal (`#section-decision`) wird statt eines starren Textfelds die dynamische Maßnahmen-Checkliste gerendert.
+   - Jeder Schritt besitzt einen Schalter / Checkbox `[JA] / [NEIN]` (Standard: aktiviert).
+   - Bei Klick auf `[NEIN]` wird der Schritt visuell abgedimmt und für den Export ausgeschlossen.
+   - Schnell-Aktionen: "Alle [JA]" und "Alle [NEIN]".
 
-### 2. `06_Deployment_und_Config/server.js` (Port 3000)
-- Endpunkt `POST /api/export-task` hinzugefügt, sodass der Export auch über Port 3000 direkt funktioniert.
+2. **Dynamischer Antigravity-Export (`exportSelectedStepsForAntigravity`)**:
+   - Unter der Liste befindet sich der Button **"Ausgewählte Schritte für Antigravity exportieren"** (`#btn-export-selected-steps`).
+   - Funktion [`buildAntigravityPromptForSteps()`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) formatiert **nur die mit [JA] markierten Schritte** in einen sauberen, gegliederten Antigravity-Master-Prompt.
+   - Übergabe an [`exportTaskToLocalDisk()`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) schreibt die Datei synchron nach `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md` (oder ruft bei Offline-Bridge den Browser-Download auf).
 
 ---
 
-## 3. Aktive Prozesse & Live-URLs
+## 3. Verifikation & Test-Ergebnisse
 
-- **Web-Frontend & API (Port 3000):** `http://localhost:3000` (Aktiv als Task `task-667`)
-- **Lokale Bridge (Port 3001):** `http://localhost:3001` (Aktiv als Task `task-642`)
-- **Heimnetz / WLAN:** `http://192.168.178.53:3000`
-- **Weltweiter Tunnel:** `https://famous-sloths-peel.loca.lt` (Bypass-Passwort: `88.67.105.95`)
-- **Ziel-Datei für Antigravity:** `C:\Users\User\Desktop\KI_Trevor\05_Antigravity_Outputs\ANTIGRAVITY_TASK.md`
+- **`tests/test_workflow_orchestrator.js`**:
+  - Alle 4 Methoden (`dispatchTask`, `executeWorkerTasks`, `aggregateDepartmentResults`, `synthesizeFinalPlan`) erfolgreich validiert.
+  - Schritt-Extraktion mit `id`, `title`, `target_file`, `department` und `enabled` verifiziert.
+- **`tests/test_api_task_start.js`**:
+  - Vollständiger Task-Start über `POST /api/task/start` erzeugt verifizierte `structured_steps`.
+- **`tests/test_dynamic_export.js`**:
+  - Filterung mit `[JA]` und `[NEIN]` getestet: Abgewählte Schritte werden garantiert nicht exportiert; die freigegebenen Schritte werden korrekt in `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md` geschrieben.
+
+---
+
+## 4. Live-Zugriff & URLs
+
+- **Web-Frontend (Port 3000):** `http://localhost:3000` (Task `task-834`)
+- **Lokale Bridge (Port 3001):** `http://localhost:3001` (Task `task-705`)
+- **Localtunnel:** `https://famous-sloths-peel.loca.lt` (Bypass: `88.67.105.95`)
+- **Ziel-Datei:** `C:\Users\User\Desktop\KI_Trevor\05_Antigravity_Outputs\ANTIGRAVITY_TASK.md`

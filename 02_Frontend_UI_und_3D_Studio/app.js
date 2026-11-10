@@ -79,11 +79,13 @@ function bootTrevorApp() {
   }
 }
 
-// Führt Initialisierung sofort aus, unabhängig von Event-Timing
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', bootTrevorApp);
-} else {
-  bootTrevorApp();
+// Führt Initialisierung sofort aus, unabhängig von Event-Timing (Browser-Umgebung)
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootTrevorApp);
+  } else {
+    bootTrevorApp();
+  }
 }
 
 function loadLocalSettings() {
@@ -535,6 +537,7 @@ async function dispatchDirectDepartmentInstruction() {
     document.getElementById('section-decision').style.display = 'flex';
     document.getElementById('decision-summary-text').innerText = state.activeTask.trevor_summary;
     document.getElementById('code-preview-content').innerText = state.activeTask.antigravity_prompt;
+    renderInteractiveRoadmap(state.activeTask.checkpoint_data?.structured_steps);
 
     updateCheckpointBadge('Entscheidung erforderlich (JA / NEIN)', false);
 
@@ -729,6 +732,9 @@ async function runLiveWorkflowSimulation(task) {
     `2. UI-Komponenten im Dark-Slate Design bauen\n` +
     `3. End-to-End Tests ausführen und bereitstellen.\n`;
 
+  task.checkpoint_data = task.checkpoint_data || {};
+  task.checkpoint_data.structured_steps = extractClientStructuredSteps(task);
+
   currentStep++;
   progressBar.style.width = '100%';
   percentLabel.innerText = '100%';
@@ -746,6 +752,7 @@ async function runLiveWorkflowSimulation(task) {
 
   document.getElementById('decision-summary-text').innerText = task.trevor_summary;
   document.getElementById('code-preview-content').innerText = task.antigravity_prompt;
+  renderInteractiveRoadmap(task.checkpoint_data.structured_steps);
 }
 
 // =============================================================================
@@ -761,7 +768,10 @@ async function handleUserDecisionClick(decision) {
       btnYes.style.cursor = 'not-allowed';
     }
 
-    const promptText = state.activeTask?.antigravity_prompt || '';
+    const activeSteps = (state.activeTask?.checkpoint_data?.structured_steps || []).filter(s => s.enabled !== false);
+    const promptText = (activeSteps.length > 0)
+      ? buildAntigravityPromptForSteps(activeSteps, state.activeTask)
+      : (state.activeTask?.antigravity_prompt || '');
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1089,6 +1099,239 @@ async function writeDirectToFileSystem() {
   await exportTaskToLocalDisk(content);
 }
 
+// =============================================================================
+// INTERAKTIVE PROMPT-ROADMAP & DYNAMISCHER ANTWORT-EXPORT
+// =============================================================================
+
+/**
+ * Rendert die interaktive Checkliste der Maßnahmen im Trevor Command Terminal
+ * @param {Array} steps - Liste der Maßnahmen { id, title, description, target_file, department, enabled }
+ */
+export function renderInteractiveRoadmap(steps) {
+  const container = document.getElementById('roadmap-steps-list');
+  if (!container) return;
+
+  const validSteps = (Array.isArray(steps) && steps.length > 0)
+    ? steps
+    : extractClientStructuredSteps(state.activeTask);
+
+  if (!state.activeTask) state.activeTask = {};
+  if (!state.activeTask.checkpoint_data) state.activeTask.checkpoint_data = {};
+  state.activeTask.checkpoint_data.structured_steps = validSteps;
+
+  container.innerHTML = validSteps.map((step) => {
+    const isEnabled = step.enabled !== false;
+    return `
+      <div class="roadmap-step-card ${isEnabled ? 'enabled' : 'disabled'}" id="step-card-${escapeHtml(step.id)}">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="step-id-badge">${escapeHtml(step.id)}</span>
+            <span class="step-dept-badge">${escapeHtml(step.department || 'Allgemein')}</span>
+            <strong style="color: #fff; font-size: 13px;">${escapeHtml(step.title)}</strong>
+          </div>
+          <label class="switch-toggle-label" title="Schritt für Export an- oder abwählen">
+            <input type="checkbox" class="step-checkbox" data-step-id="${escapeHtml(step.id)}" ${isEnabled ? 'checked' : ''}>
+            <span class="switch-toggle-btn ${isEnabled ? 'yes' : 'no'}">${isEnabled ? 'JA' : 'NEIN'}</span>
+          </label>
+        </div>
+
+        <div style="font-size: 11px; color: #94a3b8; margin: 6px 0; line-height: 1.4;">
+          ${escapeHtml(step.description || '')}
+        </div>
+
+        <div style="font-size: 10px; color: #38bdf8; display: flex; align-items: center; gap: 4px; font-family: var(--font-mono);">
+          <span>📁 Ziel-Datei:</span>
+          <code>${escapeHtml(step.target_file || '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md')}</code>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Event-Listener für Schalter / Checkboxen
+  container.querySelectorAll('.step-checkbox').forEach(input => {
+    input.addEventListener('change', (e) => {
+      const stepId = e.target.dataset.stepId;
+      const checked = e.target.checked;
+      const stepObj = validSteps.find(s => s.id === stepId);
+      if (stepObj) {
+        stepObj.enabled = checked;
+      }
+      const card = document.getElementById(`step-card-${stepId}`);
+      if (card) {
+        card.classList.toggle('enabled', checked);
+        card.classList.toggle('disabled', !checked);
+      }
+      const btnSpan = e.target.parentElement.querySelector('.switch-toggle-btn');
+      if (btnSpan) {
+        btnSpan.innerText = checked ? 'JA' : 'NEIN';
+        btnSpan.className = `switch-toggle-btn ${checked ? 'yes' : 'no'}`;
+      }
+      saveLocalCheckpoint();
+    });
+  });
+}
+
+/**
+ * Erzeugt Client-seitig strukturierte Schritte, falls keine vom Server übermittelt wurden
+ */
+export function extractClientStructuredSteps(task) {
+  if (task?.checkpoint_data?.structured_steps && Array.isArray(task.checkpoint_data.structured_steps) && task.checkpoint_data.structured_steps.length > 0) {
+    return task.checkpoint_data.structured_steps;
+  }
+
+  const pStr = task?.user_prompt || 'Software Modul';
+  const projectName = state.selectedProject || 'KI_Trevor';
+
+  return [
+    {
+      id: 'STEP-01',
+      title: 'Architektur- & Funktionsspezifikation festlegen',
+      department: '1. Ideen & Planung',
+      target_file: '00_Checkpoints_und_Status/CHECKPOINT_STATE.md',
+      description: `Funktionskatalog, Validierungslogik und Anforderungen für "${pStr.slice(0, 50)}..." definieren.`,
+      enabled: true
+    },
+    {
+      id: 'STEP-02',
+      title: 'Modulare Ordner- & Projektstruktur aufbauen',
+      department: '2. Bauplan & Technik',
+      target_file: '06_Deployment_und_Config/server.js',
+      description: `Schnittstellen-Verträge und Dateistruktur für das Projekt "${projectName}" initialisieren.`,
+      enabled: true
+    },
+    {
+      id: 'STEP-03',
+      title: 'Dark-Slate UI & interaktive Steuerelemente',
+      department: '3. Aussehen & Bedienung (Frontend)',
+      target_file: '02_Frontend_UI_und_3D_Studio/app.js',
+      description: 'Benutzeroberfläche, dynamische Event-Handler und Status-Indikatoren implementieren.',
+      enabled: true
+    },
+    {
+      id: 'STEP-04',
+      title: 'Three.js 3D-Campus Render-Loop & Steuerung',
+      department: '4. 3D-Campus & Grafiken',
+      target_file: '02_Frontend_UI_und_3D_Studio/studio3D.js',
+      description: 'OrbitControls, animierte Datenströme und Farbwechsel im 3D-Campus absichern.',
+      enabled: true
+    },
+    {
+      id: 'STEP-05',
+      title: 'Supabase Datenbankschema & RLS-Sicherheitsregeln',
+      department: '6. Datenbank & Speicher',
+      target_file: '01_Datenbank_Supabase/schema.sql',
+      description: 'Tabellen, Indizes und Row-Level-Security absichern gegen unbefugten Datenzugriff.',
+      enabled: true
+    },
+    {
+      id: 'STEP-06',
+      title: 'Backend API-Endpunkte & lokale Bridge absichern',
+      department: '5. Server & Hintergrund-Logik (Backend)',
+      target_file: '04_KI_Engine_und_Bridges/workflowOrchestrator.js',
+      description: 'REST-Endpunkte für Task-Verarbeitung und Checkpoint-Synchronisation bereitstellen.',
+      enabled: true
+    },
+    {
+      id: 'STEP-07',
+      title: 'Automatisierte Tests & Sicherheits-Audit',
+      department: '8. Qualitäts- & Fehlerprüfung (QA)',
+      target_file: 'tests/test_auth_rbac_e2e.js',
+      description: 'End-to-End Tests zur Verifikation aller Schnittstellen und Fehlerfälle ausführen.',
+      enabled: true
+    }
+  ];
+}
+
+/**
+ * Erzeugt einen strukturierten Antigravity-Master-Prompt, der AUSSCHLIESSLICH
+ * die vom Benutzer ausgewählten Schritte [JA] enthält!
+ */
+export function buildAntigravityPromptForSteps(selectedSteps, task) {
+  const taskPrompt = task?.user_prompt || 'Software Spezifikation';
+  const projectName = state.selectedProject || 'KI_Trevor';
+  const totalSteps = task?.checkpoint_data?.structured_steps?.length || selectedSteps.length;
+
+  return `<!-- 
+AUTOGENERATED BY TREVOR – AI SOFTWARE STUDIO
+TASK ID: ${task?.id || 'manual_selection'}
+PROJEKT: ${projectName}
+DATUM: ${new Date().toISOString()}
+FREIGEGEBENE SCHRITTE: ${selectedSteps.length} von ${totalSteps}
+-->
+
+# ANTIGRAVITY MASTER TASK EXECUTION (GEFILTERTE MASSNAHMEN-ROADMAP)
+
+> [!IMPORTANT]
+> Folgende ${selectedSteps.length} von ${totalSteps} Maßnahmen wurden im Trevor Multi-Agenten Studio durch den Benutzer explizit mit **[JA]** freigegeben.
+> Führe die Schritte der Reihe nach aus. Aktualisiere nach JEDER Datei sofort die Datei \`CHECKPOINT_STATE.md\`!
+
+## 1. KUNDENAUFTRAG & ZIELSETZUNG
+"""
+${taskPrompt}
+"""
+
+## 2. FREIGEGEBENE AUSFÜHRUNGS-SCHRITTE (${selectedSteps.length} AKTIVIERT)
+
+${selectedSteps.map((step, idx) => `
+### Schritt ${idx + 1}: ${step.title} [${step.id}]
+- **Abteilung:** ${step.department || 'Allgemein'}
+- **Ziel-Datei:** \`${step.target_file || '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md'}\`
+- **Spezifikation & Anweisung:**
+${step.description}
+`).join('\n---\n')}
+
+## 3. SYSTEM-GUARDRAILS & VORGABEN
+- Alle Änderungen strikt im Projektverzeichnis ausführen.
+- Dokumentations-Integrität wahren und bestehende Tests nicht beschädigen.
+- Nach jedem Teilschritt Zwischenstand in \`00_Checkpoints_und_Status/CHECKPOINT_STATE.md\` protokollieren.
+`;
+}
+
+/**
+ * Exportiert nur die aktuell mit [JA] aktivierten Schritte
+ */
+export async function exportSelectedStepsForAntigravity() {
+  const steps = state.activeTask?.checkpoint_data?.structured_steps || extractClientStructuredSteps(state.activeTask);
+  const selectedSteps = steps.filter(s => s.enabled !== false);
+
+  if (selectedSteps.length === 0) {
+    alert('Bitte wähle mindestens einen Schritt mit [JA] für den Export aus!');
+    return;
+  }
+
+  const btnExport = document.getElementById('btn-export-selected-steps');
+  const originalText = btnExport ? btnExport.innerText : '';
+  if (btnExport) {
+    btnExport.disabled = true;
+    btnExport.style.opacity = '0.6';
+    btnExport.innerText = '⏳ Exportiere ausgewählte Schritte...';
+  }
+
+  try {
+    const formattedMarkdown = buildAntigravityPromptForSteps(selectedSteps, state.activeTask);
+    state.activeTask.antigravity_prompt = formattedMarkdown;
+    saveLocalCheckpoint();
+
+    await exportTaskToLocalDisk(formattedMarkdown);
+
+    // Vorschau aktualisieren
+    const preview = document.getElementById('code-preview-content');
+    if (preview) {
+      preview.innerText = formattedMarkdown;
+    }
+
+    console.log(`[Trevor App] ${selectedSteps.length} ausgewählte Schritte erfolgreich nach ANTIGRAVITY_TASK.md exportiert.`);
+  } catch (err) {
+    console.error('[Trevor App] Fehler beim Export ausgewählter Schritte:', err);
+  } finally {
+    if (btnExport) {
+      btnExport.disabled = false;
+      btnExport.style.opacity = '1';
+      btnExport.innerText = originalText || '🚀 Ausgewählte Schritte für Antigravity exportieren';
+    }
+  }
+}
+
 function saveLocalCheckpoint() {
   if (!state.activeTask) return;
   localStorage.setItem('trevor_active_checkpoint', JSON.stringify(state.activeTask));
@@ -1355,6 +1598,32 @@ function setupEventListeners() {
     });
   }
 
+  // Interaktive Prompt-Roadmap: Buttons anbinden
+  const btnExportSelected = document.getElementById('btn-export-selected-steps');
+  if (btnExportSelected) {
+    btnExportSelected.addEventListener('click', exportSelectedStepsForAntigravity);
+  }
+
+  const btnAllYes = document.getElementById('btn-roadmap-all-yes');
+  if (btnAllYes) {
+    btnAllYes.addEventListener('click', () => {
+      const steps = state.activeTask?.checkpoint_data?.structured_steps || [];
+      steps.forEach(s => { s.enabled = true; });
+      renderInteractiveRoadmap(steps);
+      saveLocalCheckpoint();
+    });
+  }
+
+  const btnAllNo = document.getElementById('btn-roadmap-all-no');
+  if (btnAllNo) {
+    btnAllNo.addEventListener('click', () => {
+      const steps = state.activeTask?.checkpoint_data?.structured_steps || [];
+      steps.forEach(s => { s.enabled = false; });
+      renderInteractiveRoadmap(steps);
+      saveLocalCheckpoint();
+    });
+  }
+
   // Inspektor-Tabs
   document.getElementById('tab-btn-live-work').addEventListener('click', () => switchInspectorTab('live-work'));
   const tabDirectBtn = document.getElementById('tab-btn-direct-command');
@@ -1439,4 +1708,6 @@ function sleep(ms) {
 if (typeof window !== 'undefined') {
   window.exportTaskToLocalDisk = exportTaskToLocalDisk;
   window.triggerBrowserDownload = triggerBrowserDownload;
+  window.renderInteractiveRoadmap = renderInteractiveRoadmap;
+  window.exportSelectedStepsForAntigravity = exportSelectedStepsForAntigravity;
 }

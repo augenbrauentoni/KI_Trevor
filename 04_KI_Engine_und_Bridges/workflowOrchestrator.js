@@ -320,10 +320,12 @@ async function executeDepartmentWorkflow(initialTask, dept, targetPcId, neighbor
     });
 
     const { summary, antigravityPrompt } = parseTrevorSynthesis(trevorRawOutput);
+    const structuredSteps = extractStructuredPlanSteps(antigravityPrompt, task.checkpoint_data.chef_outputs, task.user_prompt);
 
     task.trevor_summary = `[Direkt-Auftrag an ${dept.name}]:\n${summary}\n\n` +
       `✔ Cross-Department-Check: ${crossCheckNotes}`;
     task.antigravity_prompt = antigravityPrompt;
+    task.checkpoint_data.structured_steps = structuredSteps;
     task.current_stage = '4_user_decision';
     task.status = 'pending_approval';
     task.last_completed_agent = 'trevor_core (Direkt-Synthese)';
@@ -333,7 +335,8 @@ async function executeDepartmentWorkflow(initialTask, dept, targetPcId, neighbor
       antigravity_prompt: task.antigravity_prompt,
       current_stage: task.current_stage,
       status: task.status,
-      last_completed_agent: task.last_completed_agent
+      last_completed_agent: task.last_completed_agent,
+      checkpoint_data: task.checkpoint_data
     });
 
     syncLocalCheckpointFile(task, 'Trevor Master-Synthese bereit -> Wartet auf JA/NEIN Freigabe');
@@ -382,85 +385,306 @@ export async function resumeTaskFromCheckpoint(taskId) {
   return executeTaskWorkflow(task);
 }
 
+// =============================================================================
+// HIERARCHISCHE AGENTEN-ORCHESTRIERUNG: HILFSFUNKTIONEN & MAPPING
+// =============================================================================
+
+function determineTargetFileByKeyword(text) {
+  const t = (text || '').toLowerCase();
+  if (t.includes('sql') || t.includes('supabase') || t.includes('tabelle') || t.includes('datenbank') || t.includes('schema') || t.includes('migration') || t.includes('rls')) {
+    return '01_Datenbank_Supabase/schema.sql';
+  }
+  if (t.includes('3d') || t.includes('three') || t.includes('canvas') || t.includes('szene') || t.includes('orbit') || t.includes('animation')) {
+    return '02_Frontend_UI_und_3D_Studio/studio3D.js';
+  }
+  if (t.includes('ui') || t.includes('frontend') || t.includes('button') || t.includes('modal') || t.includes('sidebar') || t.includes('view') || t.includes('tab') || t.includes('roadmap')) {
+    return '02_Frontend_UI_und_3D_Studio/app.js';
+  }
+  if (t.includes('style') || t.includes('css') || t.includes('theme') || t.includes('color') || t.includes('design') || t.includes('glow')) {
+    return '02_Frontend_UI_und_3D_Studio/styles.css';
+  }
+  if (t.includes('server') || t.includes('route') || t.includes('http') || t.includes('api') || t.includes('port') || t.includes('endpoint')) {
+    return '06_Deployment_und_Config/server.js';
+  }
+  if (t.includes('orchestrat') || t.includes('pipeline') || t.includes('bridge') || t.includes('agent') || t.includes('workflow') || t.includes('ki') || t.includes('llm')) {
+    return '04_KI_Engine_und_Bridges/workflowOrchestrator.js';
+  }
+  if (t.includes('test') || t.includes('qa') || t.includes('e2e') || t.includes('audit') || t.includes('qualität')) {
+    return 'tests/test_auth_rbac_e2e.js';
+  }
+  return '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md';
+}
+
+function determineDepartmentByKeyword(text) {
+  const t = (text || '').toLowerCase();
+  if (t.includes('idee') || t.includes('plan') || t.includes('anforderung')) return '1. Ideen & Planung';
+  if (t.includes('bauplan') || t.includes('architektur') || t.includes('technik')) return '2. Bauplan & Technik';
+  if (t.includes('ui') || t.includes('bedienung') || t.includes('frontend') || t.includes('layout')) return '3. Aussehen & Bedienung (Frontend)';
+  if (t.includes('3d') || t.includes('three') || t.includes('campus') || t.includes('grafik')) return '4. 3D-Campus & Grafiken';
+  if (t.includes('server') || t.includes('backend') || t.includes('api') || t.includes('route')) return '5. Server & Hintergrund-Logik (Backend)';
+  if (t.includes('datenbank') || t.includes('speicher') || t.includes('sql') || t.includes('supabase')) return '6. Datenbank & Speicher';
+  if (t.includes('ki') || t.includes('bridge') || t.includes('llm') || t.includes('intelligenz')) return '7. KI-Gehirn & Verbindungen';
+  if (t.includes('test') || t.includes('qa') || t.includes('fehler') || t.includes('prüfung')) return '8. Qualitäts- & Fehlerprüfung (QA)';
+  if (t.includes('sicherheit') || t.includes('security') || t.includes('schutz') || t.includes('guard')) return '9. Schutz & Sicherheit';
+  return '10. Bau-Anweisung (Antigravity)';
+}
+
+function getSuggestedFileForDepartment(deptId) {
+  const map = {
+    1: '00_Checkpoints_und_Status/CHECKPOINT_STATE.md',
+    2: '00_Checkpoints_und_Status/CHECKPOINT_STATE.md',
+    3: '02_Frontend_UI_und_3D_Studio/app.js',
+    4: '02_Frontend_UI_und_3D_Studio/studio3D.js',
+    5: '06_Deployment_und_Config/server.js',
+    6: '01_Datenbank_Supabase/schema.sql',
+    7: '04_KI_Engine_und_Bridges/workflowOrchestrator.js',
+    8: 'tests/test_auth_rbac_e2e.js',
+    9: '04_KI_Engine_und_Bridges/llmEngine.js',
+    10: '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md'
+  };
+  return map[deptId] || '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md';
+}
+
 /**
- * Kern-Engine: Führt den 4-Stufen Workflow sequentiell und mit atomaren Zwischenständen aus
+ * Extrahiert oder erzeugt eine strukturierte Liste einzelner Maßnahmen.
+ * Jeder Punkt besitzt: { id, title, description, target_file, department, enabled }
  */
-export async function executeTaskWorkflow(initialTask) {
-  let task = initialTask;
-  const settings = await dbBridge.getUserSettings();
+export function extractStructuredPlanSteps(antigravityPrompt = '', departmentReports = {}, userPrompt = '') {
+  const steps = [];
 
-  try {
-    // -------------------------------------------------------------------------
-    // STUFE 00: TREVOR ROUTING
-    // -------------------------------------------------------------------------
-    if (!task.checkpoint_data?.routing) {
-      console.log(`[Stufe 00] Trevor analysiert Auftrag und routet Abteilungen...`);
-      const routingPrompt = buildTrevorRoutingPrompt(task.user_prompt, hierarchy.departments);
+  if (antigravityPrompt) {
+    const rawLines = antigravityPrompt.split('\n');
+    let currentStep = null;
 
+    for (const line of rawLines) {
+      const match = line.match(/^(?:###|\*\*|\d+\.|\-)\s*(?:(?:SCHRITT|PHASE|STEP|MASSNAHME)\s*(\d+)[:\s\-]+)?([^\n\r]+)/i);
+
+      if (match && (line.startsWith('#') || line.startsWith('**') || /^\d+\./.test(line.trim()))) {
+        const titleCandidate = match[2].replace(/[\*#:]/g, '').trim();
+        const lower = titleCandidate.toLowerCase();
+
+        if (!lower.includes('vorgabe') && !lower.includes('important') &&
+            !lower.includes('kundenauftrag') && !lower.includes('best practice') &&
+            !lower.includes('hinweis') && titleCandidate.length > 4 && titleCandidate.length < 120) {
+
+          if (currentStep) {
+            steps.push(currentStep);
+          }
+
+          currentStep = {
+            id: `STEP-${String(steps.length + 1).padStart(2, '0')}`,
+            title: titleCandidate,
+            description: '',
+            target_file: determineTargetFileByKeyword(titleCandidate),
+            department: determineDepartmentByKeyword(titleCandidate),
+            enabled: true
+          };
+          continue;
+        }
+      }
+
+      if (currentStep) {
+        if (line.toLowerCase().includes('ziel-datei') || line.toLowerCase().includes('target:')) {
+          const fileMatch = line.match(/(?:Ziel-Datei|Target|Datei|File)[\s\:\*\`]*([a-zA-Z0-9_\-\.\/\\\~]+\.[a-zA-Z0-9]+)/i);
+          if (fileMatch) {
+            currentStep.target_file = fileMatch[1].replace(/[`"']/g, '').trim();
+          }
+        } else if (line.trim().length > 0 && !line.startsWith('---')) {
+          if (currentStep.description.length < 320) {
+            currentStep.description += (currentStep.description ? ' ' : '') + line.trim();
+          }
+        }
+      }
+    }
+
+    if (currentStep) {
+      steps.push(currentStep);
+    }
+  }
+
+  // Fallback 1: Falls weniger als 2 Schritte aus dem Text geparst wurden,
+  // nutzen wir die geprüften Berichte der Chef-Agenten
+  if (steps.length < 2) {
+    const reports = Array.isArray(departmentReports) ? departmentReports : Object.values(departmentReports || {});
+    if (reports.length > 0) {
+      reports.forEach((rep, idx) => {
+        const dName = rep.department_name || `Abteilung ${rep.department_id || idx + 1}`;
+        const targetFile = getSuggestedFileForDepartment(rep.department_id || (idx + 1));
+        const cleanDesc = (rep.output_text || '')
+          .replace(/[#*`]/g, '')
+          .split('\n')
+          .filter(l => l.trim().length > 10)
+          .slice(0, 3)
+          .join(' ')
+          .slice(0, 320) || `Spezifische Ausarbeitung und Code-Implementierung für ${dName}.`;
+
+        steps.push({
+          id: `STEP-${String(steps.length + 1).padStart(2, '0')}`,
+          title: `${dName}: System-Implementierung & Audit`,
+          description: cleanDesc,
+          target_file: targetFile,
+          department: dName,
+          enabled: true
+        });
+      });
+    }
+  }
+
+  // Fallback 2: Falls immer noch keine Schritte vorliegen
+  if (steps.length === 0) {
+    const pStr = userPrompt || 'Software Modul';
+    steps.push(
+      {
+        id: 'STEP-01',
+        title: 'Architektur- & Datenbank-Modellierung',
+        description: `Erstelle Tabellen-Definitionen, Schemata und Migrationen für: "${pStr.slice(0, 60)}"`,
+        target_file: '01_Datenbank_Supabase/schema.sql',
+        department: '2. Bauplan & Technik',
+        enabled: true
+      },
+      {
+        id: 'STEP-02',
+        title: 'Frontend-UI & Interaktive Komponenten',
+        description: `Entwickle die Dark-Slate Benutzeroberfläche und die Event-Handler für das Feature.`,
+        target_file: '02_Frontend_UI_und_3D_Studio/app.js',
+        department: '3. Aussehen & Bedienung (Frontend)',
+        enabled: true
+      },
+      {
+        id: 'STEP-03',
+        title: 'Backend API-Routen & Bridge-Integration',
+        description: `Implementiere die Server-Endpunkte und verknüpfe die Datenströme.`,
+        target_file: '06_Deployment_und_Config/server.js',
+        department: '5. Server & Hintergrund-Logik (Backend)',
+        enabled: true
+      }
+    );
+  }
+
+  return steps;
+}
+
+// =============================================================================
+// HIERARCHISCHE WORKFLOW-ORCHESTRATOR KLASSE
+// =============================================================================
+
+export class WorkflowOrchestrator {
+  constructor(options = {}) {
+    this.options = options;
+  }
+
+  /**
+   * 1. dispatchTask(userTask)
+   * Trevor zerlegt den Auftrag in Department-Tasks (z. B. "3D & UI", "KI & Bridges", "Architektur").
+   */
+  async dispatchTask(userTask) {
+    const promptText = typeof userTask === 'string' ? userTask : userTask.user_prompt;
+    console.log(`\n[WorkflowOrchestrator] 1. dispatchTask: Zerlege Auftrag in Department-Tasks...`);
+
+    const settings = await dbBridge.getUserSettings();
+    let selectedDeptIds = [];
+
+    try {
+      const routingPrompt = buildTrevorRoutingPrompt(promptText, hierarchy.departments);
       const routingRaw = await runAgentPrompt({
         systemPrompt: routingPrompt.systemPrompt,
         userPrompt: routingPrompt.userPrompt,
         settings
       });
 
-      let parsedRouting;
-      try {
-        const cleanJson = routingRaw.replace(/```json/g, '').replace(/```/g, '').trim();
-        parsedRouting = JSON.parse(cleanJson);
-      } catch {
-        console.warn(`[Stufe 00] JSON Parsing fehlgeschlagen, aktiviere Standard-Räume [1, 2, 3, 4, 10].`);
-        parsedRouting = {
-          selected_department_ids: [1, 2, 3, 4, 10],
-          routing_rationale: 'Automatische Standardzuweisung für Full-Stack Applikation',
-          complexity_level: 'high'
-        };
-      }
-
-      // Raum 10 (Antigravity Synthesis) immer erzwingen
-      if (!parsedRouting.selected_department_ids.includes(10)) {
-        parsedRouting.selected_department_ids.push(10);
-      }
-
-      task.checkpoint_data.routing = parsedRouting;
-      task.selected_departments = parsedRouting.selected_department_ids;
-      task.last_completed_agent = 'trevor_core (Routing)';
-
-      task = await dbBridge.updateTask(task.id, {
-        selected_departments: task.selected_departments,
-        checkpoint_data: task.checkpoint_data,
-        last_completed_agent: task.last_completed_agent
-      });
-
-      syncLocalCheckpointFile(task, `Routing abgeschlossen: Räume ${task.selected_departments.join(', ')} aktiviert`);
-      console.log(`[Stufe 00] Aktivierte Räume:`, task.selected_departments);
+      const cleanJson = routingRaw.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      selectedDeptIds = parsed.selected_department_ids || [];
+    } catch {
+      // Heuristischer Fallback
+      const pLower = promptText.toLowerCase();
+      selectedDeptIds = [1, 2]; // Planung & Architektur immer
+      if (pLower.includes('3d') || pLower.includes('canvas') || pLower.includes('grafik')) selectedDeptIds.push(4);
+      if (pLower.includes('ui') || pLower.includes('frontend') || pLower.includes('button') || pLower.includes('style')) selectedDeptIds.push(3);
+      if (pLower.includes('server') || pLower.includes('api') || pLower.includes('backend') || pLower.includes('auth')) selectedDeptIds.push(5);
+      if (pLower.includes('datenbank') || pLower.includes('database') || pLower.includes('tabelle') || pLower.includes('sql') || pLower.includes('supabase')) selectedDeptIds.push(6);
+      if (pLower.includes('ki') || pLower.includes('llm') || pLower.includes('ollama') || pLower.includes('gemini') || pLower.includes('bridge')) selectedDeptIds.push(7);
+      if (pLower.includes('test') || pLower.includes('qa') || pLower.includes('e2e')) selectedDeptIds.push(8);
+      if (pLower.includes('security') || pLower.includes('sicherheit') || pLower.includes('jwt')) selectedDeptIds.push(9);
     }
 
-    const activeDepartmentObjects = hierarchy.departments.filter(d => task.selected_departments.includes(d.id));
+    if (!selectedDeptIds.includes(10)) {
+      selectedDeptIds.push(10); // Antigravity Synthesis zwingend
+    }
 
-    // -------------------------------------------------------------------------
-    // STUFE 01: FACHTEAM (33 SPEZIAL-PCS)
-    // -------------------------------------------------------------------------
-    if (task.current_stage === '1_fachteam') {
-      console.log(`\n--- STUFE 01: FACHTEAM ARBEITET (PC-Agenten) ---`);
+    selectedDeptIds = Array.from(new Set(selectedDeptIds));
+    const activeDepts = hierarchy.departments.filter(d => selectedDeptIds.includes(d.id));
 
-      for (const dept of activeDepartmentObjects) {
-        for (const pc of dept.specialist_pcs) {
-          // Prüfe, ob dieser PC bereits im Checkpoint vorliegt (Anti-Limit & Resume)
-          if (task.checkpoint_data.pc_outputs[pc.id]) {
-            console.log(`  [Übersprungen / Bereits im Cache] ${pc.name} (${dept.name})`);
-            continue;
-          }
+    const subTasks = activeDepts.map(dept => ({
+      id: `dept_task_${dept.id}`,
+      departmentId: dept.id,
+      departmentName: dept.name,
+      departmentCode: dept.code,
+      leadAgent: dept.chef_agent,
+      workerAgents: dept.specialist_pcs,
+      missionPrompt: `Fachspezifische Ausarbeitung für ${dept.name} zu: ${promptText}`,
+      targetFolder: `0${dept.id}_${dept.name.replace(/[^a-zA-Z0-9]/g, '_')}`
+    }));
 
-          console.log(`  > Starte Inferenz für: ${pc.name} [${dept.code}]...`);
-          const pcPrompt = buildPcAgentPrompt(pc, dept, task.user_prompt);
+    if (typeof userTask === 'object' && userTask !== null) {
+      userTask.selected_departments = selectedDeptIds;
+      userTask.checkpoint_data = userTask.checkpoint_data || {};
+      userTask.checkpoint_data.routing = {
+        selected_department_ids: selectedDeptIds,
+        routing_rationale: `Hierarchische Zerlegung in ${subTasks.length} Fachabteilungen`
+      };
+      userTask.checkpoint_data.sub_tasks = subTasks;
+      syncLocalCheckpointFile(userTask, `Orchestrierung: ${subTasks.length} Department-Tasks erstellt`);
+    }
 
-          const outputText = await runAgentPrompt({
-            systemPrompt: pcPrompt.systemPrompt,
-            userPrompt: pcPrompt.userPrompt,
-            settings
-          });
+    return subTasks;
+  }
 
-          // Speichere Agent Log
+  /**
+   * 2. executeWorkerTasks(subTasks, task)
+   * Die zuständigen Sub-Agenten bearbeiten parallel oder sequentiell ihre Teilaufgabe.
+   */
+  async executeWorkerTasks(subTasks, task = null) {
+    console.log(`\n[WorkflowOrchestrator] 2. executeWorkerTasks: Sub-Agenten bearbeiten Teilaufgaben...`);
+    const settings = await dbBridge.getUserSettings();
+    const workerOutputs = {};
+    const taskPrompt = task?.user_prompt || 'Software Spezifikation';
+
+    for (const subTask of subTasks) {
+      const dept = hierarchy.departments.find(d => d.id === subTask.departmentId);
+      if (!dept) continue;
+
+      for (const pc of subTask.workerAgents) {
+        if (task?.checkpoint_data?.pc_outputs?.[pc.id]) {
+          workerOutputs[pc.id] = task.checkpoint_data.pc_outputs[pc.id];
+          continue;
+        }
+
+        console.log(`  > Spezial-PC arbeitet: ${pc.name} [${dept.name}]...`);
+        const pcPrompt = buildPcAgentPrompt(pc, dept, taskPrompt);
+
+        const outputText = await runAgentPrompt({
+          systemPrompt: pcPrompt.systemPrompt,
+          userPrompt: pcPrompt.userPrompt,
+          settings
+        });
+
+        const record = {
+          agent_id: pc.id,
+          agent_name: pc.name,
+          department_id: dept.id,
+          department_name: dept.name,
+          output_text: outputText,
+          timestamp: new Date().toISOString()
+        };
+
+        workerOutputs[pc.id] = record;
+
+        if (task) {
+          task.checkpoint_data.pc_outputs = task.checkpoint_data.pc_outputs || {};
+          task.checkpoint_data.pc_outputs[pc.id] = record;
+          task.last_completed_agent = `${pc.id} (${pc.name})`;
+
           await dbBridge.saveAgentLog({
             task_id: task.id,
             department_id: dept.id,
@@ -471,64 +695,73 @@ export async function executeTaskWorkflow(initialTask) {
             output_text: outputText
           });
 
-          // ATOMARE CHECKPOINT-SPEICHERUNG NACH JEDEM PC
-          task.checkpoint_data.pc_outputs[pc.id] = {
-            agent_id: pc.id,
-            agent_name: pc.name,
-            department_id: dept.id,
-            department_name: dept.name,
-            output_text: outputText,
-            timestamp: new Date().toISOString()
-          };
-          task.last_completed_agent = `${pc.id} (${pc.name})`;
-
-          task = await dbBridge.updateTask(task.id, {
+          await dbBridge.updateTask(task.id, {
             checkpoint_data: task.checkpoint_data,
             last_completed_agent: task.last_completed_agent
           });
 
-          syncLocalCheckpointFile(task, `PC-Agent abgeschlossen: ${pc.name}`);
+          syncLocalCheckpointFile(task, `Worker-Task abgeschlossen: ${pc.name}`);
         }
       }
-
-      // Übergang zu Stufe 02
-      task.current_stage = '2_chef_agent';
-      task = await dbBridge.updateTask(task.id, { current_stage: task.current_stage });
-      syncLocalCheckpointFile(task, 'Stufe 01 beendet -> Wechsel zu Stufe 02 (Chef-Agenten)');
     }
 
-    // -------------------------------------------------------------------------
-    // STUFE 02: CHEF-AGENTEN (AUDIT, WIDERSPRUCHS-BEREINIGUNG & BLUEPRINT)
-    // -------------------------------------------------------------------------
-    if (task.current_stage === '2_chef_agent') {
-      console.log(`\n--- STUFE 02: CHEF-AGENTEN KONTROLLIEREN & SYNTHETISIEREN ---`);
+    return workerOutputs;
+  }
 
-      for (const dept of activeDepartmentObjects) {
-        const chef = dept.chef_agent;
+  /**
+   * 3. aggregateDepartmentResults(workerOutputs, task)
+   * Die Abteilungsleiter (Leads) sammeln die Ausgaben ihrer Agenten ein, prüfen auf Widersprüche,
+   * Redundanzen und Logikfehler und konsolidieren das Ergebnis.
+   */
+  async aggregateDepartmentResults(workerOutputs, task = null) {
+    console.log(`\n[WorkflowOrchestrator] 3. aggregateDepartmentResults: Abteilungsleiter konsolidieren Ergebnisse...`);
+    const settings = await dbBridge.getUserSettings();
+    const departmentReports = {};
+    const taskPrompt = task?.user_prompt || 'Software Spezifikation';
+    const outputsArray = Object.values(workerOutputs || {});
 
-        if (task.checkpoint_data.chef_outputs[chef.id]) {
-          console.log(`  [Übersprungen / Bereits im Cache] ${chef.name} (${dept.name})`);
-          continue;
-        }
+    const selectedDeptIds = task?.selected_departments || Array.from(new Set(outputsArray.map(o => o.department_id)));
 
-        console.log(`  > Chef-Audit startet: ${chef.name} [Leitung: ${dept.name}]...`);
+    for (const deptId of selectedDeptIds) {
+      const dept = hierarchy.departments.find(d => d.id === deptId);
+      if (!dept) continue;
 
-        // Hole die Outputs der PCs dieser Abteilung
-        const departmentPcOutputs = Object.values(task.checkpoint_data.pc_outputs).filter(o => o.department_id === dept.id);
+      const chef = dept.chef_agent;
+      if (task?.checkpoint_data?.chef_outputs?.[chef.id]) {
+        departmentReports[chef.id] = task.checkpoint_data.chef_outputs[chef.id];
+        continue;
+      }
 
-        const chefPrompt = buildChefAgentPrompt(chef, dept, task.user_prompt, departmentPcOutputs);
+      console.log(`  > Abteilungsleiter auditiert: ${chef.name} [Leitung: ${dept.name}]...`);
+      const deptWorkerOutputs = outputsArray.filter(o => o.department_id === dept.id);
+      const chefPrompt = buildChefAgentPrompt(chef, dept, taskPrompt, deptWorkerOutputs);
 
-        const outputText = await runAgentPrompt({
-          systemPrompt: chefPrompt.systemPrompt,
-          userPrompt: chefPrompt.userPrompt,
-          settings
-        });
+      const outputText = await runAgentPrompt({
+        systemPrompt: chefPrompt.systemPrompt,
+        userPrompt: chefPrompt.userPrompt,
+        settings
+      });
 
-        // Extrahiere aufgelöste Widersprüche falls vorhanden
-        const contradictionMatch = outputText.match(/Identifizierte Konflikte[^:]*:\s*([^\n\r]+)/i);
-        const resolvedText = contradictionMatch ? contradictionMatch[1] : 'Keine kritischen Widersprüche';
+      const contradictionMatch = outputText.match(/Identifizierte Konflikte[^:]*:\s*([^\n\r]+)/i);
+      const resolvedText = contradictionMatch ? contradictionMatch[1] : 'Keine kritischen Widersprüche';
 
-        // Speichere Agent Log
+      const reportRecord = {
+        agent_id: chef.id,
+        agent_name: chef.name,
+        department_id: dept.id,
+        department_name: dept.name,
+        output_text: outputText,
+        contradictions_resolved: resolvedText,
+        timestamp: new Date().toISOString()
+      };
+
+      departmentReports[chef.id] = reportRecord;
+
+      if (task) {
+        task.checkpoint_data.chef_outputs = task.checkpoint_data.chef_outputs || {};
+        task.checkpoint_data.chef_outputs[chef.id] = reportRecord;
+        task.last_completed_agent = `${chef.id} (${chef.name})`;
+
         await dbBridge.saveAgentLog({
           task_id: task.id,
           department_id: dept.id,
@@ -540,48 +773,50 @@ export async function executeTaskWorkflow(initialTask) {
           contradictions_resolved: resolvedText
         });
 
-        // ATOMARE CHECKPOINT-SPEICHERUNG NACH JEDEM CHEF
-        task.checkpoint_data.chef_outputs[chef.id] = {
-          agent_id: chef.id,
-          agent_name: chef.name,
-          department_id: dept.id,
-          department_name: dept.name,
-          output_text: outputText,
-          contradictions_resolved: resolvedText,
-          timestamp: new Date().toISOString()
-        };
-        task.last_completed_agent = `${chef.id} (${chef.name})`;
-
-        task = await dbBridge.updateTask(task.id, {
+        await dbBridge.updateTask(task.id, {
           checkpoint_data: task.checkpoint_data,
           last_completed_agent: task.last_completed_agent
         });
 
-        syncLocalCheckpointFile(task, `Chef-Agent abgeschlossen: ${chef.name}`);
+        syncLocalCheckpointFile(task, `Abteilungs-Audit abgeschlossen: ${chef.name}`);
       }
-
-      // Übergang zu Stufe 03
-      task.current_stage = '3_trevor';
-      task = await dbBridge.updateTask(task.id, { current_stage: task.current_stage });
-      syncLocalCheckpointFile(task, 'Stufe 02 beendet -> Wechsel zu Stufe 03 (Trevor Synthese)');
     }
 
-    // -------------------------------------------------------------------------
-    // STUFE 03: TREVOR MASTER-SYNTHESE
-    // -------------------------------------------------------------------------
-    if (task.current_stage === '3_trevor') {
-      console.log(`\n--- STUFE 03: TREVOR ERSTELLT MASTER-SYNTHESE & ANTIGRAVITY-PROMPT ---`);
+    return departmentReports;
+  }
 
-      const chefReports = Object.values(task.checkpoint_data.chef_outputs);
-      const synthesisPrompt = buildTrevorSynthesisPrompt(task.user_prompt, chefReports, task.rejection_feedback);
+  /**
+   * 4. synthesizeFinalPlan(departmentReports, task)
+   * Trevor fasst alles zu einer Liste strukturierter Maßnahmen zusammen.
+   * Jeder Punkt erhält eine eindeutige ID, Titel, Beschreibung und Ziel-Datei.
+   */
+  async synthesizeFinalPlan(departmentReports, task = null) {
+    console.log(`\n[WorkflowOrchestrator] 4. synthesizeFinalPlan: Trevor erstellt finale Maßnahmen-Roadmap...`);
+    const settings = await dbBridge.getUserSettings();
+    const taskPrompt = task?.user_prompt || 'Software Spezifikation';
+    const reportsList = Object.values(departmentReports || {});
 
-      const trevorRawOutput = await runAgentPrompt({
-        systemPrompt: synthesisPrompt.systemPrompt,
-        userPrompt: synthesisPrompt.userPrompt,
-        settings
-      });
+    const synthesisPrompt = buildTrevorSynthesisPrompt(taskPrompt, reportsList, task?.rejection_feedback);
 
-      const { summary, antigravityPrompt } = parseTrevorSynthesis(trevorRawOutput);
+    const trevorRawOutput = await runAgentPrompt({
+      systemPrompt: synthesisPrompt.systemPrompt,
+      userPrompt: synthesisPrompt.userPrompt,
+      settings
+    });
+
+    const { summary, antigravityPrompt } = parseTrevorSynthesis(trevorRawOutput);
+
+    // Extrahiere strukturierte Liste mit eindeutiger ID, Titel, Beschreibung und Ziel-Datei
+    const structuredSteps = extractStructuredPlanSteps(antigravityPrompt, departmentReports, taskPrompt);
+
+    if (task) {
+      task.trevor_summary = summary;
+      task.antigravity_prompt = antigravityPrompt;
+      task.checkpoint_data = task.checkpoint_data || {};
+      task.checkpoint_data.structured_steps = structuredSteps;
+      task.current_stage = '4_user_decision';
+      task.status = 'pending_approval';
+      task.last_completed_agent = 'trevor_core (Master Synthesis)';
 
       await dbBridge.saveAgentLog({
         task_id: task.id,
@@ -593,25 +828,61 @@ export async function executeTaskWorkflow(initialTask) {
         output_text: trevorRawOutput
       });
 
-      task.trevor_summary = summary;
-      task.antigravity_prompt = antigravityPrompt;
-      task.current_stage = '4_user_decision';
-      task.status = 'pending_approval';
-      task.last_completed_agent = 'trevor_core (Master Synthesis)';
-
-      task = await dbBridge.updateTask(task.id, {
+      await dbBridge.updateTask(task.id, {
         trevor_summary: task.trevor_summary,
         antigravity_prompt: task.antigravity_prompt,
         current_stage: task.current_stage,
         status: task.status,
-        last_completed_agent: task.last_completed_agent
+        last_completed_agent: task.last_completed_agent,
+        checkpoint_data: task.checkpoint_data
       });
 
-      syncLocalCheckpointFile(task, 'Trevor Master-Synthese fertiggestellt -> Wartet auf Nutzer-Entscheidung (JA / NEIN)');
-      console.log(`\n[Trevor Studio] Vorlage fertiggestellt. Status: PENDING_APPROVAL.`);
+      syncLocalCheckpointFile(task, 'Master-Synthese & Interaktive Roadmap fertiggestellt -> Wartet auf Nutzer-Freigabe');
+      console.log(`\n[WorkflowOrchestrator] Roadmap mit ${structuredSteps.length} strukturierten Maßnahmen fertiggestellt.`);
     }
 
+    return {
+      summary,
+      antigravityPrompt,
+      steps: structuredSteps
+    };
+  }
+
+  /**
+   * Vollständiger 4-Stufen Orchestrierungs-Lauf
+   */
+  async run(task) {
+    // 1. Dispatch
+    const subTasks = await this.dispatchTask(task);
+    task.current_stage = '1_fachteam';
+    await dbBridge.updateTask(task.id, { current_stage: task.current_stage });
+
+    // 2. Worker Ausführung
+    const workerOutputs = await this.executeWorkerTasks(subTasks, task);
+    task.current_stage = '2_chef_agent';
+    await dbBridge.updateTask(task.id, { current_stage: task.current_stage });
+
+    // 3. Department Leads Aggregation
+    const departmentReports = await this.aggregateDepartmentResults(workerOutputs, task);
+    task.current_stage = '3_trevor';
+    await dbBridge.updateTask(task.id, { current_stage: task.current_stage });
+
+    // 4. Synthese & finale Roadmap
+    await this.synthesizeFinalPlan(departmentReports, task);
     return task;
+  }
+}
+
+export const orchestrator = new WorkflowOrchestrator();
+
+/**
+ * Kern-Engine: Führt den 4-Stufen Workflow sequentiell und mit atomaren Zwischenständen aus
+ */
+export async function executeTaskWorkflow(initialTask) {
+  let task = initialTask;
+
+  try {
+    return await orchestrator.run(task);
   } catch (err) {
     if (err instanceof LimitReachedError) {
       console.warn(`\n[Trevor Guard] TASK AUTOMATISCH EINGEFROREN BEI LIMIT!`);

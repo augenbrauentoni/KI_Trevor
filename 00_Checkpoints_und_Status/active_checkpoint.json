@@ -1,33 +1,141 @@
 {
-  "task_id": "8bd64b95-5e33-4d41-a1dc-4ee1396c77bf",
-  "status": "approved",
+  "task_id": "2be39512-0d92-43d6-8256-d2485472f983",
+  "status": "pending_approval",
   "current_stage": "4_user_decision",
-  "last_completed_agent": "trevor_core (Direkt-Synthese)",
+  "last_completed_agent": "trevor_core (Master Synthesis)",
   "selected_departments": [
+    1,
+    2,
+    3,
+    5,
     6,
-    5
+    10
   ],
-  "updated_at": "2026-11-09T23:55:58.765Z",
+  "updated_at": "2026-11-10T16:39:36.197Z",
   "checkpoint_data": {
-    "instruction_type": "bottom_up_direct",
-    "target_department": 6,
-    "target_pc": null,
-    "neighbor_department": 5,
     "routing": {
       "selected_department_ids": [
+        1,
+        2,
+        3,
+        5,
         6,
-        5
+        10
       ],
-      "routing_rationale": "Direkter Bottom-Up Auftrag an 6. Datenbank & Speicher mit Cross-Check durch 5. Server & Hintergrund-Logik (Backend)"
+      "routing_rationale": "Hierarchische Zerlegung in 6 Fachabteilungen"
     },
     "pc_outputs": {
+      "pc_plan_1": {
+        "agent_id": "pc_plan_1",
+        "agent_name": "Ideen-Prüfer",
+        "department_id": 1,
+        "department_name": "1. Ideen & Planung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.102Z"
+      },
+      "pc_plan_2": {
+        "agent_id": "pc_plan_2",
+        "agent_name": "Funktions-Planer",
+        "department_id": 1,
+        "department_name": "1. Ideen & Planung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.104Z"
+      },
+      "pc_plan_3": {
+        "agent_id": "pc_plan_3",
+        "agent_name": "Machbarkeits-Checker",
+        "department_id": 1,
+        "department_name": "1. Ideen & Planung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.107Z"
+      },
+      "pc_arch_1": {
+        "agent_id": "pc_arch_1",
+        "agent_name": "Technik-Wähler",
+        "department_id": 2,
+        "department_name": "2. Bauplan & Technik",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.112Z"
+      },
+      "pc_arch_2": {
+        "agent_id": "pc_arch_2",
+        "agent_name": "Ordner- & Struktur-Planer",
+        "department_id": 2,
+        "department_name": "2. Bauplan & Technik",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.115Z"
+      },
+      "pc_arch_3": {
+        "agent_id": "pc_arch_3",
+        "agent_name": "Schnittstellen-Planer",
+        "department_id": 2,
+        "department_name": "2. Bauplan & Technik",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.119Z"
+      },
+      "pc_design_1": {
+        "agent_id": "pc_design_1",
+        "agent_name": "Layout-Zeichner",
+        "department_id": 3,
+        "department_name": "3. Optik & Bedienung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.122Z"
+      },
+      "pc_design_2": {
+        "agent_id": "pc_design_2",
+        "agent_name": "Farben- & Dark-Mode-Profi",
+        "department_id": 3,
+        "department_name": "3. Optik & Bedienung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.124Z"
+      },
+      "pc_design_3": {
+        "agent_id": "pc_design_3",
+        "agent_name": "Handy- & PC-Ansicht-Prüfer",
+        "department_id": 3,
+        "department_name": "3. Optik & Bedienung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.129Z"
+      },
+      "pc_back_1": {
+        "agent_id": "pc_back_1",
+        "agent_name": "Datenwege-Bauer (API)",
+        "department_id": 5,
+        "department_name": "5. Server & Hintergrund-Logik (Backend)",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.132Z"
+      },
+      "pc_back_2": {
+        "agent_id": "pc_back_2",
+        "agent_name": "Rechenlogik-Programmierer",
+        "department_id": 5,
+        "department_name": "5. Server & Hintergrund-Logik (Backend)",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.134Z"
+      },
+      "pc_back_3": {
+        "agent_id": "pc_back_3",
+        "agent_name": "Echtzeit-Sync-Profi",
+        "department_id": 5,
+        "department_name": "5. Server & Hintergrund-Logik (Backend)",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.138Z"
+      },
+      "pc_back_4": {
+        "agent_id": "pc_back_4",
+        "agent_name": "Login- & Rechte-Wächter",
+        "department_id": 5,
+        "department_name": "5. Server & Hintergrund-Logik (Backend)",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.142Z"
+      },
       "pc_data_1": {
         "agent_id": "pc_data_1",
         "agent_name": "Tabellen-Architekt",
         "department_id": 6,
         "department_name": "6. Datenbank & Speicher",
         "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
-        "timestamp": "2026-11-09T23:55:58.300Z"
+        "timestamp": "2026-11-10T16:39:36.144Z"
       },
       "pc_data_2": {
         "agent_id": "pc_data_2",
@@ -35,7 +143,7 @@
         "department_id": 6,
         "department_name": "6. Datenbank & Speicher",
         "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
-        "timestamp": "2026-11-09T23:55:58.305Z"
+        "timestamp": "2026-11-10T16:39:36.146Z"
       },
       "pc_data_3": {
         "agent_id": "pc_data_3",
@@ -43,24 +151,401 @@
         "department_id": 6,
         "department_name": "6. Datenbank & Speicher",
         "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
-        "timestamp": "2026-11-09T23:55:58.308Z"
+        "timestamp": "2026-11-10T16:39:36.151Z"
+      },
+      "pc_rel_1": {
+        "agent_id": "pc_rel_1",
+        "agent_name": "Online-Stellungs-Profi (Render/GitHub)",
+        "department_id": 10,
+        "department_name": "10. Veröffentlichung & Online-Stellung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.154Z"
+      },
+      "pc_rel_2": {
+        "agent_id": "pc_rel_2",
+        "agent_name": "Paket- & Update-Verwalter",
+        "department_id": 10,
+        "department_name": "10. Veröffentlichung & Online-Stellung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.156Z"
+      },
+      "pc_rel_3": {
+        "agent_id": "pc_rel_3",
+        "agent_name": "Anleitungs-Schreiber",
+        "department_id": 10,
+        "department_name": "10. Veröffentlichung & Online-Stellung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "timestamp": "2026-11-10T16:39:36.161Z"
       }
     },
     "chef_outputs": {
+      "chef_plan": {
+        "agent_id": "chef_plan",
+        "agent_name": "Planungs-Chef",
+        "department_id": 1,
+        "department_name": "1. Ideen & Planung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "contradictions_resolved": "Keine kritischen Widersprüche",
+        "timestamp": "2026-11-10T16:39:36.165Z"
+      },
+      "chef_arch": {
+        "agent_id": "chef_arch",
+        "agent_name": "Chef-Architekt",
+        "department_id": 2,
+        "department_name": "2. Bauplan & Technik",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "contradictions_resolved": "Keine kritischen Widersprüche",
+        "timestamp": "2026-11-10T16:39:36.171Z"
+      },
+      "chef_design": {
+        "agent_id": "chef_design",
+        "agent_name": "Design-Chef",
+        "department_id": 3,
+        "department_name": "3. Optik & Bedienung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "contradictions_resolved": "Keine kritischen Widersprüche",
+        "timestamp": "2026-11-10T16:39:36.174Z"
+      },
+      "chef_backend": {
+        "agent_id": "chef_backend",
+        "agent_name": "Backend-Chef",
+        "department_id": 5,
+        "department_name": "5. Server & Hintergrund-Logik (Backend)",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "contradictions_resolved": "Keine kritischen Widersprüche",
+        "timestamp": "2026-11-10T16:39:36.179Z"
+      },
       "chef_data": {
         "agent_id": "chef_data",
         "agent_name": "Datenbank-Chef",
+        "department_id": 6,
         "department_name": "6. Datenbank & Speicher",
         "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
-        "contradictions_resolved": "Cross-Check durch Backend-Chef (5. Server & Hintergrund-Logik (Backend)): Auswirkungen auf Nachbar-Schnittstellen geprüft. Keine Seiteneffekte oder Blockaden.",
-        "timestamp": "2026-11-09T23:55:58.311Z"
+        "contradictions_resolved": "Keine kritischen Widersprüche",
+        "timestamp": "2026-11-10T16:39:36.183Z"
+      },
+      "chef_release": {
+        "agent_id": "chef_release",
+        "agent_name": "Release-Chef",
+        "department_id": 10,
+        "department_name": "10. Veröffentlichung & Online-Stellung",
+        "output_text": "[LOKALER ENTWICKLUNGS-MODUS (Gemini API-Key nicht gesetzt)]\n\nFachausarbeitung für gemini-2.5-flash:\n\n1. [SPEZIFIKATION]: Strukturierte Implementierung im Rahmen des Trevor Studio Systems.\n2. [CODE / DEFINITION]:\n```javascript\n// Autogenerierte Spezifikation durch Trevor Engine Fallback\nexport const config = { verified: true, engine: 'gemini-2.5-flash' };\n```\n3. [RISIKO & GUARDRAIL]: API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "contradictions_resolved": "Keine kritischen Widersprüche",
+        "timestamp": "2026-11-10T16:39:36.186Z"
       }
     },
-    "cross_department_check": {
-      "neighbor_dept_id": 5,
-      "neighbor_dept_name": "5. Server & Hintergrund-Logik (Backend)",
-      "neighbor_chef": "Backend-Chef",
-      "notes": "Cross-Check durch Backend-Chef (5. Server & Hintergrund-Logik (Backend)): Auswirkungen auf Nachbar-Schnittstellen geprüft. Keine Seiteneffekte oder Blockaden."
-    }
+    "sub_tasks": [
+      {
+        "id": "dept_task_1",
+        "departmentId": 1,
+        "departmentName": "1. Ideen & Planung",
+        "departmentCode": "dept_plan",
+        "leadAgent": {
+          "id": "chef_plan",
+          "name": "Planungs-Chef",
+          "title": "Leiter Ideen & Konzeption",
+          "role": "chef_agent",
+          "department_id": 1,
+          "focus": "Prüft Ideen auf Machbarkeit und leitet das Planungsteam",
+          "easy_explanation": "Prüft alle Ideen auf Machbarkeit, löst Widersprüche und leitet das Planungsteam."
+        },
+        "workerAgents": [
+          {
+            "id": "pc_plan_1",
+            "name": "Ideen-Prüfer",
+            "title": "Ideen- & Nutzen-Analyst",
+            "role": "pc_agent",
+            "department_id": 1,
+            "focus": "Prüft Idee auf Logik, Zielgruppe und Nutzen",
+            "easy_explanation": "Testet deine Idee auf Logik, echten Nutzen und beste Erfolgsaussichten."
+          },
+          {
+            "id": "pc_plan_2",
+            "name": "Funktions-Planer",
+            "title": "Feature- & Roadmap-Architekt",
+            "role": "pc_agent",
+            "department_id": 1,
+            "focus": "Erstellt vollständigen Feature-Katalog",
+            "easy_explanation": "Erstellt die Liste aller Funktionen und Knöpfe, die für dein Projekt gebraucht werden."
+          },
+          {
+            "id": "pc_plan_3",
+            "name": "Machbarkeits-Checker",
+            "title": "Scope- & Ressourcen-Prüfer",
+            "role": "pc_agent",
+            "department_id": 1,
+            "focus": "Validiert Umsetzbarkeit und Zeitaufwand",
+            "easy_explanation": "Prüft, ob die Technik, Schnittstellen und Zeit für diese Idee realistisch ausreichen."
+          }
+        ],
+        "missionPrompt": "Fachspezifische Ausarbeitung für 1. Ideen & Planung zu: Erstelle einen Supabase Auth Flow mit Role-Based Access Control und React UI",
+        "targetFolder": "01_1__Ideen___Planung"
+      },
+      {
+        "id": "dept_task_2",
+        "departmentId": 2,
+        "departmentName": "2. Bauplan & Technik",
+        "departmentCode": "dept_arch",
+        "leadAgent": {
+          "id": "chef_arch",
+          "name": "Chef-Architekt",
+          "title": "Leitender Systemarchitekt",
+          "role": "chef_agent",
+          "department_id": 2,
+          "focus": "Überwacht das technische Fundament und den Gesamtbauplan",
+          "easy_explanation": "Überwacht das gesamte technische Fundament, harmonisiert Schnittstellen und gibt den Bauplan frei."
+        },
+        "workerAgents": [
+          {
+            "id": "pc_arch_1",
+            "name": "Technik-Wähler",
+            "title": "Tech-Stack & Library Auditor",
+            "role": "pc_agent",
+            "department_id": 2,
+            "focus": "Wählt Runtimes, Frameworks und minimale Dependencies",
+            "easy_explanation": "Wählt die besten Programmiersprachen und schlankesten Bibliotheken ohne unnötigen Ballast."
+          },
+          {
+            "id": "pc_arch_2",
+            "name": "Ordner- & Struktur-Planer",
+            "title": "Directory & Modular Layout Engineer",
+            "role": "pc_agent",
+            "department_id": 2,
+            "focus": "Strukturiert Projekt-Ordner und Namenskonventionen",
+            "easy_explanation": "Plant eine saubere, übersichtliche Datei- und Ordnerstruktur für das gesamte Projekt."
+          },
+          {
+            "id": "pc_arch_3",
+            "name": "Schnittstellen-Planer",
+            "title": "API-Topology & Protocol Specialist",
+            "role": "pc_agent",
+            "department_id": 2,
+            "focus": "Definiert Datenverträge zwischen Frontend und Backend",
+            "easy_explanation": "Definiert, wie Frontend, Backend und externe APIs exakt miteinander Daten austauschen."
+          }
+        ],
+        "missionPrompt": "Fachspezifische Ausarbeitung für 2. Bauplan & Technik zu: Erstelle einen Supabase Auth Flow mit Role-Based Access Control und React UI",
+        "targetFolder": "02_2__Bauplan___Technik"
+      },
+      {
+        "id": "dept_task_3",
+        "departmentId": 3,
+        "departmentName": "3. Optik & Bedienung",
+        "departmentCode": "dept_design",
+        "leadAgent": {
+          "id": "chef_design",
+          "name": "Design-Chef",
+          "title": "Head of Visual Design & UX",
+          "role": "chef_agent",
+          "department_id": 3,
+          "focus": "Sorgt für modernsten Look, klare Farbwelten und erstklassige Usability",
+          "easy_explanation": "Sorgt für eine moderne Farbästhetik, verständliche Nutzerführung und einheitliche Design-Tokens."
+        },
+        "workerAgents": [
+          {
+            "id": "pc_design_1",
+            "name": "Layout-Zeichner",
+            "title": "Wireframe & Component Layout Artist",
+            "role": "pc_agent",
+            "department_id": 3,
+            "focus": "Zeichnet Bildschirme, Abstände und Hierarchien",
+            "easy_explanation": "Zeichnet den perfekten Aufbau aller Seiten, Menüs und Eingabefelder."
+          },
+          {
+            "id": "pc_design_2",
+            "name": "Farben- & Dark-Mode-Profi",
+            "title": "Dark-Slate & Contrast Styler",
+            "role": "pc_agent",
+            "department_id": 3,
+            "focus": "Definiert Dark-Slate, Glassmorphismus und Red Glow",
+            "easy_explanation": "Gestaltet die Dark-Slate & Neon-Akzente sowie perfekte Kontraste für augenschonendes Arbeiten."
+          },
+          {
+            "id": "pc_design_3",
+            "name": "Handy- & PC-Ansicht-Prüfer",
+            "title": "Responsive & Mobile Usability Tester",
+            "role": "pc_agent",
+            "department_id": 3,
+            "focus": "Optimiert Breakpoints und Touch-Ziele",
+            "easy_explanation": "Garantiert, dass die Bedienung auf Smartphones, Tablets und großen Monitoren gleichermaßen genial ist."
+          }
+        ],
+        "missionPrompt": "Fachspezifische Ausarbeitung für 3. Optik & Bedienung zu: Erstelle einen Supabase Auth Flow mit Role-Based Access Control und React UI",
+        "targetFolder": "03_3__Optik___Bedienung"
+      },
+      {
+        "id": "dept_task_5",
+        "departmentId": 5,
+        "departmentName": "5. Server & Hintergrund-Logik (Backend)",
+        "departmentCode": "dept_backend",
+        "leadAgent": {
+          "id": "chef_backend",
+          "name": "Backend-Chef",
+          "title": "Chief Backend Architect",
+          "role": "chef_agent",
+          "department_id": 5,
+          "focus": "Überwacht Server-Routen, Berechnungen und Datenschnittstellen",
+          "easy_explanation": "Sichert robuste Serverarchitekturen, Antwortzeiten im Millisekundenbereich und fehlerfreie APIs."
+        },
+        "workerAgents": [
+          {
+            "id": "pc_back_1",
+            "name": "Datenwege-Bauer (API)",
+            "title": "REST & Endpoint Architect",
+            "role": "pc_agent",
+            "department_id": 5,
+            "focus": "Schreibt REST/JSON-Routen und Fehler-Codes",
+            "easy_explanation": "Erstellt die stabilen Datenautobahnen zwischen Frontend und Datenbank."
+          },
+          {
+            "id": "pc_back_2",
+            "name": "Rechenlogik-Programmierer",
+            "title": "Core Business Logic Developer",
+            "role": "pc_agent",
+            "department_id": 5,
+            "focus": "Programmiert algorithmische Workflows und Filter",
+            "easy_explanation": "Programmiert die geschäftliche Logik und komplexe Berechnungen im Hintergrund."
+          },
+          {
+            "id": "pc_back_3",
+            "name": "Echtzeit-Sync-Profi",
+            "title": "WebSocket & Realtime Specialist",
+            "role": "pc_agent",
+            "department_id": 5,
+            "focus": "Verwaltet Realtime-Subscriptions und Push-Events",
+            "easy_explanation": "Sorgt dafür, dass Änderungen ohne Neuladen der Seite sofort auf allen Geräten sichtbar sind."
+          },
+          {
+            "id": "pc_back_4",
+            "name": "Login- & Rechte-Wächter",
+            "title": "Auth & RBAC Middleware Specialist",
+            "role": "pc_agent",
+            "department_id": 5,
+            "focus": "Sichert Session-Token, JWTs und Zugriffsrechte",
+            "easy_explanation": "Verwaltet Benutzer-Logins, Rollen und wer welche Daten einsehen oder ändern darf."
+          }
+        ],
+        "missionPrompt": "Fachspezifische Ausarbeitung für 5. Server & Hintergrund-Logik (Backend) zu: Erstelle einen Supabase Auth Flow mit Role-Based Access Control und React UI",
+        "targetFolder": "05_5__Server___Hintergrund_Logik__Backend_"
+      },
+      {
+        "id": "dept_task_6",
+        "departmentId": 6,
+        "departmentName": "6. Datenbank & Speicher",
+        "departmentCode": "dept_data",
+        "leadAgent": {
+          "id": "chef_data",
+          "name": "Datenbank-Chef",
+          "title": "Lead Database Architect",
+          "role": "chef_agent",
+          "department_id": 6,
+          "focus": "Garantiert blitzschnelle und unzerstörbare Datenbankstrukturen",
+          "easy_explanation": "Prüft Datenintegrität, Normalisierung und verhindert Dateninkonsistenzen."
+        },
+        "workerAgents": [
+          {
+            "id": "pc_data_1",
+            "name": "Tabellen-Architekt",
+            "title": "PostgreSQL Schema Modeler",
+            "role": "pc_agent",
+            "department_id": 6,
+            "focus": "Schreibt DDL-Tabellen, Foreign Keys und Trigger",
+            "easy_explanation": "Entwirft saubere Supabase- & PostgreSQL-Tabellen mit sicheren Verknüpfungen."
+          },
+          {
+            "id": "pc_data_2",
+            "name": "Such-Beschleuniger",
+            "title": "Index & Query Tuning Specialist",
+            "role": "pc_agent",
+            "department_id": 6,
+            "focus": "Setzt B-Tree/GIN Indizes und optimiert Abfragen",
+            "easy_explanation": "Setzt smarte Indizes, damit Suchanfragen selbst bei tausenden Datensätzen in Millisekunden laden."
+          },
+          {
+            "id": "pc_data_3",
+            "name": "Backup- & Sicherungs-Planer",
+            "title": "Disaster Recovery & Migration Guard",
+            "role": "pc_agent",
+            "department_id": 6,
+            "focus": "Schreibt atomare Migrationen und Rollback-Skripte",
+            "easy_explanation": "Sichert Datenstände gegen Abstürze ab und plant automatische Wiederherstellungsschritte."
+          }
+        ],
+        "missionPrompt": "Fachspezifische Ausarbeitung für 6. Datenbank & Speicher zu: Erstelle einen Supabase Auth Flow mit Role-Based Access Control und React UI",
+        "targetFolder": "06_6__Datenbank___Speicher"
+      },
+      {
+        "id": "dept_task_10",
+        "departmentId": 10,
+        "departmentName": "10. Veröffentlichung & Online-Stellung",
+        "departmentCode": "dept_release",
+        "leadAgent": {
+          "id": "chef_release",
+          "name": "Release-Chef",
+          "title": "Lead DevOps & Release Governor",
+          "role": "chef_agent",
+          "department_id": 10,
+          "focus": "Veröffentlicht das fertige Projekt ins weltweite Web",
+          "easy_explanation": "Sorgt dafür, dass das fertige Programm weltweit online erreichbar und fehlerfrei gestartet werden kann."
+        },
+        "workerAgents": [
+          {
+            "id": "pc_rel_1",
+            "name": "Online-Stellungs-Profi (Render/GitHub)",
+            "title": "Cloud Deployment Engineer",
+            "role": "pc_agent",
+            "department_id": 10,
+            "focus": "Schreibt render.yaml und CI/CD Automatisierungen",
+            "easy_explanation": "Richtet das 1-Klick-Deployment auf Render und automatisierte GitHub-Pipelines ein."
+          },
+          {
+            "id": "pc_rel_2",
+            "name": "Paket- & Update-Verwalter",
+            "title": "Dependency & Build Governor",
+            "role": "pc_agent",
+            "department_id": 10,
+            "focus": "Verwaltet package.json und Build-Skripte",
+            "easy_explanation": "Verwaltet npm-Pakete, Versionsstände und stellt reproduzierbare Builds sicher."
+          },
+          {
+            "id": "pc_rel_3",
+            "name": "Anleitungs-Schreiber",
+            "title": "Technical Documentation Specialist",
+            "role": "pc_agent",
+            "department_id": 10,
+            "focus": "Verfasst 1-Klick Start-Anleitungen und README.md",
+            "easy_explanation": "Schreibt verständliche Schritt-für-Schritt-Anleitungen, damit jeder das Projekt sofort bedienen kann."
+          }
+        ],
+        "missionPrompt": "Fachspezifische Ausarbeitung für 10. Veröffentlichung & Online-Stellung zu: Erstelle einen Supabase Auth Flow mit Role-Based Access Control und React UI",
+        "targetFolder": "010_10__Ver_ffentlichung___Online_Stellung"
+      }
+    ],
+    "structured_steps": [
+      {
+        "id": "STEP-01",
+        "title": "[SPEZIFIKATION] Strukturierte Implementierung im Rahmen des Trevor Studio Systems.",
+        "description": "",
+        "target_file": "05_Antigravity_Outputs/ANTIGRAVITY_TASK.md",
+        "department": "10. Bau-Anweisung (Antigravity)",
+        "enabled": true
+      },
+      {
+        "id": "STEP-02",
+        "title": "[CODE / DEFINITION]",
+        "description": "```javascript // Autogenerierte Spezifikation durch Trevor Engine Fallback export const config = { verified: true, engine: 'gemini-2.5-flash' }; ```",
+        "target_file": "05_Antigravity_Outputs/ANTIGRAVITY_TASK.md",
+        "department": "10. Bau-Anweisung (Antigravity)",
+        "enabled": true
+      },
+      {
+        "id": "STEP-03",
+        "title": "[RISIKO & GUARDRAIL] API-Key in .env hinterlegen, um Live-Inferenz zu nutzen.",
+        "description": "## 2. SYSTEM-VORGABEN: - Alle Änderungen strikt im Projektverzeichnis ausführen. - Nach JEDER geänderten oder neuen Datei Zwischenstände in CHECKPOINT_STATE.md dokumentieren!",
+        "target_file": "06_Deployment_und_Config/server.js",
+        "department": "5. Server & Hintergrund-Logik (Backend)",
+        "enabled": true
+      }
+    ]
   }
 }
