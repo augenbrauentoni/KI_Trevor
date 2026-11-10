@@ -20,7 +20,26 @@ const HEADERS = {
   'Content-Type': 'application/json; charset=utf-8'
 };
 
+/**
+ * Strikte Sandbox-Prüfung: Stellt sicher, dass ein Zielpfad ausnahmslos
+ * innerhalb des KI_Trevor Hauptverzeichnisses liegt.
+ */
+function isPathInsideSandbox(targetPath, rootPath = PROJECT_ROOT) {
+  const normTarget = path.resolve(targetPath).toLowerCase();
+  const normRoot = path.resolve(rootPath).toLowerCase();
+  const rel = path.relative(normRoot, normTarget);
+  // Verhindert jedes Ausbrechen aus dem KI_Trevor Root
+  return !rel.startsWith('..') && !path.isAbsolute(rel) && (normTarget === normRoot || normTarget.startsWith(normRoot + path.sep));
+}
+
 const server = http.createServer((req, res) => {
+  // Strikter Sandbox-Schutz vor jeder Routen-Verarbeitung: Pfadausbruch mit '..' blockieren
+  if (req.url && (req.url.includes('..') || decodeURIComponent(req.url).includes('..'))) {
+    console.warn(`[Bridge Security] 403 Forbidden: Pfadausbruch mit '..' in URL abgewiesen: ${req.url}`);
+    res.writeHead(403, HEADERS);
+    return res.end(JSON.stringify({ error: '403 Forbidden: Pfad liegt außerhalb der KI_Trevor Sandbox' }));
+  }
+
   // Preflight-Anfragen behandeln
   if (req.method === 'OPTIONS') {
     res.writeHead(204, HEADERS);
@@ -31,6 +50,95 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/api/status') {
     res.writeHead(200, HEADERS);
     return res.end(JSON.stringify({ status: 'online', targetPath: OUTPUT_FILE }));
+  }
+
+  // =========================================================================
+  // ENDPUNKT 1: /api/list-files (SANDBOX DATEI-LISTE FÜR CODE-RAG)
+  // =========================================================================
+  if (req.method === 'GET' && req.url.startsWith('/api/list-files')) {
+    try {
+      // 1. Sicherheits-Check gegen URL Traversal
+      if (req.url.includes('..')) {
+        console.warn(`[Bridge Security] 403 Forbidden: Pfadausbruch mit '..' in URL abgewiesen: ${req.url}`);
+        res.writeHead(403, HEADERS);
+        return res.end(JSON.stringify({ error: '403 Forbidden: Pfad liegt außerhalb der KI_Trevor Sandbox' }));
+      }
+
+      const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
+      const folderParam = parsedUrl.searchParams.get('folder');
+
+      if (folderParam) {
+        if (folderParam.includes('..')) {
+          console.warn(`[Bridge Security] 403 Forbidden: Pfadausbruch im folder-Parameter: ${folderParam}`);
+          res.writeHead(403, HEADERS);
+          return res.end(JSON.stringify({ error: '403 Forbidden: Pfad liegt außerhalb der KI_Trevor Sandbox' }));
+        }
+        const resolvedFolder = path.resolve(PROJECT_ROOT, folderParam);
+        if (!isPathInsideSandbox(resolvedFolder)) {
+          console.warn(`[Bridge Security] 403 Forbidden: Ordner außerhalb der Sandbox: ${folderParam}`);
+          res.writeHead(403, HEADERS);
+          return res.end(JSON.stringify({ error: '403 Forbidden: Pfad liegt außerhalb der KI_Trevor Sandbox' }));
+        }
+      }
+
+      // Erlaubt-Ordner & erlaubte Endungen für die RAG-Sandbox
+      const ALLOWED_FOLDERS = [
+        '02_Frontend_UI_und_3D_Studio',
+        '03_Agenten_System_und_Prompts',
+        '04_KI_Engine_und_Bridges'
+      ];
+      const ALLOWED_EXTENSIONS = ['.js', '.html', '.css', '.md'];
+
+      let fileList = [];
+
+      function scanDir(currentDir) {
+        if (!fs.existsSync(currentDir)) return;
+        const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(currentDir, entry.name);
+          const resolved = path.resolve(fullPath);
+
+          // Strikte Sandbox-Prüfung bei jedem einzelnen Element
+          if (!isPathInsideSandbox(resolved)) {
+            continue;
+          }
+
+          if (entry.isDirectory()) {
+            if (entry.name === 'node_modules' || entry.name === '.git') continue;
+            scanDir(fullPath);
+          } else if (entry.isFile()) {
+            const ext = path.extname(entry.name).toLowerCase();
+            if (ALLOWED_EXTENSIONS.includes(ext)) {
+              const relPath = path.relative(PROJECT_ROOT, resolved).replace(/\\/g, '/');
+              fileList.push(relPath);
+            }
+          }
+        }
+      }
+
+      if (folderParam) {
+        const targetDir = path.resolve(PROJECT_ROOT, folderParam);
+        scanDir(targetDir);
+      } else {
+        for (const folder of ALLOWED_FOLDERS) {
+          const folderDir = path.resolve(PROJECT_ROOT, folder);
+          if (isPathInsideSandbox(folderDir)) {
+            scanDir(folderDir);
+          }
+        }
+      }
+
+      fileList.sort();
+      console.log(`[Bridge Sandbox] /api/list-files: ${fileList.length} Sandbox-Dateien gelistet.`);
+
+      res.writeHead(200, HEADERS);
+      return res.end(JSON.stringify(fileList));
+    } catch (err) {
+      console.error('[Bridge] Fehler bei /api/list-files:', err);
+      res.writeHead(500, HEADERS);
+      return res.end(JSON.stringify({ error: err.message }));
+    }
   }
 
   // Export-Endpunkt: Nimmt Prompt-Text entgegen und speichert Datei
@@ -117,13 +225,14 @@ const server = http.createServer((req, res) => {
           if (normalized.startsWith('KI_Trevor/')) normalized = normalized.slice('KI_Trevor/'.length);
           if (normalized.startsWith('Desktop/KI_Trevor/')) normalized = normalized.slice('Desktop/KI_Trevor/'.length);
 
-          // Auflösen und Sicherheitsprüfung gegen Directory-Traversal
+          // Auflösen und strikte Sicherheitsprüfung gegen Directory-Traversal / Sandbox-Ausbruch
           const targetPath = path.resolve(PROJECT_ROOT, normalized);
-          if (!targetPath.startsWith(PROJECT_ROOT)) {
+          if (!isPathInsideSandbox(targetPath) || normalized.includes('..')) {
+            console.warn(`[Bridge Security] 403 Forbidden: Lese-Versuch außerhalb der KI_Trevor Sandbox verweigert: ${filePath}`);
             results.push({
               path: filePath,
               content: null,
-              status: 'nicht gefunden'
+              status: 'error: 403 Forbidden (Zugriff außerhalb der KI_Trevor Sandbox verweigert)'
             });
             continue;
           }

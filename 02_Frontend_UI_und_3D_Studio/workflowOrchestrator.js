@@ -46,12 +46,26 @@ export class WorkflowOrchestrator {
     // -------------------------------------------------------------------------
     let codeContext = '';
     try {
-      const candidateFiles = this.extractCandidateFilePaths(subTasks.rawAnalysis || '', userPrompt);
+      let candidateFiles = [];
+      let isManualSelection = false;
+
+      // Priorität 1: Manuelle Dateiauswahl des Nutzers im UI (window.selectedContextFiles)
+      if (typeof window !== 'undefined' && Array.isArray(window.selectedContextFiles) && window.selectedContextFiles.length > 0) {
+        candidateFiles = [...window.selectedContextFiles];
+        isManualSelection = true;
+        console.log(`[WorkflowOrchestrator] Code-RAG: Verwende ${candidateFiles.length} manuell ausgewählte Kontext-Dateien aus window.selectedContextFiles (Regex-Fallback übersprungen).`);
+      } else {
+        // Priorität 2: Automatische Regex-Erkennung aus Prompt & Dispatcher-Antwort
+        candidateFiles = this.extractCandidateFilePaths(subTasks.rawAnalysis || '', userPrompt);
+      }
+
       if (candidateFiles.length > 0) {
         onStatusUpdate(
           'Stufe 1/4: Code-RAG (Kontext-Abruf)',
           'Trevor',
-          `Lese Quellcode von ${candidateFiles.length} identifizierten Projektdateien via Bridge (Port 3001)...`
+          isManualSelection
+            ? `Lese Quellcode von ${candidateFiles.length} manuell gewählten Kontext-Dateien (Sandbox) via Bridge (Port 3001)...`
+            : `Lese Quellcode von ${candidateFiles.length} identifizierten Projektdateien via Bridge (Port 3001)...`
         );
 
         const fetchedFiles = await this.fetchFilesContext(candidateFiles);

@@ -80,6 +80,13 @@ function bootTrevorApp() {
   } catch (err) {
     console.warn('[Trevor App] Idle-Training Warnung:', err);
   }
+
+  // 4. Sandbox-Dateien für Code-RAG Dateiwähler laden
+  try {
+    loadRAGFiles();
+  } catch (err) {
+    console.warn('[Trevor App] RAG Sandbox-Dateien laden Warnung:', err);
+  }
 }
 
 // Führt Initialisierung sofort aus, unabhängig von Event-Timing (Browser-Umgebung)
@@ -503,6 +510,96 @@ export function showAgentInfo(data) {
 
   // 4. Panel sichtbar schalten
   panel.style.display = 'flex';
+}
+
+// =============================================================================
+// SMART CONTEXT MANAGER (CODE-RAG SANDBOX DATEIWÄHLER)
+// =============================================================================
+if (typeof window !== 'undefined') {
+  if (!Array.isArray(window.selectedContextFiles)) {
+    window.selectedContextFiles = [];
+  }
+}
+
+export async function loadRAGFiles() {
+  const container = document.getElementById('rag-files-container');
+  if (!container) return;
+
+  container.innerHTML = '<div class="rag-loading-placeholder">Lade Sandbox-Dateien...</div>';
+
+  try {
+    const res = await fetch('http://localhost:3001/api/list-files');
+    if (!res.ok) {
+      throw new Error(`Server antwortete mit HTTP-Status ${res.status}`);
+    }
+    const files = await res.json();
+
+    if (!Array.isArray(files) || files.length === 0) {
+      container.innerHTML = '<div class="rag-loading-placeholder">Keine Sandbox-Dateien gefunden oder Bridge offline.</div>';
+      return;
+    }
+
+    if (typeof window !== 'undefined' && !Array.isArray(window.selectedContextFiles)) {
+      window.selectedContextFiles = [];
+    }
+
+    renderRAGFileTags(files);
+  } catch (err) {
+    console.warn('[Trevor RAG] /api/list-files nicht erreichbar:', err.message);
+    container.innerHTML = `
+      <div class="rag-loading-placeholder" style="color: #f87171;">
+        ⚠️ Bridge (Port 3001) nicht erreichbar. Starte localBridgeServer.js für manuelle Datei-Auswahl.
+      </div>
+    `;
+  }
+}
+
+export function renderRAGFileTags(files) {
+  const container = document.getElementById('rag-files-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  files.forEach(filePath => {
+    const isSelected = window.selectedContextFiles?.includes(filePath);
+    const tag = document.createElement('span');
+    tag.className = `rag-file-tag ${isSelected ? 'selected' : ''}`;
+    tag.innerText = filePath;
+    tag.title = `Klicken, um ${filePath} als Kontext einzubinden / abzuwählen`;
+
+    tag.addEventListener('click', () => {
+      if (!Array.isArray(window.selectedContextFiles)) {
+        window.selectedContextFiles = [];
+      }
+      const idx = window.selectedContextFiles.indexOf(filePath);
+      if (idx > -1) {
+        window.selectedContextFiles.splice(idx, 1);
+        tag.classList.remove('selected');
+      } else {
+        window.selectedContextFiles.push(filePath);
+        tag.classList.add('selected');
+      }
+      updateRAGSelectedCount();
+    });
+
+    container.appendChild(tag);
+  });
+
+  updateRAGSelectedCount();
+}
+
+export function updateRAGSelectedCount() {
+  const countBadge = document.getElementById('rag-selected-count');
+  const count = (typeof window !== 'undefined' && Array.isArray(window.selectedContextFiles)) 
+    ? window.selectedContextFiles.length 
+    : 0;
+
+  if (countBadge) {
+    countBadge.innerText = `${count} gewählt`;
+    countBadge.style.background = count > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)';
+    countBadge.style.color = count > 0 ? '#f87171' : '#94a3b8';
+    countBadge.style.borderColor = count > 0 ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255, 255, 255, 0.1)';
+  }
 }
 
 // =============================================================================
@@ -1731,6 +1828,14 @@ function setupEventListeners() {
     }
   });
 
+  // RAG Context Files: Aktualisieren-Button
+  const btnRefreshRAG = document.getElementById('btn-refresh-rag-files');
+  if (btnRefreshRAG) {
+    btnRefreshRAG.addEventListener('click', () => {
+      loadRAGFiles();
+    });
+  }
+
   // Trevor Terminal Tabs
   const btnTrevorActive = document.getElementById('tab-btn-trevor-active');
   const btnTrevorHistory = document.getElementById('tab-btn-trevor-history');
@@ -1972,4 +2077,10 @@ if (typeof window !== 'undefined') {
   window.renderInteractiveRoadmap = renderInteractiveRoadmap;
   window.exportSelectedStepsForAntigravity = exportSelectedStepsForAntigravity;
   window.showAgentInfo = showAgentInfo;
+  window.loadRAGFiles = loadRAGFiles;
+  window.renderRAGFileTags = renderRAGFileTags;
+  window.updateRAGSelectedCount = updateRAGSelectedCount;
+  if (!Array.isArray(window.selectedContextFiles)) {
+    window.selectedContextFiles = [];
+  }
 }

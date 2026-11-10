@@ -360,6 +360,23 @@
               Dein Software-Auftrag an Trevor:
             </label>
             <textarea id="task-prompt-input" class="prompt-textarea" placeholder="Beschreibe dein Feature, Fullstack-Modul, Datenbankmodell oder Bugfix. Z. B.: 'Baue eine Supabase Auth-Pipeline mit Role-Based-Access-Control, React Dark-Mode-UI und Docker-Deployment.'"></textarea>
+
+            <!-- KONTEXT-DATEIEN (RAG-SANDBOX) DATEIWÄHLER -->
+            <div class="rag-context-section">
+              <div class="rag-context-header">
+                <span class="rag-context-title">
+                  📁 Kontext-Dateien (RAG-Sandbox)
+                  <span id="rag-selected-count" class="rag-selected-badge">0 gewählt</span>
+                </span>
+                <button type="button" id="btn-refresh-rag-files" class="rag-refresh-btn" title="Dateiliste neu laden">
+                  ↻ Aktualisieren
+                </button>
+              </div>
+              <div id="rag-files-container" class="rag-files-container">
+                <div class="rag-loading-placeholder">Lade Sandbox-Dateien...</div>
+              </div>
+            </div>
+
             <div style="display: flex; justify-content: flex-end;">
               <button id="btn-dispatch-task" class="btn-submit-task">
                 <span>🚀 Auftrag an Trevor & Team übergeben</span>

@@ -1041,6 +1041,122 @@ body {
   box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
 }
 
+/* =============================================================================
+   RAG CONTEXT SELECTOR (SANDBOX DATEIWÄHLER)
+   ============================================================================= */
+.rag-context-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 12px 0;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+}
+
+.rag-context-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rag-context-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rag-selected-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  font-weight: 600;
+}
+
+.rag-refresh-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.rag-refresh-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.rag-files-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 115px;
+  overflow-y: auto;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(239, 68, 68, 0.4) rgba(0, 0, 0, 0.2);
+}
+
+.rag-files-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.rag-files-container::-webkit-scrollbar-thumb {
+  background: rgba(239, 68, 68, 0.4);
+  border-radius: 4px;
+}
+
+.rag-file-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: #1e2430; /* Dunkelgrauer Hintergrund */
+  color: #cbd5e1;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.18s ease;
+}
+
+.rag-file-tag:hover {
+  background: #252e3d;
+  color: #ffffff;
+  border-color: #475569;
+}
+
+.rag-file-tag.selected {
+  background: rgba(239, 68, 68, 0.22);
+  color: #ffffff;
+  border-color: #ef4444; /* Rote/neon Umrandung */
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  font-weight: 600;
+}
+
+.rag-loading-placeholder {
+  font-size: 11px;
+  color: #64748b;
+  padding: 8px 4px;
+  font-style: italic;
+}
+
 .btn-submit-task {
   background: linear-gradient(135deg, var(--iron-red) 0%, #b91c1c 100%);
   color: #fff;

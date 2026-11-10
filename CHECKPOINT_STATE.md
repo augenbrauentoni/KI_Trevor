@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** 3D-Raycaster, Schwebendes Agenten-Inspektions-Panel & Avatar-Interaktion zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
-- **Datum / Letztes Update:** 2026-11-10 18:30:00
+- **Status:** Smart Context Manager (Code-RAG), Strikte Sandbox-Isolation (`/api/list-files` & `/api/read-files`) & UI-Dateiwähler zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
+- **Datum / Letztes Update:** 2026-11-10 18:45:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -45,7 +45,7 @@ Ermöglicht den Fach-Agenten, realen existierenden Projektcode bei der Aufgabenb
 1. **Lese-Endpunkt `POST /api/read-files` (`04_KI_Engine_und_Bridges/localBridgeServer.js`):**
    - Nimmt ein JSON-Array von Dateipfaden entgegen: `{ "files": ["02_Frontend_UI_und_3D_Studio/app.js", "..."] }`.
    - Liest Dateien ausgehend vom Projekt-Root (`C:\Users\User\Desktop\KI_Trevor`) mit `fs.readFileSync(targetPath, 'utf-8')`.
-   - Absicherung gegen Directory-Traversal (`targetPath.startsWith(PROJECT_ROOT)`).
+   - Absicherung gegen Directory-Traversal (`isPathInsideSandbox(targetPath)`).
    - Tolerante Fehlerbehandlung: Nicht gefundene Dateien werden als `{ path, content: null, status: 'nicht gefunden' }` markiert.
    - Antwortet mit Array: `[{ path: "...", content: "...", status: "ok" }]`.
 2. **Kontext-Extraktion & Injektion (`02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js`):**
@@ -80,7 +80,7 @@ Verknüpft die Workflow-Stufen dynamisch mit der Three.js 3D-Szene für plastisc
    - Direkte Provider-Auswahl (Gemini / Ollama) und Passwort-Feld für den Gemini API-Key direkt im Trevor-Eingabebereich (`#quick-llm-provider-select`, `#quick-gemini-key-input`).
    - Synchronisation mit den globalen Studio-Einstellungen und dem `llmEngine`-State.
 2. **Interaktive Maßnahmen-Karten (`renderInteractiveRoadmap`):**
-   - Jede Maßnahme wird als interaktive Karte mit ID, Abteilungs-Badge, Badge `<span class="badge-logic-verified">✔ Logik geprüft durch Abteilungsleiter</span>`, Titel, Ziel-Dateipfad und Schalter `[JA]/[NEIN]` gerendert.
+   - Jede Maßnahmen-Karte enthält ID, Abteilungs-Badge, Badge `<span class="badge-logic-verified">✔ Logik geprüft durch Abteilungsleiter</span>`, Titel, Ziel-Dateipfad und Schalter `[JA]/[NEIN]`.
    - Klick auf `[NEIN]` dimmt die Karte ab und schließt sie vom finalen Export aus.
    - Buttons `"Alle [JA]"` (`#btn-roadmap-all-yes`) und `"Alle [NEIN]"` (`#btn-roadmap-all-no`) zur schnellen Gesamtauswahl.
 3. **Selektiver Export an Antigravity (`exportSelectedStepsForAntigravity`, `buildAntigravityPromptForSteps`):**
@@ -115,12 +115,36 @@ Interaktive 3D-Inspektion der Avatare und Arbeitsplätze direkt im Three.js Canv
 
 ---
 
-## 7. Verifikation & Test-Ergebnisse
+## 7. Smart Context Manager mit strikter Sandbox-Isolation (`04_KI_Engine_und_Bridges/` & `02_Frontend_UI_und_3D_Studio/`)
 
-- **Bridge `/api/read-files`:** Erfolgreich getestet mit vorhandenen Dateien (`index.html`, `CHECKPOINT_STATE.md`) und fehlenden Dateien (`non_existent_file.xyz`).
-- **Code-RAG Injektion:** Erfolgreich validiert; Dateipfade werden erkannt, Quellcode über die Bridge bezogen und für Stufe 2 Fach-PCs aufbereitet.
-- **3D-Campus Visuelle Kopplung:** Erfolgreich validiert; Alle 5 visuellen Zustände (`idle`, `stage1`, `stage2`, `stage3`, `stage4`) reagieren performant ohne Render-Lag.
-- **3D-Raycaster & Agenten-Inspektions-Panel:** 5/5 automatisierte Unit- & Integrations-Tests bestanden (PC-Klick, Trevor-Klick, Chef-Klick, Vollbild-Inspektor Modal Trigger, Schließen-Button).
+Vollständige Kontrolle über den Quellcode-Kontext mit kryptographisch robuster Pfad-Isolation:
+
+1. **Neuer Endpunkt `GET /api/list-files` ([`localBridgeServer.js`](file:///C:/Users/User/Desktop/KI_Trevor/04_KI_Engine_und_Bridges/localBridgeServer.js)):**
+   - Strikte Sandbox-Prüfung via `isPathInsideSandbox(targetPath)`: Verifiziert mit `path.resolve()` und `path.relative()`, dass kein Zugriff aus `KI_Trevor` ausbricht.
+   - Traversal-Blockade: Jeder Versuch mit `../` oder `%2e%2e` in URL oder Parametern wird mit HTTP `403 Forbidden` abgewiesen.
+   - Durchsucht rekursiv ausschließlich die Erlaubt-Ordner: `02_Frontend_UI_und_3D_Studio`, `03_Agenten_System_und_Prompts`, `04_KI_Engine_und_Bridges`.
+   - Filtert strikt auf Quellcode-Dateien (`.js`, `.html`, `.css`, `.md`).
+   - Liefert sauberes JSON-Array mit relativen Pfaden (z. B. `["02_Frontend_UI_und_3D_Studio/app.js", ...]`).
+2. **Absicherung von `POST /api/read-files` ([`localBridgeServer.js`](file:///C:/Users/User/Desktop/KI_Trevor/04_KI_Engine_und_Bridges/localBridgeServer.js)):**
+   - Wendet dieselbe `isPathInsideSandbox()`-Sicherheitsgrenze an. Jede Datei außerhalb der Sandbox wird abgewiesen mit `error: 403 Forbidden (Zugriff außerhalb der KI_Trevor Sandbox verweigert)` und liefert `content: null`.
+3. **UI-Dateiwähler "Kontext-Dateien (RAG-Sandbox)" ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html), [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css), [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Scrollbarer Container `.rag-context-section` direkt unterhalb des Prompt-Eingabefelds `#task-prompt-input`.
+   - Lädt beim App-Boot automatisch `/api/list-files` und bietet einen `↻ Aktualisieren`-Button.
+   - Klickbare Tags im Dark-Mode (`#1e2430` Hintergrund, bei Aktivierung rote/neonfarbene Umrandung und rotes Glühen).
+   - Ausgewählte Dateien werden synchron im Array `window.selectedContextFiles` verwaltet.
+   - Dynamisches Zähler-Badge `#rag-selected-count` (z. B. `"2 gewählt"`).
+4. **Workflow-Priorisierung ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Wenn `window.selectedContextFiles` Einträge enthält, wird die automatische Regex-Erkennung vollständig übersprungen und **ausschließlich** diese manuell gewählten Dateien an die Fach-Agenten als Code-Kontext übergeben.
+   - Erst wenn keine manuelle Auswahl getroffen wurde, greift der automatische Regex-Fallback.
+
+---
+
+## 8. Verifikation & Test-Ergebnisse
+
+- **Sandbox-Sicherheit (`/api/list-files`):** Erfolgreich verifiziert; Traversal-Versuche mit `../` und manipulierten Ordnern werden zuverlässig mit HTTP `403 Forbidden` abgewiesen.
+- **Sandbox-Sicherheit (`/api/read-files`):** Erfolgreich verifiziert; Zugriff auf Systemdateien oder Nachbar-Verzeichnisse wird mit 403 Forbidden abgewiesen, kein externer Quellcode wird geleakt.
+- **Workflow-Priorisierung:** Erfolgreich verifiziert; `window.selectedContextFiles` hat strikte Priorität vor automatischer Regex-Erkennung.
+- **UI-Dateiwähler:** Erfolgreich verifiziert; Tags lassen sich klickend aktivieren/deaktivieren, synchronisieren `window.selectedContextFiles` und aktualisieren den Badge-Zähler.
 - **Server & Bridges:**
   - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
-  - Lokale Bridge (Port 3001): `http://localhost:3001/api/status` & `http://localhost:3001/api/read-files` (online)
+  - Lokale Bridge (Port 3001): `http://localhost:3001/api/status`, `/api/list-files`, `/api/read-files` & `/api/export-task` (online)
