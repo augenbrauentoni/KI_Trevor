@@ -62,6 +62,11 @@ const state = {
   }
 };
 
+// Globales Trevor-Audio-Objekt frühzeitig initialisieren
+if (typeof window !== 'undefined') {
+  window.trevorAudio = window.trevorAudio || { enabled: true, ctx: null };
+}
+
 // =============================================================================
 // INITIALISIERUNG: SICHERES SYNCHRONES RENDERN (OHNE BLOCKIERENDE INPUTS)
 // =============================================================================
@@ -1971,6 +1976,7 @@ export function playNotificationSound(type = 'QUESTION') {
  * Richtet das Audio-System und den Sound-Toggle Button in der Kopfzeile ein
  */
 function setupAudioSystem() {
+  window.trevorAudio = window.trevorAudio || {};
   const savedSound = localStorage.getItem('trevor_sound_enabled');
   if (savedSound !== null) {
     window.trevorAudio.enabled = (savedSound === 'true');
