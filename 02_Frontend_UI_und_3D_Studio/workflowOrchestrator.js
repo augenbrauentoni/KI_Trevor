@@ -42,7 +42,37 @@ export class WorkflowOrchestrator {
     console.log(`[Stufe 1] Auftrag in ${subTasks.length} Abteilungs-Tasks zerlegt.`);
 
     // -------------------------------------------------------------------------
-    // STUFE 2: FACH-AGENTEN (WORKER EXECUTION)
+    // CODE-RAG: KONTEXT-ABRUF AUS DATEIEN (LOKALE BRIDGE PORT 3001)
+    // -------------------------------------------------------------------------
+    let codeContext = '';
+    try {
+      const candidateFiles = this.extractCandidateFilePaths(subTasks.rawAnalysis || '', userPrompt);
+      if (candidateFiles.length > 0) {
+        onStatusUpdate(
+          'Stufe 1/4: Code-RAG (Kontext-Abruf)',
+          'Trevor',
+          `Lese Quellcode von ${candidateFiles.length} identifizierten Projektdateien via Bridge (Port 3001)...`
+        );
+
+        const fetchedFiles = await this.fetchFilesContext(candidateFiles);
+        if (fetchedFiles && fetchedFiles.length > 0) {
+          codeContext = fetchedFiles.map(f => {
+            const snippet = f.content.length > 6000 
+              ? `${f.content.slice(0, 6000)}\n// ... [weiterer Code gekürzt für Prompt-Kontext]` 
+              : f.content;
+            return `### DATEI: ${f.path}\n\`\`\`\n${snippet}\n\`\`\``;
+          }).join('\n\n');
+
+          console.log(`[WorkflowOrchestrator] Code-RAG: ${fetchedFiles.length} Dateien erfolgreich für Fach-Agenten geladen.`);
+        }
+      }
+    } catch (ragErr) {
+      console.warn('[WorkflowOrchestrator] Code-RAG nicht verfügbar (Bridge offline?):', ragErr.message);
+      codeContext = '';
+    }
+
+    // -------------------------------------------------------------------------
+    // STUFE 2: FACH-AGENTEN (WORKER EXECUTION) MIT CODE-RAG INJEKTION
     // -------------------------------------------------------------------------
     onStatusUpdate(
       'Stufe 2/4: Fach-Agenten (Worker Execution)',
@@ -50,7 +80,7 @@ export class WorkflowOrchestrator {
       'Fach-Agenten erarbeiten konkrete technische Lösungen und Dateipfade...'
     );
 
-    const workerOutputs = await this.executeWorkerTasks(subTasks, userPrompt, onStatusUpdate);
+    const workerOutputs = await this.executeWorkerTasks(subTasks, userPrompt, onStatusUpdate, codeContext);
     console.log(`[Stufe 2] ${Object.keys(workerOutputs).length} Fach-Ausarbeitungen erstellt.`);
 
     // -------------------------------------------------------------------------
@@ -87,19 +117,21 @@ export class WorkflowOrchestrator {
     const availableDepts = this.hierarchy.departments.map(d => `${d.id}. ${d.name}: ${d.easy_explanation}`).join('\n');
 
     const systemPrompt = `Du bist Trevor, der Studio-Director und Master-Dispatcher von "Trevor AI Software Studio".
-Deine Aufgabe in Stufe 1 ist es, den Kundenauftrag zu analysieren und festzulegen, welche Fachabteilungen dafür zwingend benötigt werden.
+Deine Aufgabe in Stufe 1 ist es, den Kundenauftrag zu analysieren, festzulegen welche Fachabteilungen benötigt werden und betroffene Projektdateien (z. B. 02_Frontend_UI_und_3D_Studio/app.js, 06_Deployment_und_Config/server.js, 04_KI_Engine_und_Bridges/localBridgeServer.js, etc.) zu benennen.
 
 VERFÜGBARE ABTEILUNGEN:
 ${availableDepts}
 
-Wähle die relevanten Abteilungs-IDs (als Array von Zahlen, z. B. [1, 2, 3, 5, 6, 10]) und gib eine kurze Begründung.`;
+Wähle die relevanten Abteilungs-IDs (als Array von Zahlen, z. B. [1, 2, 3, 5, 6, 10]), nenne die betroffenen Dateien und gib eine kurze Begründung.`;
 
-    const userMsg = `KUNDENAUFTRAG:\n"""\n${userPrompt}\n"""\n\nWelche Abteilungen sind erforderlich?`;
+    const userMsg = `KUNDENAUFTRAG:\n"""\n${userPrompt}\n"""\n\nWelche Abteilungen und Dateien sind erforderlich?`;
 
     // Heuristik & LLM
     let selectedDeptIds = [];
+    let dispatchRawAnalysis = '';
     try {
       const response = await queryLLM(systemPrompt, userMsg, false);
+      dispatchRawAnalysis = response;
       const match = response.match(/\[\s*[\d\s,]+\s*\]/);
       if (match) {
         selectedDeptIds = JSON.parse(match[0]);
@@ -121,7 +153,7 @@ Wähle die relevanten Abteilungs-IDs (als Array von Zahlen, z. B. [1, 2, 3, 5, 6
     selectedDeptIds = Array.from(new Set(selectedDeptIds));
     const activeDepts = this.hierarchy.departments.filter(d => selectedDeptIds.includes(d.id));
 
-    return activeDepts.map(dept => ({
+    const subTasks = activeDepts.map(dept => ({
       departmentId: dept.id,
       departmentName: dept.name,
       departmentCode: dept.code,
@@ -129,13 +161,69 @@ Wähle die relevanten Abteilungs-IDs (als Array von Zahlen, z. B. [1, 2, 3, 5, 6
       workerAgents: dept.specialist_pcs,
       mission: `Spezifische technische Ausarbeitung für ${dept.name} zum Auftrag: "${userPrompt.slice(0, 80)}"`
     }));
+
+    subTasks.rawAnalysis = dispatchRawAnalysis;
+    return subTasks;
   }
 
   /**
-   * 2. executeWorkerTasks: Sub-Agenten bearbeiten ihre Teilaufgaben
+   * Extrahiert relevante Dateipfade aus Texten (z. B. Dispatcher-Antwort & Prompt)
    */
-  async executeWorkerTasks(subTasks, userPrompt, onStatusUpdate = () => {}) {
+  extractCandidateFilePaths(...texts) {
+    const fileRegex = /([a-zA-Z0-9_\-\.\/]+\.(?:js|html|css|md|json|sql|ts|jsx|tsx))/gi;
+    const paths = new Set();
+
+    for (const text of texts) {
+      if (!text || typeof text !== 'string') continue;
+      let match;
+      while ((match = fileRegex.exec(text)) !== null) {
+        let candidate = match[1].replace(/\\/g, '/').trim();
+        candidate = candidate.replace(/[`,;:)\]}]+$/, '');
+        if (candidate.startsWith('./')) candidate = candidate.slice(2);
+        if (candidate.startsWith('/')) candidate = candidate.slice(1);
+        if (candidate.length > 3 && !candidate.startsWith('http') && !candidate.includes(' ') && candidate.includes('.')) {
+          paths.add(candidate);
+        }
+      }
+    }
+    return Array.from(paths);
+  }
+
+  /**
+   * Ruft Quellcode über die lokale Bridge (/api/read-files) für Code-RAG ab
+   */
+  async fetchFilesContext(filePaths) {
+    if (!filePaths || filePaths.length === 0) return [];
+
+    try {
+      const resp = await fetch('http://localhost:3001/api/read-files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: filePaths })
+      });
+
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      const files = Array.isArray(data) ? data : (data.files || []);
+      return files.filter(f => f && f.content && f.status !== 'nicht gefunden');
+    } catch (err) {
+      console.warn('[WorkflowOrchestrator] Code-RAG Abruf fehlgeschlagen (Bridge offline?):', err.message);
+      return [];
+    }
+  }
+
+  /**
+   * 2. executeWorkerTasks: Sub-Agenten bearbeiten ihre Teilaufgaben (mit Code-RAG Injektion)
+   */
+  async executeWorkerTasks(subTasks, userPrompt, onStatusUpdate = () => {}, codeContext = '') {
     const workerOutputs = {};
+
+    const ragContextSection = codeContext
+      ? `\n\nHier ist der aktuelle Code der betroffenen Dateien:\n"""\n${codeContext}\n"""\nNutze diesen Quellcode als Referenz, um präzise und kompatible Änderungen vorzuschlagen.\n`
+      : '';
 
     for (const subTask of subTasks) {
       for (const pc of subTask.workerAgents) {
@@ -149,7 +237,7 @@ Wähle die relevanten Abteilungs-IDs (als Array von Zahlen, z. B. [1, 2, 3, 5, 6
 Aufgabe: ${pc.easy_explanation}.
 Erstelle eine konkrete technische Lösung mit relevanten Dateipfaden (z. B. 02_Frontend_UI_und_3D_Studio/..., 06_Deployment_und_Config/..., 01_Datenbank_Supabase/...).`;
 
-        const userMsg = `AUFTRAG:\n"""\n${userPrompt}\n"""\n\nErstelle deine technische Detailausarbeitung:`;
+        const userMsg = `AUFTRAG:\n"""\n${userPrompt}\n"""${ragContextSection}\n\nErstelle deine technische Detailausarbeitung:`;
 
         const output = await queryLLM(systemPrompt, userMsg, false);
         workerOutputs[pc.id] = {

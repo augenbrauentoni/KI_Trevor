@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Hierarchische Orchestrierung, Dual-LLM Engine (Gemini & Ollama) & Interaktive [JA]/[NEIN] Checkliste zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
-- **Datum / Letztes Update:** 2026-11-10 18:10:00
+- **Status:** Hierarchische Orchestrierung, Dual-LLM Engine, Code-RAG (Datei-Lesezugriff) & Interaktive [JA]/[NEIN] Checkliste zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
+- **Datum / Letztes Update:** 2026-11-10 18:18:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -38,7 +38,25 @@ Die Klasse [`WorkflowOrchestrator`](file:///C:/Users/User/Desktop/KI_Trevor/02_F
 
 ---
 
-## 3. Interaktive Prompt-Roadmap & [JA]/[NEIN] Checkliste (`02_Frontend_UI_und_3D_Studio/`)
+## 3. Code-RAG (Datei-Lesezugriff & Kontext-Injektion für Agenten)
+
+Ermöglicht den Fach-Agenten, realen existierenden Projektcode bei der Aufgabenbearbeitung zu lesen und präzise Anpassungen vorzunehmen:
+
+1. **Lese-Endpunkt `POST /api/read-files` (`04_KI_Engine_und_Bridges/localBridgeServer.js`):**
+   - Nimmt ein JSON-Array von Dateipfaden entgegen: `{ "files": ["02_Frontend_UI_und_3D_Studio/app.js", "..."] }`.
+   - Liest Dateien ausgehend vom Projekt-Root (`C:\Users\User\Desktop\KI_Trevor`) mit `fs.readFileSync(targetPath, 'utf-8')`.
+   - Absicherung gegen Directory-Traversal (`targetPath.startsWith(PROJECT_ROOT)`).
+   - Tolerante Fehlerbehandlung: Nicht gefundene Dateien werden als `{ path, content: null, status: 'nicht gefunden' }` markiert.
+   - Antwortet mit Array: `[{ path: "...", content: "...", status: "ok" }]`.
+2. **Kontext-Extraktion & Injektion (`02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js`):**
+   - `extractCandidateFilePaths(...texts)`: Erkennt Dateiendungen (`.js`, `.html`, `.css`, `.md`, `.sql`, `.json`) aus Prompt und Dispatcher-Antwort via Regex.
+   - `fetchFilesContext(filePaths)`: Ruft über die Bridge (`http://localhost:3001/api/read-files`) den Quellcode der Dateien ab.
+   - Injektion in Stufe 2: Fügt `"Hier ist der aktuelle Code der betroffenen Dateien: ..."` in den Prompt der Spezial-PCs ein.
+   - Offline-Schutz: Bei nicht erreichbarem Bridge-Server läuft der Workflow unterbrechungsfrei ohne Code-Kontext weiter.
+
+---
+
+## 4. Interaktive Prompt-Roadmap & [JA]/[NEIN] Checkliste (`02_Frontend_UI_und_3D_Studio/`)
 
 1. **Kompakte Dual-LLM Leiste (`index.html`, `styles.css`, `app.js`):**
    - Direkte Provider-Auswahl (Gemini / Ollama) und Passwort-Feld für den Gemini API-Key direkt im Trevor-Eingabebereich (`#quick-llm-provider-select`, `#quick-gemini-key-input`).
@@ -54,15 +72,11 @@ Die Klasse [`WorkflowOrchestrator`](file:///C:/Users/User/Desktop/KI_Trevor/02_F
 
 ---
 
-## 4. Verifikation & Test-Ergebnisse
+## 5. Verifikation & Test-Ergebnisse
 
-- **Syntax-Check:** `node -c llmEngine.js`, `node -c workflowOrchestrator.js`, `node -c app.js` fehlerfrei bestanden (Exit-Code 0).
-- **Automatisierter Inferenz- & Orchestrierungs-Test:**
-  - `saveLLMConfig` / `getLLMConfig`: Persistenz und Abruf verifiziert.
-  - Fallback-Inferenz: Robust bei fehlendem oder ungültigem API-Key, kein Workflow-Absturz.
-  - 4-Stufen-Pipeline: Erzeugt alle Schritte mit `logicVerified: true` und `approved: true`.
-  - Filter-Logik: `buildAntigravityPromptForSteps` schließt [NEIN]-Schritte aus und bindet Audit-Status ein.
+- **Bridge `/api/read-files`:** Erfolgreich getestet mit vorhandenen Dateien (`index.html`, `CHECKPOINT_STATE.md`) und fehlenden Dateien (`non_existent_file.xyz`).
+- **Code-RAG Injektion:** Erfolgreich validiert; Dateipfade werden erkannt, Quellcode über die Bridge bezogen und für Stufe 2 Fach-PCs aufbereitet.
 - **Server & Bridges:**
   - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
-  - Lokale Bridge (Port 3001): `http://localhost:3001/api/status` (online, Ziel: `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md`)
+  - Lokale Bridge (Port 3001): `http://localhost:3001/api/status` & `http://localhost:3001/api/read-files` (online)
   - Localtunnel: `https://famous-sloths-peel.loca.lt` (Bypass-IP: `88.67.105.95`)
