@@ -30,11 +30,42 @@ export class WorkflowOrchestrator {
     console.log(`======================================================\n`);
 
     // -------------------------------------------------------------------------
-    // PRE-ROUTING: LLM-KLASSIFIZIERUNG (SOFTWARE vs. HARDWARE_ALLGEMEIN)
+    // PRE-ROUTING: LLM-KLASSIFIZIERUNG (SOFTWARE vs. HARDWARE_ALLGEMEIN vs. QUESTION)
     // -------------------------------------------------------------------------
     const routing = await this.classifyTaskType(userPrompt);
     const target_floor = routing.target_floor || routing.floor || 'EG';
     console.log(`[Pre-Routing] Kategorie: ${routing.category} -> Ziel-Etage: ${target_floor}`);
+
+    // Bei QUESTION: Task-Zerlegung überspringen und Direkt-Antwort im Q&A-Panel anzeigen
+    if (routing.category === 'QUESTION') {
+      console.log(`[WorkflowOrchestrator] Q&A-Modus erkannt. Überspringe 4-Stufen Zerlegung, generiere Direkt-Antwort.`);
+      onStatusUpdate('Frage-Modus', 'Trevor', 'Beantworte direkte Frage im Q&A-Modus...');
+      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+        window.update3DStudioState('stage1', 'EG');
+      }
+
+      const qPrompt = `Du bist Trevor, Studio-Director und KI-Chef-Architekt von "Trevor AI Software Studio". 
+Beantworte die folgende Frage des Nutzers präzise, professionell, klar strukturiert und auf den Punkt auf Deutsch.`;
+
+      const directAnswer = await queryLLM(qPrompt, userPrompt, false);
+
+      if (typeof window !== 'undefined' && typeof window.showQAPanel === 'function') {
+        window.showQAPanel(userPrompt, directAnswer);
+      }
+      onStatusUpdate('Frage beantwortet', 'Trevor', 'Direkt-Antwort im Q&A-Panel bereitgestellt.');
+
+      return {
+        isQuestion: true,
+        type: 'question',
+        category: 'QUESTION',
+        question: userPrompt,
+        answer: directAnswer,
+        summary: directAnswer,
+        steps: [],
+        rawReports: {},
+        departmentReports: {}
+      };
+    }
 
     // Triggere beim Etagen-Wechsel ein Event: onStatusUpdate('routing', 'Fahre ins ' + target_floor)
     onStatusUpdate('routing', 'Fahre ins ' + target_floor);
@@ -146,18 +177,19 @@ export class WorkflowOrchestrator {
   }
 
   /**
-   * 0. classifyTaskType: Pre-Routing per LLM (SOFTWARE vs. HARDWARE_ALLGEMEIN)
+   * 0. classifyTaskType: Pre-Routing per LLM (SOFTWARE vs. HARDWARE_ALLGEMEIN vs. QUESTION)
    * Nutzt zwingend queryLLM(..., expectJson = true) für deterministisches JSON.
    */
   async classifyTaskType(userPrompt) {
     const systemPrompt = `Du bist Trevors KI-Routing-Classifier.
-Analysiere die Benutzeranfrage und klassifiziere sie in genau EINE von zwei Kategorien:
-- "SOFTWARE": Webentwicklung, Apps, Three.js, JavaScript, Python, APIs, SQL, Frontend, Backend, Bugs, Code-Architektur (Ziel-Etage: "EG").
+Analysiere die Benutzeranfrage und klassifiziere sie in genau EINE von drei Kategorien:
+- "QUESTION": Direkte Wissensfragen, Verständnisfragen, Erklärungsbitten, Definitionsfragen ("Was ist...", "Wie funktioniert...", "Warum...", Fragen ohne Bau- oder Programmierauftrag, Ziel-Etage: "EG").
+- "SOFTWARE": Webentwicklung, Apps, Three.js, JavaScript, Python, APIs, SQL, Frontend, Backend, Bugs, Code-Architektur, konkrete Programmier- oder Implementierungsaufträge (Ziel-Etage: "EG").
 - "HARDWARE_ALLGEMEIN": Physische Hardware, Elektronik, ESP32, Arduino, Raspberry Pi, Löten, PCB, Serverraum, Netzwerkinfrastruktur, FISI-Themen, Allgemeinwissen, Recherche, Textverfassung, Brainstorming, Alltagsorganisation oder Gaming/Freizeit (Ziel-Etage: "UG").
 
 Antworte zwingend und ausschließlich mit folgendem JSON-Schema:
 {
-  "category": "SOFTWARE" oder "HARDWARE_ALLGEMEIN",
+  "category": "QUESTION" oder "SOFTWARE" oder "HARDWARE_ALLGEMEIN",
   "target_floor": "EG" oder "UG"
 }`;
 
@@ -169,7 +201,17 @@ Antworte zwingend und ausschließlich mit folgendem JSON-Schema:
         return this.heuristicClassification(userPrompt);
       }
 
-      const isUG = String(parsed.category || '').toUpperCase().includes('HARDWARE') || 
+      const catUpper = String(parsed.category || '').toUpperCase();
+      if (catUpper.includes('QUESTION') || catUpper.includes('FRAGE')) {
+        return {
+          category: 'QUESTION',
+          target_floor: 'EG',
+          classification: 'QUESTION',
+          floor: 'EG'
+        };
+      }
+
+      const isUG = catUpper.includes('HARDWARE') || 
                    String(parsed.target_floor || '').toUpperCase() === 'UG';
       
       const target_floor = isUG ? 'UG' : 'EG';
@@ -187,7 +229,22 @@ Antworte zwingend und ausschließlich mit folgendem JSON-Schema:
   }
 
   heuristicClassification(userPrompt) {
-    const p = (userPrompt || '').toLowerCase();
+    const p = (userPrompt || '').trim().toLowerCase();
+
+    // 1. Zuerst auf direkte Frage prüfen (wenn keine Bau-/Programmier-Befehle am Anfang)
+    const isBuildTask = /^(baue|erstelle|programmiere|implementiere|schreibe code|refaktoriere|fixe|repariere|debugge|konfiguriere|löse|entwickle)\b/i.test(p);
+    const isQuestionPattern = /^(was|wie|warum|wieso|weshalb|wozu|wann|wo|wer|welche|welcher|welches|kannst du erklären|erklär|erkläre|definiere|was bedeutet|was ist|unterschied zwischen)\b/i.test(p);
+
+    if (!isBuildTask && (isQuestionPattern || (p.endsWith('?') && p.split(/\s+/).length < 30))) {
+      return {
+        category: 'QUESTION',
+        target_floor: 'EG',
+        classification: 'QUESTION',
+        floor: 'EG'
+      };
+    }
+
+    // 2. Hardware / Keller
     const ugKeywords = [
       'hardware', 'elektronik', 'schaltung', 'löten', 'sensor', 'esp32', 'arduino', 'raspberry',
       'serverraum', 'netzwerk', 'kabel', 'router', 'switch', 'rack', 'vpn', 'patchpanel', 'fisi', 'infrastruktur',

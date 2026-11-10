@@ -310,26 +310,58 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Task-Export-Endpunkt (schreibt direkt in 05_Antigravity_Outputs/ANTIGRAVITY_TASK.md)
+function sanitizeExportFilename(rawFilename) {
+  if (!rawFilename || typeof rawFilename !== 'string') {
+    return 'ANTIGRAVITY_TASK.md';
+  }
+  let base = path.basename(rawFilename.trim());
+  let ext = path.extname(base);
+  let nameWithoutExt = ext ? base.slice(0, -ext.length) : base;
+  let clean = nameWithoutExt.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_');
+  if (!clean || clean === '_') clean = 'ANTIGRAVITY_TASK';
+  return `${clean}.md`;
+}
+
+// Task-Export-Endpunkt (mit dynamischen Dateinamen & striktem Sandbox-Schutz)
   if (pathname === '/api/export-task' && req.method === 'POST') {
     try {
       const body = await parseBody(req);
       const taskContent = body.content || '';
+      const requestedFilename = body.filename || 'ANTIGRAVITY_TASK.md';
+      const safeFilename = sanitizeExportFilename(requestedFilename);
       const outputDir = path.join(ROOT_DIR, '05_Antigravity_Outputs');
-      const outputFile = path.join(outputDir, 'ANTIGRAVITY_TASK.md');
+      const targetFilePath = path.resolve(outputDir, safeFilename);
+
+      // Strikte Sandbox-Prüfung gegen Directory Traversal (../)
+      if (!targetFilePath.startsWith(outputDir) || !targetFilePath.startsWith(ROOT_DIR)) {
+        console.warn(`[Server Security] 403 Forbidden: Pfadausbruch bei Export abgewiesen: ${requestedFilename}`);
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: '403 Forbidden: Pfad liegt außerhalb der KI_Trevor Sandbox' }));
+        return;
+      }
 
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }
 
-      fs.writeFileSync(outputFile, taskContent, 'utf-8');
-      console.log(`[Server] Task erfolgreich exportiert nach: ${outputFile}`);
+      fs.writeFileSync(targetFilePath, taskContent, 'utf-8');
+
+      // Auch Standard-Master-Datei aktualisieren
+      const masterFile = path.join(outputDir, 'ANTIGRAVITY_TASK.md');
+      if (targetFilePath !== masterFile) {
+        try {
+          fs.writeFileSync(masterFile, taskContent, 'utf-8');
+        } catch { /* ignore fallback */ }
+      }
+
+      console.log(`[Server] Task erfolgreich exportiert nach: ${targetFilePath}`);
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         success: true,
-        message: 'Task erfolgreich in 05_Antigravity_Outputs gespeichert',
-        path: outputFile,
+        message: `Task erfolgreich gespeichert als ${safeFilename}`,
+        path: targetFilePath,
+        filename: safeFilename,
         timestamp: new Date().toISOString()
       }));
       return;

@@ -41,6 +41,8 @@ const state = {
   activeTask: null,
   agentLogs: {},
   currentInspectedAgent: null,
+  taskQueue: [],
+  currentQAContext: { question: '', answer: '' },
   settings: {
     llm_mode: 'gemini',
     gemini_model: 'gemini-2.5-flash',
@@ -59,10 +61,12 @@ function bootTrevorApp() {
 
   loadLocalSettings();
   loadSelectedProject();
+  loadTaskQueue();
 
   // 1. Sofortiges Rendern der 10 Pills & des 2D-Grids
   renderDepartmentPills();
   renderWorkstationsGrid();
+  renderTaskQueueUI();
   setupEventListeners();
   checkExistingCheckpoint();
   updateUIThemeSettings();
@@ -911,6 +915,22 @@ async function dispatchNewTask() {
       }
     });
 
+    // Q&A-Modus: Bei direkter Frage wurde Antwort bereits in showQAPanel angezeigt
+    if (finalResult && finalResult.isQuestion) {
+      console.log('[Trevor App] Q&A-Workflow erfolgreich abgeschlossen (Direkt-Antwort angezeigt).');
+      const progressSection = document.getElementById('section-task-progress');
+      if (progressSection) progressSection.style.display = 'none';
+      const promptSection = document.getElementById('section-task-input');
+      if (promptSection) promptSection.style.display = 'flex';
+      const promptInput = document.getElementById('task-prompt-input');
+      if (promptInput) promptInput.value = '';
+      updateCheckpointBadge('Frage im Q&A-Modus beantwortet', true);
+      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+        window.update3DStudioState('stage1', 'EG');
+      }
+      return;
+    }
+
     state.activeTask.current_stage = '4_user_decision';
     state.activeTask.status = 'pending_approval';
     state.activeTask.trevor_summary = finalResult.summary;
@@ -1330,8 +1350,28 @@ function getLocalTaskArchive() {
 }
 
 // =============================================================================
-// EXPORT & CHECKPOINT HELPER (LOKALE BRIDGE & BROWSER-DOWNLOAD FALLBACK)
+// EXPORT & CHECKPOINT HELPER (LOKALE BRIDGE, DYNAMISCHE DATEINAMEN & BROWSER-DOWNLOAD FALLBACK)
 // =============================================================================
+
+/**
+ * Erzeugt einen sprechenden dynamischen Dateinamen basierend auf den ersten 3 Wörtern des Prompts und einem Zeitstempel.
+ * Beispiel: Task_Login_Bauen_169999.md
+ * @param {string} userPrompt - Prompt des Benutzers
+ * @returns {string} - Bereinigter Dateiname
+ */
+export function generateDynamicTaskFilename(userPrompt) {
+  const p = (userPrompt || '').trim();
+  const words = p.replace(/[^a-zA-Z0-9äöüÄÖÜß\s]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+
+  const baseName = words.length > 0 ? words.join('_') : 'Auftrag';
+  const timestamp = Date.now().toString().slice(-6);
+  return `Task_${baseName}_${timestamp}.md`;
+}
 
 /**
  * Erstellt einen Blob und stößt den Browser-Download an.
@@ -1357,14 +1397,17 @@ export function triggerBrowserDownload(content, filename = 'ANTIGRAVITY_TASK.md'
 }
 
 /**
- * Sendet einen POST-Request mit { content: taskMarkdown } an http://localhost:3001/api/export-task.
+ * Sendet einen POST-Request mit { content, filename } an http://localhost:3001/api/export-task.
  * Fällt bei Fehlern oder unerreichbarem Server automatisch auf triggerBrowserDownload zurück.
  * @param {string} taskMarkdown - Zu exportierender Inhalt
+ * @param {string} customFilename - Optionaler benutzerdefinierter Dateiname
  */
-export async function exportTaskToLocalDisk(taskMarkdown) {
+export async function exportTaskToLocalDisk(taskMarkdown, customFilename) {
   const content = (taskMarkdown !== undefined && taskMarkdown !== null && taskMarkdown !== '') 
     ? taskMarkdown 
     : (state.activeTask?.antigravity_prompt || '');
+
+  const filename = customFilename || generateDynamicTaskFilename(state.activeTask?.user_prompt);
 
   try {
     const resp = await fetch('http://localhost:3001/api/export-task', {
@@ -1372,7 +1415,7 @@ export async function exportTaskToLocalDisk(taskMarkdown) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ content })
+      body: JSON.stringify({ content, filename })
     });
 
     if (!resp.ok) {
@@ -1381,20 +1424,20 @@ export async function exportTaskToLocalDisk(taskMarkdown) {
 
     const data = await resp.json();
     if (data && data.success === true) {
-      const savedPath = data.path || data.filePath || '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md';
+      const savedPath = data.path || data.filePath || `05_Antigravity_Outputs/${filename}`;
       console.log(`[Trevor App] Lokaler Datei-Export erfolgreich: ${savedPath}`);
       showExportNotification(`✔ Lokaler Datei-Export erfolgreich:\n${savedPath}`, 'success');
-      return { success: true, path: savedPath };
+      return { success: true, path: savedPath, filename };
     } else {
       throw new Error(data?.error || 'Server meldete Misserfolg');
     }
   } catch (err) {
     console.warn('[Trevor App] Lokaler Bridge-Server (Port 3001) nicht erreichbar oder Fehler:', err.message);
-    console.warn('[Trevor App] Starte automatischen Fallback: triggerBrowserDownload(taskMarkdown, "ANTIGRAVITY_TASK.md")');
+    console.warn(`[Trevor App] Starte automatischen Fallback: triggerBrowserDownload(content, "${filename}")`);
 
-    showExportNotification('⚠️ Bridge (Port 3001) nicht aktiv – Browser-Download gestartet!', 'warning');
-    triggerBrowserDownload(content, 'ANTIGRAVITY_TASK.md');
-    return { success: false, fallback: true, error: err.message };
+    showExportNotification(`⚠️ Bridge (Port 3001) nicht aktiv – Browser-Download (${filename}) gestartet!`, 'warning');
+    triggerBrowserDownload(content, filename);
+    return { success: false, fallback: true, error: err.message, filename };
   }
 }
 
@@ -1452,12 +1495,299 @@ function showExportNotification(message, type = 'success') {
 
 function downloadTaskFile() {
   const content = state.activeTask?.antigravity_prompt || '';
-  triggerBrowserDownload(content, 'ANTIGRAVITY_TASK.md');
+  const filename = generateDynamicTaskFilename(state.activeTask?.user_prompt);
+  triggerBrowserDownload(content, filename);
 }
 
 async function writeDirectToFileSystem() {
   const content = state.activeTask?.antigravity_prompt || '';
-  await exportTaskToLocalDisk(content);
+  const filename = generateDynamicTaskFilename(state.activeTask?.user_prompt);
+  await exportTaskToLocalDisk(content, filename);
+}
+
+/**
+ * Sichere, einfache Markdown-zu-HTML Formatierung (Sanitizing gegen XSS)
+ * @param {string} text - Quell-Markdown
+ * @returns {string} - HTML-String
+ */
+function formatMarkdownToHTML(text) {
+  if (!text) return '';
+  const escaped = String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // Code-Blöcke ```lang ... ```
+  const codeBlocks = escaped.replace(/```([a-zA-Z0-9_\-]*)\n([\s\S]*?)```/g, '<pre style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 6px; overflow-x: auto;"><code class="$1">$2</code></pre>');
+  // Inline Code `code`
+  const inlineCode = codeBlocks.replace(/`([^`]+)`/g, '<code style="background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 4px; font-family: monospace;">$1</code>');
+  // Fett **text**
+  const bold = inlineCode.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Aufzählungspunkte
+  const bullets = bold.replace(/^[-*]\s+(.*)$/gm, '<li style="margin: 4px 0;">$1</li>');
+  // Listen einpacken
+  const listWrapped = bullets.replace(/(<li[\s\S]*?<\/li>)/g, '<ul style="margin: 8px 0; padding-left: 20px;">$1</ul>');
+  // Absätze / Umbrüche
+  return listWrapped.replace(/\n\n+/g, '<p style="margin: 10px 0;"></p>').replace(/\n/g, '<br/>');
+}
+
+// =============================================================================
+// GLOBALE NAVIGATION & ZENTRALE-RÜCKKEHR
+// =============================================================================
+
+/**
+ * Globale Zentrale-Navigation:
+ * Schließt alle Overlays (Q&A-Panel, Task-Queue, Info-Panel, Modals, Decision-Ansichten),
+ * setzt den 3D-Campus auf die EG-Zentrale im Idle-Zustand zurück und stellt das Prompt-Feld wieder her.
+ */
+export function returnToHub() {
+  console.log('[Trevor App] returnToHub aufgerufen – schließe alle Overlays und kehre zur EG-Zentrale zurück.');
+
+  const overlaysToHide = [
+    'qa-panel',
+    'task-queue-panel',
+    'agent-info-panel',
+    'modal-trevor-terminal',
+    'modal-chef-reports',
+    'modal-agent-inspector',
+    'modal-settings',
+    'section-decision',
+    'section-task-progress'
+  ];
+
+  overlaysToHide.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.display = 'none';
+      el.classList.remove('open');
+    }
+  });
+
+  const taskInputSection = document.getElementById('section-task-input');
+  if (taskInputSection) {
+    taskInputSection.style.display = 'flex';
+  }
+
+  if (typeof window !== 'undefined') {
+    if (typeof window.switchFloor === 'function') {
+      window.switchFloor('EG');
+    }
+    if (typeof window.update3DStudioState === 'function') {
+      window.update3DStudioState('idle', 'EG');
+    }
+  }
+
+  updateCheckpointBadge('Zentrale bereit für neue Aufgaben', true);
+}
+
+// =============================================================================
+// Q&A MODUS (TREVOR DIREKT-ANTWORTEN & ERKLÄRUNGS-MODUS)
+// =============================================================================
+
+/**
+ * Zeigt das Q&A-Panel mit Trevors Direkt-Antwort an
+ * @param {string} question - Benutzerfrage
+ * @param {string} answer - Trevors Antwort
+ */
+export function showQAPanel(question, answer) {
+  state.currentQAContext = { question, answer };
+  const panel = document.getElementById('qa-panel');
+  const qEl = document.getElementById('qa-user-question');
+  const aEl = document.getElementById('qa-answer-text');
+
+  if (qEl) qEl.innerText = question || '';
+  if (aEl) aEl.innerHTML = formatMarkdownToHTML(answer || '');
+
+  if (panel) {
+    panel.style.display = 'flex';
+  }
+
+  if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+    window.update3DStudioState('stage1', 'EG');
+  }
+}
+
+/**
+ * Fragt bei Trevor eine anfängerfreundliche Erklärung mit Alltags-Analogien an
+ */
+export async function requestQAExplanation() {
+  const aEl = document.getElementById('qa-answer-text');
+  const btnExplain = document.getElementById('qa-btn-explain');
+  if (!aEl) return;
+
+  const originalBtnText = btnExplain ? btnExplain.innerText : '';
+  if (btnExplain) {
+    btnExplain.disabled = true;
+    btnExplain.innerText = '⏳ Generiere Erklärung...';
+  }
+
+  aEl.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 10px; color: var(--arc-cyan); padding: 12px 0;">
+      <div class="radar-dot pulse" style="width: 12px; height: 12px; background: var(--arc-cyan); border-radius: 50%;"></div>
+      <span>Trevor formuliert eine anfängerfreundliche Erklärung mit Alltags-Analogien...</span>
+    </div>
+  `;
+
+  try {
+    const explainSysPrompt = `Du bist Trevor, KI-Chef-Architekt. Erkläre diesen Sachverhalt für einen Anfänger extrem leicht verständlich, nutze anschauliche Analogien aus dem Alltag und verzichte auf unnötigen Fachjargon. Strukturiere die Erklärung übersichtlich auf Deutsch.`;
+    const explainUserPrompt = `Ursprüngliche Frage: "${state.currentQAContext.question}"\nBisherige Antwort: "${state.currentQAContext.answer}"\n\nBitte erstelle jetzt die leicht verständliche Alltags-Erklärung:`;
+
+    const explanation = await queryLLM(explainSysPrompt, explainUserPrompt, false);
+    state.currentQAContext.answer = explanation;
+    aEl.innerHTML = formatMarkdownToHTML(explanation);
+    showExportNotification('✔ Anfängerfreundliche Erklärung bereitgestellt!', 'success');
+  } catch (err) {
+    console.error('[Trevor App] Fehler bei QA-Erklärung:', err);
+    aEl.innerHTML = `<span style="color: #ef4444;">⚠️ Fehler beim Laden der Erklärung: ${err.message}</span>`;
+  } finally {
+    if (btnExplain) {
+      btnExplain.disabled = false;
+      btnExplain.innerText = originalBtnText;
+    }
+  }
+}
+
+// =============================================================================
+// TASK-QUEUE MANAGEMENT (WARTESCHLANGE FÜR AUFTRÄGE)
+// =============================================================================
+
+export function loadTaskQueue() {
+  try {
+    const saved = localStorage.getItem('trevor_task_queue');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        state.taskQueue = parsed;
+      }
+    }
+  } catch {
+    state.taskQueue = [];
+  }
+  if (typeof window !== 'undefined') {
+    window.taskQueue = state.taskQueue;
+  }
+}
+
+export function addToTaskQueue(promptText) {
+  const text = (promptText || '').trim();
+  if (!text) {
+    showExportNotification('⚠️ Bitte gib einen Text für den Auftrag ein.', 'warning');
+    return;
+  }
+
+  const newItem = {
+    id: 'queue_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    text,
+    createdAt: new Date().toLocaleTimeString()
+  };
+
+  state.taskQueue.push(newItem);
+  if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
+  localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+  renderTaskQueueUI();
+  showExportNotification(`✔ Auftrag zur Queue hinzugefügt (#${state.taskQueue.length})`, 'success');
+}
+
+export function removeFromTaskQueue(index) {
+  if (index >= 0 && index < state.taskQueue.length) {
+    state.taskQueue.splice(index, 1);
+    if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
+    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    renderTaskQueueUI();
+  }
+}
+
+export function moveTaskQueueUp(index) {
+  if (index > 0 && index < state.taskQueue.length) {
+    const item = state.taskQueue.splice(index, 1)[0];
+    state.taskQueue.splice(index - 1, 0, item);
+    if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
+    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    renderTaskQueueUI();
+  }
+}
+
+export function moveTaskQueueDown(index) {
+  if (index >= 0 && index < state.taskQueue.length - 1) {
+    const item = state.taskQueue.splice(index, 1)[0];
+    state.taskQueue.splice(index + 1, 0, item);
+    if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
+    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    renderTaskQueueUI();
+  }
+}
+
+export async function runQueueTask(index) {
+  if (index < 0 || index >= state.taskQueue.length) return;
+  const item = state.taskQueue.splice(index, 1)[0];
+  if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
+  localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+  renderTaskQueueUI();
+
+  const input = document.getElementById('task-prompt-input');
+  if (input) {
+    input.value = item.text;
+  }
+  const queuePanel = document.getElementById('task-queue-panel');
+  if (queuePanel) {
+    queuePanel.style.display = 'none';
+  }
+  await dispatchNewTask();
+}
+
+export function renderTaskQueueUI() {
+  const listEl = document.getElementById('task-queue-list');
+  const countBadge = document.getElementById('queue-count-badge');
+  const emptyPlaceholder = document.getElementById('queue-empty-placeholder');
+  const btnStartNext = document.getElementById('btn-queue-start-next');
+
+  const count = state.taskQueue ? state.taskQueue.length : 0;
+
+  if (countBadge) {
+    countBadge.innerText = `${count} ${count === 1 ? 'wartender Auftrag' : 'wartende Aufträge'}`;
+  }
+
+  if (emptyPlaceholder) {
+    emptyPlaceholder.style.display = count === 0 ? 'block' : 'none';
+  }
+
+  if (btnStartNext) {
+    btnStartNext.style.display = count > 0 ? 'inline-flex' : 'none';
+  }
+
+  if (!listEl) return;
+
+  if (count === 0) {
+    listEl.innerHTML = '';
+    return;
+  }
+
+  listEl.innerHTML = state.taskQueue.map((item, idx) => `
+    <li class="task-queue-item" data-index="${idx}" data-id="${item.id}">
+      <div class="task-queue-item-header">
+        <span class="task-queue-item-num">#${idx + 1}</span>
+        <span class="task-queue-item-text" title="${escapeHtml(item.text)}">${escapeHtml(item.text)}</span>
+      </div>
+      <div class="task-queue-btn-group">
+        <button class="btn-queue-ctrl btn-queue-run" data-action="run" data-index="${idx}" title="Diesen Auftrag sofort ausführen">▶ Start</button>
+        <button class="btn-queue-ctrl btn-queue-up" data-action="up" data-index="${idx}" title="Nach oben verschieben" ${idx === 0 ? 'disabled' : ''}>▲</button>
+        <button class="btn-queue-ctrl btn-queue-down" data-action="down" data-index="${idx}" title="Nach unten verschieben" ${idx === count - 1 ? 'disabled' : ''}>▼</button>
+        <button class="btn-queue-ctrl btn-queue-delete" data-action="delete" data-index="${idx}" title="Löschen">✕</button>
+      </div>
+    </li>
+  `).join('');
+
+  listEl.querySelectorAll('.btn-queue-ctrl').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.index, 10);
+      const action = btn.dataset.action;
+      if (action === 'run') runQueueTask(idx);
+      else if (action === 'up') moveTaskQueueUp(idx);
+      else if (action === 'down') moveTaskQueueDown(idx);
+      else if (action === 'delete') removeFromTaskQueue(idx);
+    });
+  });
 }
 
 // =============================================================================
@@ -2248,6 +2578,123 @@ function setupEventListeners() {
     updateUIThemeSettings();
     settingsModal.classList.remove('open');
   });
+
+  // Globale Zentrale-Rückkehr für alle .btn-back-to-hub Buttons
+  document.querySelectorAll('.btn-back-to-hub').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      returnToHub();
+    });
+  });
+
+  // Task-Queue: Event-Listener
+  const btnEnqueueTask = document.getElementById('btn-enqueue-task');
+  if (btnEnqueueTask) {
+    btnEnqueueTask.addEventListener('click', () => {
+      const input = document.getElementById('task-prompt-input');
+      const text = input ? input.value : '';
+      if (!text.trim()) {
+        showExportNotification('⚠️ Bitte gib einen Text im Prompt-Feld ein.', 'warning');
+        return;
+      }
+      addToTaskQueue(text);
+      input.value = '';
+      const queuePanel = document.getElementById('task-queue-panel');
+      if (queuePanel) queuePanel.style.display = 'flex';
+    });
+  }
+
+  const btnAddToQueue = document.getElementById('btn-add-to-queue');
+  const queueNewInput = document.getElementById('task-queue-new-input');
+  if (btnAddToQueue && queueNewInput) {
+    const handleAdd = () => {
+      const text = queueNewInput.value;
+      if (text.trim()) {
+        addToTaskQueue(text);
+        queueNewInput.value = '';
+      }
+    };
+    btnAddToQueue.addEventListener('click', handleAdd);
+    queueNewInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handleAdd();
+      }
+    });
+  }
+
+  const btnQueueStartNext = document.getElementById('btn-queue-start-next');
+  if (btnQueueStartNext) {
+    btnQueueStartNext.addEventListener('click', () => {
+      runQueueTask(0);
+    });
+  }
+
+  const taskQueueCloseBtn = document.getElementById('task-queue-close-btn');
+  if (taskQueueCloseBtn) {
+    taskQueueCloseBtn.addEventListener('click', () => {
+      const panel = document.getElementById('task-queue-panel');
+      if (panel) panel.style.display = 'none';
+    });
+  }
+
+  const ctrlTaskQueueToggle = document.getElementById('ctrl-task-queue-toggle');
+  if (ctrlTaskQueueToggle) {
+    ctrlTaskQueueToggle.addEventListener('click', () => {
+      const panel = document.getElementById('task-queue-panel');
+      if (panel) {
+        panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'flex' : 'none';
+      }
+    });
+  }
+
+  const btnSidebarTaskQueue = document.getElementById('btn-sidebar-task-queue');
+  if (btnSidebarTaskQueue) {
+    btnSidebarTaskQueue.addEventListener('click', (e) => {
+      e.preventDefault();
+      const panel = document.getElementById('task-queue-panel');
+      if (panel) {
+        panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'flex' : 'none';
+      }
+    });
+  }
+
+  // Q&A Panel: Event-Listener
+  const qaPanelCloseBtn = document.getElementById('qa-panel-close-btn');
+  if (qaPanelCloseBtn) {
+    qaPanelCloseBtn.addEventListener('click', () => {
+      const panel = document.getElementById('qa-panel');
+      if (panel) panel.style.display = 'none';
+    });
+  }
+
+  const qaBtnYes = document.getElementById('qa-btn-yes');
+  if (qaBtnYes) {
+    qaBtnYes.addEventListener('click', () => {
+      returnToHub();
+      showExportNotification('✔ Frage beantwortet & zur Zentrale zurückgekehrt.', 'success');
+    });
+  }
+
+  const qaBtnNo = document.getElementById('qa-btn-no');
+  if (qaBtnNo) {
+    qaBtnNo.addEventListener('click', () => {
+      const panel = document.getElementById('qa-panel');
+      if (panel) panel.style.display = 'none';
+      const input = document.getElementById('task-prompt-input');
+      if (input) {
+        input.focus();
+        input.placeholder = 'Bitte formuliere deine Frage genauer oder stelle eine neue Anweisung...';
+      }
+      showExportNotification('ℹ️ Formuliere deine Frage bitte etwas genauer oder stelle eine Rückfrage.', 'warning');
+    });
+  }
+
+  const qaBtnExplain = document.getElementById('qa-btn-explain');
+  if (qaBtnExplain) {
+    qaBtnExplain.addEventListener('click', () => {
+      requestQAExplanation();
+    });
+  }
 }
 
 function saveSettings() {
@@ -2292,6 +2739,17 @@ if (typeof window !== 'undefined') {
   window.loadRAGFiles = loadRAGFiles;
   window.renderRAGFileTags = renderRAGFileTags;
   window.updateRAGSelectedCount = updateRAGSelectedCount;
+  window.returnToHub = returnToHub;
+  window.showQAPanel = showQAPanel;
+  window.requestQAExplanation = requestQAExplanation;
+  window.generateDynamicTaskFilename = generateDynamicTaskFilename;
+  window.addToTaskQueue = addToTaskQueue;
+  window.removeFromTaskQueue = removeFromTaskQueue;
+  window.moveTaskQueueUp = moveTaskQueueUp;
+  window.moveTaskQueueDown = moveTaskQueueDown;
+  window.runQueueTask = runQueueTask;
+  window.renderTaskQueueUI = renderTaskQueueUI;
+  window.taskQueue = state.taskQueue;
   if (!Array.isArray(window.selectedContextFiles)) {
     window.selectedContextFiles = [];
   }

@@ -141,7 +141,27 @@ const server = http.createServer((req, res) => {
     }
   }
 
-  // Export-Endpunkt: Nimmt Prompt-Text entgegen und speichert Datei
+/**
+ * Bereinigt dynamische Dateinamen für den Export und schützt vor Directory-Traversal
+ */
+function sanitizeExportFilename(rawFilename) {
+  if (!rawFilename || typeof rawFilename !== 'string') {
+    return 'ANTIGRAVITY_TASK.md';
+  }
+  // Nur Basisname ohne übergeordnete Verzeichnisse
+  let base = path.basename(rawFilename.trim());
+  let ext = path.extname(base);
+  let nameWithoutExt = ext ? base.slice(0, -ext.length) : base;
+
+  // Nur alphanumerische Zeichen, Bindestriche und Unterstriche erlauben
+  let clean = nameWithoutExt.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_');
+  if (!clean || clean === '_') clean = 'ANTIGRAVITY_TASK';
+
+  // Sicherstellen, dass die Dateiendung .md ist
+  return `${clean}.md`;
+}
+
+// Export-Endpunkt: Nimmt Prompt-Text und optional dynamischen Dateinamen entgegen
   if (req.method === 'POST' && req.url === '/api/export-task') {
     let body = '';
 
@@ -152,15 +172,33 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         let taskContent = '';
+        let requestedFilename = 'ANTIGRAVITY_TASK.md';
+
         if (body.trim().startsWith('{')) {
           try {
             const payload = JSON.parse(body);
-            taskContent = payload.content || body;
+            taskContent = payload.content || '';
+            if (payload.filename) {
+              requestedFilename = payload.filename;
+            }
           } catch {
             taskContent = body;
           }
         } else {
           taskContent = body;
+        }
+
+        const safeFilename = sanitizeExportFilename(requestedFilename);
+        const targetFilePath = path.resolve(OUTPUT_DIR, safeFilename);
+
+        // Strikte Sandbox-Prüfung: Muss innerhalb des KI_Trevor Projekts und in OUTPUT_DIR liegen
+        if (!isPathInsideSandbox(targetFilePath) || !targetFilePath.startsWith(OUTPUT_DIR)) {
+          console.warn(`[Bridge Security] 403 Forbidden: Pfadausbruch bei Export abgewiesen: ${requestedFilename} -> ${targetFilePath}`);
+          res.writeHead(403, HEADERS);
+          return res.end(JSON.stringify({
+            success: false,
+            error: '403 Forbidden: Pfad liegt außerhalb der KI_Trevor Sandbox'
+          }));
         }
 
         // Ordner sicherstellen
@@ -169,14 +207,22 @@ const server = http.createServer((req, res) => {
         }
 
         // Markdown-Datei auf Festplatte schreiben
-        fs.writeFileSync(OUTPUT_FILE, taskContent, 'utf-8');
+        fs.writeFileSync(targetFilePath, taskContent, 'utf-8');
 
-        console.log(`[Bridge] Task erfolgreich gespeichert: ${OUTPUT_FILE}`);
+        // Auch die Master-Datei ANTIGRAVITY_TASK.md aktualisieren
+        if (targetFilePath !== OUTPUT_FILE) {
+          try {
+            fs.writeFileSync(OUTPUT_FILE, taskContent, 'utf-8');
+          } catch { /* ignore fallback */ }
+        }
+
+        console.log(`[Bridge] Task erfolgreich gespeichert als: ${targetFilePath}`);
         res.writeHead(200, HEADERS);
         return res.end(JSON.stringify({
           success: true,
-          message: 'Task erfolgreich in 05_Antigravity_Outputs gespeichert',
-          path: OUTPUT_FILE,
+          message: `Task erfolgreich in 05_Antigravity_Outputs gespeichert als ${safeFilename}`,
+          path: targetFilePath,
+          filename: safeFilename,
           timestamp: new Date().toISOString()
         }));
       } catch (err) {

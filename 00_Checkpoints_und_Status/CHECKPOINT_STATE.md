@@ -291,16 +291,52 @@ Erfolgreiche Umsetzung von Schritt 4 der freigegebenen 4-Punkte-Roadmap für 3D-
 
 ---
 
-## 15. Verifikation & Test-Ergebnisse
+## 16. Task-Queue, Dynamischer Export, Q&A-Modus & Globale Zentrale-Navigation
 
-- **Automatisierte Integrations-Suite (`test_interactive_panel.mjs`):**
-   - `updateAgentStatus` aktualisiert verlässlich `userData.currentTask` auf den Ziel-Meshes.
-   - Geöffnetes `#agent-info-panel` aktualisiert `#status-text` synchron und isoliert gegen andere Agenten.
-   - `executeDirectAgentTask` umgeht den Orchestrator, sendet Anweisung direkt an `queryLLM` und rendert Antwort in `#agent-direct-response`.
-- **Automatisierte UG- & Pre-Routing Suite (`test_ug_integration.mjs`):**
-   - Exakt 14 Abteilungen (10 EG, 4 UG), Pre-Routing und Token-Ersparnis zu 100 % verifiziert.
-- **Three.js Syntax- & Modul-Integrität:**
-   - `node -c` auf allen Frontend-Modulen fehlerfrei abgeschlossen (0 Syntaxfehler).
+Erweiterung der Web-App um eine interaktive Auftragsliste (Queue), einen Frage-Antwort-Modus für Trevor mit Erklärungs-Funktion, dynamische Dateinamen beim Export und eine globale "Zurück zur Zentrale"-Navigation:
+
+1. **Dynamischer Export & Sandbox-Schutz ([`localBridgeServer.js`](file:///C:/Users/User/Desktop/KI_Trevor/04_KI_Engine_und_Bridges/localBridgeServer.js) & [`server.js`](file:///C:/Users/User/Desktop/KI_Trevor/06_Deployment_und_Config/server.js)):**
+   - Endpunkt `POST /api/export-task` nimmt nun `{ content, filename }` entgegen.
+   - Strikte Dateinamen-Bereinigung (`sanitizeExportFilename`): `path.basename()` entfernt alle übergebenen Verzeichnispfade, Zeichen werden auf `[a-zA-Z0-9_\-]` gefiltert und die `.md` Endung wird erzwungen.
+   - Strikter Sandbox-Check via `path.resolve()` und `startsWith(OUTPUT_DIR)` blockiert jeden Directory-Traversal-Versuch (`../`) zuverlässig.
+   - Frontend-Funktion `generateDynamicTaskFilename(userPrompt)` in [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) extrahiert die ersten 3 Wörter des Auftrags und kombiniert sie mit den letzten 6 Ziffern des aktuellen Timestamps (z. B. `Task_Login_Bauen_Mit_523032.md`).
+
+2. **Globale Zentrale-Navigation ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Global verfügbare Funktion `window.returnToHub()`:
+     - Schließt alle Overlays und Modals (`#qa-panel`, `#task-queue-panel`, `#agent-info-panel`, `#modal-trevor-terminal`, `#modal-chef-reports`, `#modal-agent-inspector`, `#modal-settings`, `#section-decision`, `#section-task-progress`).
+     - Stellt das Standard-Eingabefeld `#section-task-input` wieder her.
+     - Setzt den 3D-Campus über `window.switchFloor('EG')` und `window.update3DStudioState('idle', 'EG')` zurück in die neutrale Ausgangsposition.
+   - Alle Dialoge und Panels (Info-Panel, Q&A-Panel, Roadmap-Export, Task-Queue, Canvas-Controls) besitzen einheitliche `<button class="btn-back-to-hub">Zurück zur Zentrale</button>` Buttons.
+
+3. **Interaktive Auftrags-Queue ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html), [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css), [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Seitliches Slide-Out-Panel `#task-queue-panel` mit Anzeige der wartenden Aufgaben (`#queue-count-badge`).
+   - Warteschlangen-Array `window.taskQueue` inklusive `localStorage`-Persistierung (`trevor_task_queue`).
+   - Native JavaScript Sortier- und Steuerungs-Funktionen:
+     - `addToTaskQueue(promptText)`: Fügt neuen Auftrag hinzu.
+     - `removeFromTaskQueue(index)`: Entfernt Auftrag aus der Queue.
+     - `moveTaskQueueUp(index)` & `moveTaskQueueDown(index)`: Verschiebt Einträge in der Priorität nach oben oder unten.
+     - `runQueueTask(index)`: Übergibt den gewählten Auftrag an das Eingabefeld und startet sofort `dispatchNewTask()`.
+   - Schnelleinreihung über den neuen Button `[➕ In Queue einreihen]` (`#btn-enqueue-task`) direkt im Prompt-Eingabebereich sowie Schnelltaste in der 3D-Canvas-Steuerung.
+
+4. **Direkter Q&A-Modus mit Erklärungs-Funktion ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js) & [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Pre-Routing-Klassifizierung (`classifyTaskType` / `heuristicClassification`) unterscheidet nun zwischen `SOFTWARE`, `HARDWARE_ALLGEMEIN` und `QUESTION`.
+   - Bei `QUESTION` wird die 4-Stufen Task-Zerlegung übersprungen: Trevor generiert eine direkte Antwort und öffnet `#qa-panel` (`showQAPanel`).
+   - Drei interaktive Aktions-Schaltflächen:
+     - `✔ [Ja]` (`#qa-btn-yes`): Antwort akzeptiert -> kehrt über `returnToHub()` zur Zentrale zurück.
+     - `✖ [Nein]` (`#qa-btn-no`): Schließt das Overlay und fokussiert das Prompt-Feld zur Neuformulierung.
+     - `💡 [Erklärung]` (`#qa-btn-explain`): Ruft Trevor über `requestQAExplanation()` erneut auf mit der Anweisung, den Sachverhalt anfängerfreundlich mit anschaulichen Alltags-Analogien ohne Fachjargon zu erklären.
+
+---
+
+## 17. Verifikation & Test-Ergebnisse
+
+- **Automatisierte Integrations-Suite (`test_queue_qa_navigation.mjs`):**
+   - Dynamische Dateinamen-Generierung mit ersten 3 Wörtern + Timestamp zu 100 % verifiziert.
+   - Pre-Routing für Wissensfragen ("Was ist...", "Erkläre mir...") vs. Software- vs. Hardware-Aufträge verifiziert.
+   - Live-Export über Bridge (Port 3001) mit dynamischen Dateinamen verifiziert.
+   - Directory Traversal Schutz (`../../../../windows/system32/evil.exe` -> `evil.md` in `05_Antigravity_Outputs`) erfolgreich verifiziert (14 von 14 Tests bestanden).
+- **Three.js & JavaScript Syntax- & Modul-Integrität:**
+   - `node -c` auf `localBridgeServer.js`, `server.js`, `workflowOrchestrator.js` und `app.js` fehlerfrei abgeschlossen (0 Syntaxfehler).
 - **Server & Bridges:**
    - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
    - Lokale Bridge (Port 3001): `http://localhost:3001/api/status`, `/api/list-files`, `/api/read-files` & `/api/export-task` (online)

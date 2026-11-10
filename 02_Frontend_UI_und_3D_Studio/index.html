@@ -121,9 +121,12 @@
               <div id="agent-direct-response" style="display:none;"></div>
             </div>
           </div>
-          <div class="agent-info-footer">
+          <div class="agent-info-footer" style="display: flex; flex-direction: column; gap: 6px;">
             <button id="agent-info-action-btn" class="agent-info-btn">
               <span>🔍 Vollständigen Inspektor & Terminal öffnen</span>
+            </button>
+            <button class="btn-back-to-hub" title="Schließt das Panel und kehrt zur Zentrale zurück">
+              <span>🎯 Zurück zur Zentrale</span>
             </button>
           </div>
         </div>
@@ -135,6 +138,8 @@
           <button id="ctrl-zoom-out" class="ctrl-btn" title="Zoom Out">−</button>
           <button id="ctrl-floor-eg" class="ctrl-btn active" style="border-color: rgba(56, 189, 248, 0.4);" title="Kamera zu Erdgeschoss (Software-Campus)">🏢 EG (Software)</button>
           <button id="ctrl-floor-ug" class="ctrl-btn" style="border-color: rgba(168, 85, 247, 0.4);" title="Kamera zu Untergeschoss (Keller & Hardware)">🔻 UG (Keller)</button>
+          <button id="ctrl-task-queue-toggle" class="ctrl-btn" style="border-color: rgba(251, 191, 36, 0.4);" title="Auftrags-Warteschlange öffnen">📋 Queue (<span id="queue-badge-count">0</span>)</button>
+          <button class="btn-back-to-hub ctrl-btn" title="Kamera zurück zur Zentrale">🎯 Zentrale</button>
           <button id="ctrl-reset-cam" class="ctrl-btn" title="Kamera zurücksetzen">Ganzes Studio</button>
           <button id="ctrl-quiet-toggle" class="ctrl-btn" title="Ruhige Ansicht ein/aus">Ruhige Ansicht</button>
         </div>
@@ -222,6 +227,10 @@
 
       <!-- Footer-Links der Sidebar -->
       <div class="sidebar-footer-links">
+        <button id="btn-sidebar-task-queue" class="footer-link-btn" style="border-color: rgba(251, 191, 36, 0.4);">
+          <span>📋 Auftrags-Queue (<span id="sidebar-queue-count">0</span>)</span>
+          <span>→</span>
+        </button>
         <button id="btn-sidebar-chef-reports" class="footer-link-btn">
           <span>Chef-Arbeitsplatz & Berichte</span>
           <span>→</span>
@@ -392,7 +401,10 @@
               </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end;">
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button id="btn-enqueue-task" type="button" class="ctrl-btn" style="padding: 10px 14px; font-weight: 700; color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" title="Auftrag in Queue einreihen">
+                <span>📋 In Queue</span>
+              </button>
               <button id="btn-dispatch-task" class="btn-submit-task">
                 <span>🚀 Auftrag an Trevor & Team übergeben</span>
               </button>
@@ -448,10 +460,13 @@
                 <!-- Wird dynamisch aus task.checkpoint_data.structured_steps befüllt -->
               </div>
 
-              <!-- Button für dynamischen Teil-Export -->
-              <div style="margin-top: 12px; display: flex; gap: 8px;">
-                <button id="btn-export-selected-steps" class="btn-submit-task" style="flex: 1; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+              <!-- Button für dynamischen Teil-Export & Zentrale Navigation -->
+              <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                <button id="btn-export-selected-steps" class="btn-submit-task" style="width: 100%; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
                   <span>🚀 Ausgewählte [JA]-Schritte an Antigravity senden</span>
+                </button>
+                <button class="btn-back-to-hub" style="width: 100%; justify-content: center;">
+                  <span>🎯 Zurück zur Zentrale</span>
                 </button>
               </div>
             </div>
@@ -585,6 +600,82 @@
         <button id="btn-save-settings" class="btn-submit-task" style="margin-top: 10px; width: 100%; justify-content: center;">
           Speichern & Übernehmen
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       7. TASK-QUEUE PANEL (SEITLICHES PANEL FÜR WARTENDE AUFTRÄGE)
+       ========================================================================= -->
+  <div id="task-queue-panel" class="task-queue-panel" style="display: none;">
+    <div class="task-queue-header">
+      <div class="task-queue-title">
+        <span class="task-queue-icon">📋</span>
+        <span>AUFTRAGS-QUEUE (WARTESCHLANGE)</span>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="btn-back-to-hub" title="Zurück zur Zentrale">Zurück zur Zentrale</button>
+        <button id="task-queue-close-btn" class="ctrl-btn panel-close-btn" title="Schließen">✕</button>
+      </div>
+    </div>
+    <div class="task-queue-body">
+      <div class="task-queue-input-box">
+        <input type="text" id="task-queue-new-input" placeholder="Neuen Auftrag in Queue einreihen..." autocomplete="off" />
+        <button id="btn-add-to-queue" class="btn-queue-add">➕ Einreihen</button>
+      </div>
+      <div class="task-queue-meta-row">
+        <span id="queue-count-badge" class="queue-count-badge">0 wartende Aufträge</span>
+        <button id="btn-queue-start-next" class="btn-queue-start" style="display: none;">▶ Nächsten Auftrag ausführen</button>
+      </div>
+      <ul id="task-queue-list" class="task-queue-list">
+        <!-- Dynamische Einträge mit Up/Down-Buttons und Delete-Button -->
+      </ul>
+      <div id="queue-empty-placeholder" class="queue-empty-placeholder">
+        Keine wartenden Aufträge in der Warteschlange.
+      </div>
+    </div>
+    <div class="task-queue-footer">
+      <button class="btn-back-to-hub" style="width: 100%;">🎯 Zurück zur Zentrale</button>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       8. Q&A PANEL (TREVOR DIREKT-FRAGEN OVERLAY MIT ERKLÄRUNGS-MODUS)
+       ========================================================================= -->
+  <div id="qa-panel" class="modal-overlay qa-panel-overlay" style="display: none;">
+    <div class="terminal-modal-card qa-card" style="max-width: 640px;">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <span style="color: var(--arc-cyan);">⚡</span>
+          <span>TREVOR Q&A-MODUS (DIREKT-ANTWORT)</span>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button class="btn-back-to-hub" title="Zurück zur Zentrale">Zurück zur Zentrale</button>
+          <button id="qa-panel-close-btn" class="ctrl-btn modal-close-btn">✕</button>
+        </div>
+      </div>
+      <div class="terminal-body" style="gap: 14px;">
+        <div class="inspector-callout-box">
+          <span class="inspector-callout-label">DEINE FRAGE:</span>
+          <p id="qa-user-question" class="inspector-callout-text" style="font-weight: 700; color: #fff;"></p>
+        </div>
+
+        <div class="qa-answer-container">
+          <span class="inspector-callout-label" style="color: var(--arc-cyan);">TREVORS ANTWORT:</span>
+          <div id="qa-answer-text" class="qa-answer-text"></div>
+        </div>
+
+        <div class="qa-decision-box">
+          <div class="qa-decision-title">War diese Antwort hilfreich oder benötigst du weitere Details?</div>
+          <div class="qa-decision-buttons">
+            <button id="qa-btn-yes" class="qa-btn qa-btn-yes" title="Antwort akzeptieren und zur Zentrale">✔ [Ja]</button>
+            <button id="qa-btn-no" class="qa-btn qa-btn-no" title="Frage neu oder präziser stellen">✖ [Nein]</button>
+            <button id="qa-btn-explain" class="qa-btn qa-btn-explain" title="Einfache Erklärung mit Alltag-Analogien anfordern">💡 [Erklärung]</button>
+          </div>
+        </div>
+      </div>
+      <div class="terminal-footer" style="padding: 10px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+        <button class="btn-back-to-hub">🎯 Zurück zur Zentrale</button>
       </div>
     </div>
   </div>
