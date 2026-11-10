@@ -45,13 +45,16 @@ export class WorkflowOrchestrator {
       }
 
       const qPrompt = `Du bist Trevor, Studio-Director und KI-Chef-Architekt von "Trevor AI Software Studio". 
-Beantworte die folgende Frage des Nutzers präzise, professionell, klar strukturiert und auf den Punkt auf Deutsch.`;
+Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-britisch, extrem höflich und souverän (nutze gelegentlich 'Sir'). Halte gesprochene Statusmeldungen und Rückfragen prägnant. Beantworte die folgende Frage des Nutzers klar strukturiert auf Deutsch.`;
 
       const directAnswer = await queryLLM(qPrompt, userPrompt, false);
 
       if (typeof window !== 'undefined') {
         if (typeof window.showQAPanel === 'function') {
           window.showQAPanel(userPrompt, directAnswer);
+        }
+        if (typeof window.speakAsJarvis === 'function') {
+          window.speakAsJarvis(directAnswer);
         }
         if (typeof window.playNotificationSound === 'function') {
           window.playNotificationSound('QUESTION');
@@ -194,6 +197,10 @@ Beantworte die folgende Frage des Nutzers präzise, professionell, klar struktur
     const finalPlan = await this.synthesizeFinalPlan(userPrompt, departmentReports);
     console.log(`[Stufe 4] Finale Checkliste mit ${finalPlan.steps.length} Schritten fertiggestellt.`);
 
+    if (typeof window !== 'undefined' && typeof window.speakAsJarvis === 'function') {
+      window.speakAsJarvis(`Die Ausarbeitung ist abgeschlossen, Sir. ${finalPlan.steps.length} Maßnahmen stehen zur Freigabe im Terminal bereit.`);
+    }
+
     return finalPlan;
   }
 
@@ -298,6 +305,7 @@ Antworte zwingend und ausschließlich mit folgendem JSON-Schema:
     const availableDepts = availableDeptsList.map(d => `${d.id}. ${d.name} (${d.floor || 'EG'}): ${d.easy_explanation}`).join('\n');
 
     const systemPrompt = `Du bist Trevor, der Studio-Director und Master-Dispatcher von "Trevor AI Software Studio".
+Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-britisch, extrem höflich und souverän (nutze gelegentlich 'Sir'). Halte gesprochene Statusmeldungen und Rückfragen prägnant.
 Deine Aufgabe in Stufe 1 ist es, den Kundenauftrag für die Etage [${targetFloor}] zu analysieren und relevante Abteilungen auszuwählen.
 
 VERFÜGBARE ABTEILUNGEN AUF ETAGE ${targetFloor}:
@@ -508,6 +516,9 @@ Deine Kernaufgabe in Stufe 3 ist ein unbestechliches Qualitäts- und Logikaudit:
       };
 
       if (typeof window !== 'undefined') {
+        if (typeof window.speakAsJarvis === 'function') {
+          window.speakAsJarvis(`Abteilung ${subTask.departmentName} hat die Arbeiten abgeschlossen, Sir.`);
+        }
         if (typeof window.playNotificationSound === 'function') {
           window.playNotificationSound('SUCCESS');
         }
@@ -542,6 +553,7 @@ Deine Kernaufgabe in Stufe 3 ist ein unbestechliches Qualitäts- und Logikaudit:
       .join('\n\n');
 
     const systemPrompt = `Du bist Trevor, Studio Director von "Trevor AI Software Studio".
+Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-britisch, extrem höflich und souverän (nutze gelegentlich 'Sir').
 Dir liegen die geprüften Berichte deiner Abteilungsleiter vor. Alle Logikfehler und Pfad-Konflikte wurden bereinigt.
 
 DEINE AUFGABE IN STUFE 4:

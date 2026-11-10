@@ -30,6 +30,13 @@ import {
 } from './idleTrainer.js';
 import { getLLMConfig, saveLLMConfig, queryLLM } from './llmEngine.js';
 import { WorkflowOrchestrator, orchestrator } from './workflowOrchestrator.js';
+import {
+  speakAsJarvis,
+  stopJarvisSpeech,
+  toggleVoiceRecognition,
+  toggleJarvisVoiceEnabled,
+  updateVoiceToggleButtonUI
+} from './jarvisVoice.js';
 
 // Globaler Anwendungs-Status
 const state = {
@@ -93,6 +100,13 @@ function bootTrevorApp() {
     loadRAGFiles();
   } catch (err) {
     console.warn('[Trevor App] RAG Sandbox-Dateien laden Warnung:', err);
+  }
+
+  // 5. J.A.R.V.I.S. Voice Toggle Button synchronisieren
+  try {
+    updateVoiceToggleButtonUI();
+  } catch (err) {
+    console.warn('[Trevor App] Voice-Button UI Sync Warnung:', err);
   }
 }
 
@@ -1610,6 +1624,18 @@ export function returnToHub() {
   updateCheckpointBadge('Zentrale bereit für neue Aufgaben', true);
 }
 
+/**
+ * Bricht alle laufenden Workflows ab und kehrt zur Zentrale zurück (per Sprachbefehl oder Button)
+ */
+export function cancelAllActiveTasks() {
+  console.log('[Trevor App] cancelAllActiveTasks aufgerufen – halte alle aktiven Prozesse an.');
+  if (state.activeTask) {
+    state.activeTask.status = 'rejected';
+  }
+  returnToHub();
+  updateCheckpointBadge('Alle Prozesse gestoppt', true);
+}
+
 // =============================================================================
 // Q&A MODUS (TREVOR DIREKT-ANTWORTEN & ERKLÄRUNGS-MODUS)
 // =============================================================================
@@ -2847,6 +2873,17 @@ function setupEventListeners() {
   document.getElementById('btn-resume-limit').addEventListener('click', resumePausedTask);
   document.getElementById('btn-dispatch-task').addEventListener('click', dispatchNewTask);
 
+  // J.A.R.V.I.S. Voice Controls
+  const btnMic = document.getElementById('btn-mic-input');
+  if (btnMic) {
+    btnMic.addEventListener('click', toggleVoiceRecognition);
+  }
+
+  const btnVoiceToggle = document.getElementById('btn-toggle-jarvis-voice');
+  if (btnVoiceToggle) {
+    btnVoiceToggle.addEventListener('click', toggleJarvisVoiceEnabled);
+  }
+
   // Neuer Button: Direkt-Anweisung im Inspektor absenden
   const btnDispatchDirect = document.getElementById('btn-inspector-dispatch-direct');
   if (btnDispatchDirect) {
@@ -3295,6 +3332,11 @@ if (typeof window !== 'undefined') {
   window.removeActionCenterItem = removeActionCenterItem;
   window.renderActionCenterUI = renderActionCenterUI;
   window.actionCenterItems = state.actionCenterItems;
+  window.speakAsJarvis = speakAsJarvis;
+  window.stopJarvisSpeech = stopJarvisSpeech;
+  window.toggleVoiceRecognition = toggleVoiceRecognition;
+  window.toggleJarvisVoiceEnabled = toggleJarvisVoiceEnabled;
+  window.cancelAllActiveTasks = cancelAllActiveTasks;
   if (!Array.isArray(window.selectedContextFiles)) {
     window.selectedContextFiles = [];
   }

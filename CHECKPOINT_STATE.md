@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Antigravity Master Execution – Alle 4 von 4 freigegebenen Schritten (Frontend Checkliste, Dual-Engine REST, Supabase Schema, 3D Render-Loop) zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
-- **Datum / Letztes Update:** 2026-11-10 20:00:00
+- **Status:** J.A.R.V.I.S. Voice-Interface & 3D Arc-Reactor Sync VOLLSTÄNDIG IMPLEMENTIERT & VERIFIZIERT 🎙️⚡
+- **Datum / Letztes Update:** 2026-11-10 22:30:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -423,3 +423,50 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
    - Validierung von `window.trevorAudio`, `playNotificationSound`, `showActionToast`, `openActionCenter`, `localStorage`-Persistierung und `returnToHub`-Isolation.
 - **Server-Status:**
    - Root Node.js Web Service aktiv auf Port 3000 (`http://localhost:3000`).
+
+---
+
+## 22. JARVIS Voice-Interface (Speech-To-Text, Text-To-Speech & 3D Arc-Reactor Sync)
+
+1. **J.A.R.V.I.S. Voice Modul ([`jarvisVoice.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/jarvisVoice.js)):**
+   - **Sprachausgabe (`window.speakAsJarvis(text)`):**
+     - Automatische Bereinigung von Markdown-Steuerzeichen (`#`, `*`, `_`, `` ` ``).
+     - Intelligenter Code-Block-Filter: Ersetzt mehrzeilige Code-Blöcke durch: *"Der entsprechende Code-Block liegt im Terminal bereit, Sir."* (verhindert das zeichenweise Buchstabieren von Programmcode).
+     - Priorisierte neuronale Stimmenauswahl aus `window.speechSynthesis.getVoices()`:
+       1. `'Microsoft Conrad Online (Natural) - German (Germany)'`
+       2. `'Microsoft Killian Online (Natural) - German (Germany)'`
+       3. `'Google Deutsch'` bzw. männliche deutsche Systemstimmen
+       4. Fallback auf Standardstimmen (`'Daniel'`, `'George'`, etc.).
+     - Spezifische J.A.R.V.I.S.-Audiocharakteristik: `pitch = 0.92` (souverän-tiefe Bruststimme), `rate = 1.04` (prägnantes britisches Sprechtempo).
+     - 3D-Synchronisation: Setzt während des Sprechens `window.isJarvisSpeaking = true` (`onstart`) und bei Beendigung/Fehler auf `false` (`onend`, `onerror`).
+   - **Spracheingabe (`window.toggleVoiceRecognition()`):**
+     - Native Browser-Erkennung via `SpeechRecognition || webkitSpeechRecognition` (`lang = 'de-DE'`, `interimResults = true`).
+     - Echtzeit-Transkription direkt in `#task-prompt-input` (oder `#agent-direct-prompt`, wenn der Inspektor geöffnet ist).
+     - Integrierte Sprachbefehle:
+       - *"Trevor, zurück zur Zentrale"* -> Ruft `window.returnToHub()` auf und antwortet: *"Sehr wohl, Sir. Kehre zur Zentrale zurück."*
+       - *"Trevor, alle Aufträge stoppen"* -> Ruft `window.cancelAllActiveTasks()` auf und antwortet: *"Alle aktiven Prozesse wurden angehalten, Sir."*
+     - Fokus-Übergabe auf `#btn-dispatch-task` nach Beendigung der Aufnahme.
+   - **Mute- & Steuerungs-Logik:**
+     - Toggle-Funktion `toggleJarvisVoiceEnabled()` mit Speicherung des Status in `localStorage ('trevor_jarvis_voice_enabled')`.
+     - Button-Synchronisation über `updateVoiceToggleButtonUI()`.
+
+2. **3D Arc-Reactor Audio-Puls ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - Referenzen `trevorArcCoreMesh` und `trevorArcRingMesh` im Trevor-Iron-Man-Modell gespeichert.
+   - In der Render-Loop `animate()`: Prüfung auf `if (window.isJarvisSpeaking === true)`.
+   - Bei aktiver Sprachausgabe: Schnelles, rhythmisches Pulsieren in Sprechwellenform (`sin(t*26.0) + cos(t*17.0)`) in hellem Cyan (`0x00f0ff`) auf dem Arc-Reactor-Kern, Ring und den Lichtquellen (`trevorArcLight`, `trevorStageAuraLight`).
+   - Bei Inaktivität: Sanfte Rückkehr zu Standard-Skalierung und Idle-Beleuchtung.
+
+3. **UI-Komponenten ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) & [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css)):**
+   - Neuer Mikrofon-Button `#btn-mic-input` direkt neben dem Prompt-Feld mit pulsierender Aufnahme-Animation (`@keyframes micPulse`).
+   - Neuer Toggle-Button `#btn-toggle-jarvis-voice` in der Header-Leiste (`🗣️ J.A.R.V.I.S. Voice: AN/AUS`).
+
+4. **J.A.R.V.I.S.-Persönlichkeit & Orchestrator-Integration ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Trevor System-Prompt erweitert: *"Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-britisch, extrem höflich und souverän (nutze gelegentlich 'Sir'). Halte gesprochene Statusmeldungen und Rückfragen prägnant."*
+   - Automatische Sprachausgabe via `window.speakAsJarvis` für:
+     - Q&A-Direktantworten und Rückfragen
+     - Fertigstellung von Abteilungsleiter-Audits in Stufe 3
+     - Abschluss der finalen Synthese und Bereitstellung der Maßnahmen in Stufe 4.
+
+5. **Globale Fenster-Exporte ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - `window.speakAsJarvis`, `window.stopJarvisSpeech`, `window.toggleVoiceRecognition`, `window.toggleJarvisVoiceEnabled`, `window.cancelAllActiveTasks`.
+

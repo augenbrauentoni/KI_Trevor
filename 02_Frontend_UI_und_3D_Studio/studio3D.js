@@ -23,6 +23,7 @@ let scene, camera, renderer, controls;
 let containerEl;
 let animationFrameId = null;
 let trevorGroup, trevorHead, trevorArcLight, trevorHands = [];
+let trevorArcCoreMesh = null, trevorArcRingMesh = null;
 let decisionTerminalScreen;
 const interactiveObjects = [];
 const pcMeshMap = {};
@@ -784,12 +785,14 @@ function setupTrevorIronManMech(THREE_LIB) {
   const arcRing = new THREE_LIB.Mesh(arcRingGeo, arcRingMat);
   arcRing.position.set(0, 0.2, 0.44);
   mechBody.add(arcRing);
+  trevorArcRingMesh = arcRing;
 
   const arcCoreGeo = new THREE_LIB.CircleGeometry(0.16, 24);
   const arcCoreMat = new THREE_LIB.MeshBasicMaterial({ color: 0xe0f2fe });
   const arcCore = new THREE_LIB.Mesh(arcCoreGeo, arcCoreMat);
   arcCore.position.set(0, 0.2, 0.45);
   mechBody.add(arcCore);
+  trevorArcCoreMesh = arcCore;
 
   trevorArcLight = new THREE_LIB.PointLight(0x38bdf8, 4.0, 14);
   trevorArcLight.position.set(0, 0.2, 0.8);
@@ -1867,20 +1870,72 @@ function animate() {
   if (trevorGroup && !isQuietMode) {
     trevorGroup.position.y = Math.sin(time * 2.2) * 0.05;
 
-    // Dynamisches Pulsieren je nach Workflow-Stufe
-    if (currentWorkflowStage === 'stage1') {
-      if (trevorArcLight) trevorArcLight.intensity = 6.0 + Math.sin(time * 8.0) * 2.0;
-      if (trevorStageAuraLight) trevorStageAuraLight.intensity = 3.5 + Math.sin(time * 8.0) * 1.5;
-      if (trevorSpotlight) trevorSpotlight.intensity = 5.5 + Math.sin(time * 6.0) * 1.2;
-    } else if (currentWorkflowStage === 'stage4') {
-      if (trevorArcLight) trevorArcLight.intensity = 7.0 + Math.sin(time * 6.0) * 2.0;
-      if (trevorStageAuraLight) trevorStageAuraLight.intensity = 5.0 + Math.sin(time * 6.0) * 1.5;
-    } else {
+    // J.A.R.V.I.S. Sprach-Synchronisation: Arc-Reactor Audio-Puls im 3D-Raum
+    const isJarvisSpeaking = typeof window !== 'undefined' && Boolean(window.isJarvisSpeaking);
+
+    if (isJarvisSpeaking) {
+      // Schneller, lebendiger Sprachwellen-Puls (Cyan/Hellblau 0x00f0ff)
+      const speechPulse = Math.sin(time * 26.0) * 0.45 + Math.cos(time * 17.0) * 0.55;
+      const coreScale = 1.0 + Math.abs(speechPulse) * 0.38;
+
+      if (trevorArcCoreMesh) {
+        trevorArcCoreMesh.scale.set(coreScale, coreScale, coreScale);
+        if (trevorArcCoreMesh.material && trevorArcCoreMesh.material.color) {
+          trevorArcCoreMesh.material.color.setHex(0x00f0ff);
+        }
+      }
+      if (trevorArcRingMesh) {
+        trevorArcRingMesh.scale.set(coreScale * 1.12, coreScale * 1.12, coreScale * 1.12);
+      }
       if (trevorArcLight) {
-        trevorArcLight.intensity = 3.5 + Math.sin(time * 5.0) * 0.8;
+        trevorArcLight.color.setHex(0x00f0ff);
+        trevorArcLight.intensity = 8.0 + Math.abs(speechPulse) * 6.5;
       }
       if (trevorStageAuraLight) {
-        trevorStageAuraLight.intensity = 0.6 + Math.sin(time * 3.0) * 0.2;
+        trevorStageAuraLight.color.setHex(0x00f0ff);
+        trevorStageAuraLight.intensity = 4.5 + Math.abs(speechPulse) * 3.0;
+      }
+    } else {
+      // Normale Rückstellung bei Sprechpause / Idle
+      if (trevorArcCoreMesh && trevorArcCoreMesh.scale.x !== 1) {
+        trevorArcCoreMesh.scale.set(1, 1, 1);
+        if (trevorArcCoreMesh.material && trevorArcCoreMesh.material.color) {
+          trevorArcCoreMesh.material.color.setHex(0xe0f2fe);
+        }
+      }
+      if (trevorArcRingMesh && trevorArcRingMesh.scale.x !== 1) {
+        trevorArcRingMesh.scale.set(1, 1, 1);
+      }
+
+      // Dynamisches Pulsieren je nach Workflow-Stufe
+      if (currentWorkflowStage === 'stage1') {
+        if (trevorArcLight) {
+          trevorArcLight.color.setHex(0x38bdf8);
+          trevorArcLight.intensity = 6.0 + Math.sin(time * 8.0) * 2.0;
+        }
+        if (trevorStageAuraLight) {
+          trevorStageAuraLight.color.setHex(0xef4444);
+          trevorStageAuraLight.intensity = 3.5 + Math.sin(time * 8.0) * 1.5;
+        }
+        if (trevorSpotlight) trevorSpotlight.intensity = 5.5 + Math.sin(time * 6.0) * 1.2;
+      } else if (currentWorkflowStage === 'stage4') {
+        if (trevorArcLight) {
+          trevorArcLight.color.setHex(0x38bdf8);
+          trevorArcLight.intensity = 7.0 + Math.sin(time * 6.0) * 2.0;
+        }
+        if (trevorStageAuraLight) {
+          trevorStageAuraLight.color.setHex(0xef4444);
+          trevorStageAuraLight.intensity = 5.0 + Math.sin(time * 6.0) * 1.5;
+        }
+      } else {
+        if (trevorArcLight) {
+          trevorArcLight.color.setHex(0x38bdf8);
+          trevorArcLight.intensity = 3.5 + Math.sin(time * 5.0) * 0.8;
+        }
+        if (trevorStageAuraLight) {
+          trevorStageAuraLight.color.setHex(0xef4444);
+          trevorStageAuraLight.intensity = 0.6 + Math.sin(time * 3.0) * 0.2;
+        }
       }
     }
 
