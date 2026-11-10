@@ -30,20 +30,18 @@ export class WorkflowOrchestrator {
     console.log(`======================================================\n`);
 
     // -------------------------------------------------------------------------
-    // PRE-ROUTING: LLM-KLASSIFIZIERUNG (SOFTWARE_DEV vs. ALLGEMEIN_HARDWARE)
+    // PRE-ROUTING: LLM-KLASSIFIZIERUNG (SOFTWARE vs. HARDWARE_ALLGEMEIN)
     // -------------------------------------------------------------------------
-    onStatusUpdate(
-      'Stufe 1/4: Pre-Routing (Etagen-Klassifizierung)',
-      'Trevor',
-      'Klassifiziert Auftrag: Prüfe ob Software-Code (EG) oder Non-Code/Hardware/Archiv (UG)...'
-    );
-
     const routing = await this.classifyTaskType(userPrompt);
-    console.log(`[Pre-Routing] Klassifizierung: ${routing.classification} -> Ziel-Etage: ${routing.floor} (${routing.reason})`);
+    const target_floor = routing.target_floor || routing.floor || 'EG';
+    console.log(`[Pre-Routing] Kategorie: ${routing.category} -> Ziel-Etage: ${target_floor}`);
+
+    // Triggere beim Etagen-Wechsel ein Event: onStatusUpdate('routing', 'Fahre ins ' + target_floor)
+    onStatusUpdate('routing', 'Fahre ins ' + target_floor);
 
     // 3D-Bühne sofort über Ziel-Etage informieren (Kamera-Fahrt UG/EG)
     if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
-      window.update3DStudioState(routing.floor === 'UG' ? 'ug_active' : 'stage1');
+      window.update3DStudioState('routing', target_floor);
     }
 
     // -------------------------------------------------------------------------
@@ -52,19 +50,19 @@ export class WorkflowOrchestrator {
     onStatusUpdate(
       'Stufe 1/4: Trevor (CEO & Dispatcher)',
       'Trevor',
-      routing.floor === 'UG'
-        ? `ALLGEMEIN_HARDWARE erkannt -> Verteilt Aufgaben an das Untergeschoss (UG: Archiv, Serverraum, Werkstatt, Lounge)...`
-        : `SOFTWARE_DEV erkannt -> Verteilt Aufgaben an den Software-Campus (EG)...`
+      target_floor === 'UG'
+        ? `HARDWARE_ALLGEMEIN erkannt -> Verteilt Aufgaben an das Untergeschoss (UG: Archiv, Serverraum, Werkstatt, Lounge)...`
+        : `SOFTWARE erkannt -> Verteilt Aufgaben an den Software-Campus (EG)...`
     );
 
     const subTasks = await this.dispatchTask(userPrompt, routing);
-    console.log(`[Stufe 1] Auftrag in ${subTasks.length} Abteilungs-Tasks (${routing.floor}) zerlegt.`);
+    console.log(`[Stufe 1] Auftrag in ${subTasks.length} Abteilungs-Tasks (${target_floor}) zerlegt.`);
 
     // -------------------------------------------------------------------------
-    // CODE-RAG: KONTEXT-ABRUF AUS DATEIEN (NUR BEI SOFTWARE_DEV / EG)
+    // CODE-RAG: KONTEXT-ABRUF AUS DATEIEN (NUR BEI target_floor === 'EG')
     // -------------------------------------------------------------------------
     let codeContext = '';
-    if (routing.classification === 'SOFTWARE_DEV') {
+    if (target_floor === 'EG') {
       try {
         let candidateFiles = [];
         let isManualSelection = false;
@@ -105,7 +103,7 @@ export class WorkflowOrchestrator {
         codeContext = '';
       }
     } else {
-      console.log('[WorkflowOrchestrator] Code-RAG für UG / ALLGEMEIN_HARDWARE automatisch übersprungen (Token-Ersparnis).');
+      console.log('[WorkflowOrchestrator] Code-RAG für UG / HARDWARE_ALLGEMEIN komplett übersprungen (Token-Ersparnis).');
     }
 
     // -------------------------------------------------------------------------
@@ -148,53 +146,70 @@ export class WorkflowOrchestrator {
   }
 
   /**
-   * 0. classifyTaskType: Pre-Routing per LLM (SOFTWARE_DEV vs. ALLGEMEIN_HARDWARE)
+   * 0. classifyTaskType: Pre-Routing per LLM (SOFTWARE vs. HARDWARE_ALLGEMEIN)
+   * Nutzt zwingend queryLLM(..., expectJson = true) für deterministisches JSON.
    */
   async classifyTaskType(userPrompt) {
     const systemPrompt = `Du bist Trevors KI-Routing-Classifier.
 Analysiere die Benutzeranfrage und klassifiziere sie in genau EINE von zwei Kategorien:
-1. SOFTWARE_DEV: Webentwicklung, Apps, Three.js, JavaScript, Python, APIs, SQL, Frontend, Backend, Bugs, Code-Architektur (Ziel: Erdgeschoss EG).
-2. ALLGEMEIN_HARDWARE: Physische Hardware, Elektronik, ESP32, Arduino, Raspberry Pi, Löten, PCB, Serverraum-Verkabelung/Netzwerkinfrastruktur, Allgemeinwissen, Recherche, Textverfassung, Brainstorming, Alltagsorganisation oder Gaming/Freizeit (Ziel: Untergeschoss UG).
+- "SOFTWARE": Webentwicklung, Apps, Three.js, JavaScript, Python, APIs, SQL, Frontend, Backend, Bugs, Code-Architektur (Ziel-Etage: "EG").
+- "HARDWARE_ALLGEMEIN": Physische Hardware, Elektronik, ESP32, Arduino, Raspberry Pi, Löten, PCB, Serverraum, Netzwerkinfrastruktur, FISI-Themen, Allgemeinwissen, Recherche, Textverfassung, Brainstorming, Alltagsorganisation oder Gaming/Freizeit (Ziel-Etage: "UG").
 
-Antworte ausschließlich im JSON-Format:
+Antworte zwingend und ausschließlich mit folgendem JSON-Schema:
 {
-  "classification": "SOFTWARE_DEV" oder "ALLGEMEIN_HARDWARE",
-  "floor": "EG" oder "UG",
-  "reason": "Kurze Begründung"
+  "category": "SOFTWARE" oder "HARDWARE_ALLGEMEIN",
+  "target_floor": "EG" oder "UG"
 }`;
 
     try {
-      const resp = await queryLLM(systemPrompt, `Aufgabe: "${userPrompt}"`, false);
-      const parsed = JSON.parse(resp);
-      const isUG = (parsed.classification || '').toUpperCase().includes('HARDWARE') || (parsed.floor || '').toUpperCase() === 'UG';
+      const resp = await queryLLM(systemPrompt, `Aufgabe: "${userPrompt}"`, true);
+      let parsed = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+
+      if (!parsed || Array.isArray(parsed) || (!parsed.category && !parsed.target_floor)) {
+        return this.heuristicClassification(userPrompt);
+      }
+
+      const isUG = String(parsed.category || '').toUpperCase().includes('HARDWARE') || 
+                   String(parsed.target_floor || '').toUpperCase() === 'UG';
+      
+      const target_floor = isUG ? 'UG' : 'EG';
+      const category = isUG ? 'HARDWARE_ALLGEMEIN' : 'SOFTWARE';
+
       return {
-        classification: isUG ? 'ALLGEMEIN_HARDWARE' : 'SOFTWARE_DEV',
-        floor: isUG ? 'UG' : 'EG',
-        reason: parsed.reason || 'LLM Pre-Routing Klassifizierung'
+        category,
+        target_floor,
+        classification: category === 'SOFTWARE' ? 'SOFTWARE_DEV' : 'ALLGEMEIN_HARDWARE',
+        floor: target_floor
       };
     } catch {
-      // Heuristischer Fallback bei Offline-Betrieb / JSON-Parse-Fehler
-      const p = userPrompt.toLowerCase();
-      const ugKeywords = [
-        'hardware', 'elektronik', 'schaltung', 'löten', 'sensor', 'esp32', 'arduino', 'raspberry',
-        'serverraum', 'netzwerktechnik', 'kabel', 'router', 'switch', 'rack', 'vpn', 'patchpanel',
-        'archiv', 'recherche', 'text schreiben', 'aufsatz', 'brainstorming', 'allgemeinwissen', 'artikel',
-        'lounge', 'gaming', 'alltag', 'freizeit', 'pause', 'terminplan', 'lifestyle', 'kaffee'
-      ];
-      const isUG = ugKeywords.some(kw => p.includes(kw));
-      return {
-        classification: isUG ? 'ALLGEMEIN_HARDWARE' : 'SOFTWARE_DEV',
-        floor: isUG ? 'UG' : 'EG',
-        reason: isUG ? 'Heuristik: Hardware/Non-Coding Schlüsselwörter erkannt' : 'Heuristik: Standard Software-Entwicklung'
-      };
+      return this.heuristicClassification(userPrompt);
     }
+  }
+
+  heuristicClassification(userPrompt) {
+    const p = (userPrompt || '').toLowerCase();
+    const ugKeywords = [
+      'hardware', 'elektronik', 'schaltung', 'löten', 'sensor', 'esp32', 'arduino', 'raspberry',
+      'serverraum', 'netzwerk', 'kabel', 'router', 'switch', 'rack', 'vpn', 'patchpanel', 'fisi', 'infrastruktur',
+      'archiv', 'recherche', 'text schreiben', 'aufsatz', 'brainstorming', 'allgemeinwissen', 'artikel', 'wissen',
+      'lounge', 'gaming', 'alltag', 'freizeit', 'pause', 'terminplan', 'lifestyle', 'kaffee'
+    ];
+    const isUG = ugKeywords.some(kw => p.includes(kw));
+    const target_floor = isUG ? 'UG' : 'EG';
+    const category = isUG ? 'HARDWARE_ALLGEMEIN' : 'SOFTWARE';
+    return {
+      category,
+      target_floor,
+      classification: category === 'SOFTWARE' ? 'SOFTWARE_DEV' : 'ALLGEMEIN_HARDWARE',
+      floor: target_floor
+    };
   }
 
   /**
    * 1. dispatchTask: Trevor zerlegt den Auftrag in Abteilungs-Tasks (gefiltert nach Etage)
    */
-  async dispatchTask(userPrompt, routing = { classification: 'SOFTWARE_DEV', floor: 'EG' }) {
-    const targetFloor = routing.floor || (routing.classification === 'ALLGEMEIN_HARDWARE' ? 'UG' : 'EG');
+  async dispatchTask(userPrompt, routing = { category: 'SOFTWARE', target_floor: 'EG' }) {
+    const targetFloor = routing.target_floor || routing.floor || (routing.category === 'HARDWARE_ALLGEMEIN' ? 'UG' : 'EG');
 
     // Filtere verfügbare Abteilungen strikt nach Etage!
     const availableDeptsList = this.hierarchy.departments.filter(d => {

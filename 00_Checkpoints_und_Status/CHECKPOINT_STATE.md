@@ -139,7 +139,7 @@ Vollständige Kontrolle über den Quellcode-Kontext mit kryptographisch robuster
 
 ---
 
-## 8. KI-Campus Erweiterung: Untergeschoss (UG / Keller auf y = -15) & Intelligente Pre-Routing Logik
+## 8. KI-Campus Erweiterung: Untergeschoss (UG / Keller auf y = -15) & Deterministisches Pre-Routing
 
 Vollständige architektonische und algorithmische Erweiterung des Multi-Agenten-Systems um eine dedizierte physische Kellerebene für non-coding und hardwarenahe Workflows:
 
@@ -152,31 +152,38 @@ Vollständige architektonische und algorithmische Erweiterung des Multi-Agenten-
      - **Die Lounge (id: 14, Farbe: `#6366f1`):** Alltagsplanung, Entlastung, Kreativpausen, Off-Topic, Gaming (`chef_lounge`, 3 Spezialisten `pc_lounge_1..3`).
    - Gesamtsystem umfasst nun **14 Abteilungen, 14 Chef-Agenten und 42 Spezial-PCs** (57 Agenten insgesamt inklusive Trevor CEO).
 
-2. **Intelligentes Pre-Routing & Token-Ersparnis ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
-   - Methode `classifyTaskType(userPrompt)` klassifiziert Prompts vorab via LLM (bzw. regelbasiertem Heuristik-Fallback) in `SOFTWARE_DEV` (Ziel: EG) oder `ALLGEMEIN_HARDWARE` (Ziel: UG).
-   - **Logik-Gabelung:**
-     - Bei `SOFTWARE_DEV`: Teilaufgaben gehen streng an Software-Abteilungen (1–10 im EG). Code-RAG sucht und liest aktiv Quellcode-Dateien.
-     - Bei `ALLGEMEIN_HARDWARE`: Teilaufgaben gehen streng an Untergeschoss-Abteilungen (11–14 im UG). Der Code-RAG Schritt wird **vollständig übersprungen**, um Tokens zu sparen und irrelevanten Quellcode-Ballast zu eliminieren.
+2. **Deterministisches JSON-Pre-Routing & Token-Ersparnis ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Methode `classifyTaskType(userPrompt)` erzwingt mit `queryLLM(..., expectJson = true)` eine deterministische JSON-Antwort mit Schema:
+     `{ "category": "SOFTWARE" | "HARDWARE_ALLGEMEIN", "target_floor": "EG" | "UG" }`.
+   - **Event-Triggering:** Löst beim Etagen-Wechsel das Event `onStatusUpdate('routing', 'Fahre ins ' + target_floor)` aus und informiert die 3D-Bühne via `window.update3DStudioState('routing', target_floor)`.
+   - **Logik-Weiche:**
+     - Bei `target_floor: 'EG'`: Aufgaben gehen an EG-Abteilungen (1–10). Code-RAG sucht und liest aktiv Quellcode-Dateien.
+     - Bei `target_floor: 'UG'`: Aufgaben gehen an Untergeschoss-Abteilungen (11–14). Der Code-RAG-Abruf wird **vollständig übersprungen**, um Tokens zu sparen.
 
 3. **3D-Architektur des Untergeschosses auf y = -15 ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
-   - Industrieller Betonboden (`y = -15.25`, Radius 18.5) mit gelb-oranger Sicherheits-Kantenmarkierung und konzentrischen Führungsringen.
+   - Industrieller Betonboden (`y = -15.25`, Radius 18.5) mit Gitter-Optik (`GridHelper(36, 36)` auf `y = -14.98`), Warnstreifen-Kante und konzentrischen Führungsringen.
    - 4 massive tragende Stahl-Pfeiler von `y = -15` bis `y = 0` mit Fuß- und Kopfmanschetten.
+   - Schwarze Boxen als Server-Racks mit blinkenden LEDs in Grün, Cyan, Bernstein und Rot.
    - Zentrales Holographisches Hardware-Terminal (`coreHub`) mit rotierendem Cyan-Ring und schwebendem 3D-Billboard-Schild.
-   - Industrielle Server-Cluster mit pulsierenden LEDs (`blinkingLeds`) in Grün, Cyan, Bernstein und Rot.
-   - Eigene atmosphärisch gedimmte Industrie-Punktbeleuchtung (`ugLights`).
-   - Eigene thematische Raumrequisiten für UG-Pods: Bücherregale im Archiv, Doppel-Serverracks im Serverraum, Werkbank & Werkzeugkasten in der Werkstatt, Leder-Sofa in der Lounge.
+   - Atmosphärisch gedimmte Industrie-Punktbeleuchtung (`ugLights`).
+   - Requisiten für UG-Pods: Bücherregale im Archiv, Doppel-Serverracks im Serverraum, Werkbank & Werkzeugkasten in der Werkstatt, Leder-Sofa in der Lounge.
 
-4. **Gläserner Campus-Aufzug (EG ⇄ UG, [`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
-   - Gläserner Schacht (Höhe 19m, Führungsschienen, Türportale auf beiden Ebenen).
-   - Animierte Fahrstuhlkabine mit beleuchtetem Cyan-Boden und Innenlicht.
-   - Gleitet sanft per Interpolation (`targetElevatorY`) zwischen `y = 1.0` (EG) und `y = -14.0` (UG).
-   - Interaktiver Raycasting-Klick auf den Aufzug im 3D-Canvas wechselt direkt die Etage.
+4. **Gläserner Aufzugschacht (EG ⇄ UG, [`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - Transparenter Aufzugsschacht (`BoxGeometry(2.4, 15.0, 2.4)`, `opacity: 0.2`), der exakt von `y = 0` nach `y = -15` reicht.
+   - 4 tragende Führungsschienen und Plattform-Portale auf beiden Ebenen.
+   - Animierte Fahrstuhlkabine mit beleuchtetem Cyan-Boden und Innenlicht, interpoliert per `targetElevatorY` zwischen `y = 1.0` (EG) und `y = -14.0` (UG).
+   - Raycasting-Klick auf den Aufzug schaltet die Etage direkt um.
 
-5. **Kamera-Fahrten & UI-Steuerung ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js), [`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html), [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
-   - Kamera-Fahrt `switchFloor('UG')`: Schwenkt die Kamera animiert per Lerp nach unten (`targetCameraPos: (0, -6.5, 23)`, `targetLookAt: (0, -14.5, 0)`).
-   - Nach Fertigstellung (`stage4` / `idle`) fährt die Kamera automatisch wieder nach oben zu Trevor ins EG.
+5. **Zustandsbasierte native Kamerafahrt (Verzicht auf externe Animations-Libs, [`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - **Vollständiger Verzicht auf GSAP, TWEEN oder externe Libs** (strikte Render-Deployment- und Browser-Kompatibilität).
+   - Globale Variable `let targetCameraY = 5;` definiert die Zielhöhe.
+   - Funktion `window.update3DStudioState(stage, floor)` setzt:
+     `targetCameraY = (floor === 'UG') ? -10 : 5;`.
+   - Native Interpolation in der `animate()`-Schleife:
+     `camera.position.y += (targetCameraY - camera.position.y) * 0.05;`
+     `camera.lookAt(scene.position);`
    - Quick-Buttons im 3D-Canvas-Overlay: `#ctrl-floor-eg` (`🏢 EG (Software)`) und `#ctrl-floor-ug` (`🔻 UG (Keller)`).
-   - Abteilungspills im Header zeigen Keller-Bereiche mit auffälligem `[UG]`-Badge an.
+   - Abteilungspills im Header zeigen Keller-Bereiche mit `[UG]`-Badge an.
 
 ---
 

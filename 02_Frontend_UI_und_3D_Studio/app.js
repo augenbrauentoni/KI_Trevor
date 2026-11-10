@@ -798,14 +798,23 @@ async function dispatchNewTask() {
 
   try {
     const finalResult = await orchestrator.executeFullWorkflow(userPrompt, (stageName, agentName, message) => {
-      if (statusLabel) statusLabel.innerText = stageName;
-      if (activeAgentLabel) activeAgentLabel.innerText = `${agentName ? `[${agentName}] ` : ''}${message}`;
-
-      // Visuelle Echtzeit-Kopplung der 3D-Szene an den Workflow
-      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
-        window.update3DStudioState(stageName);
+      if (stageName === 'routing') {
+        if (statusLabel) statusLabel.innerText = 'Pre-Routing';
+        if (activeAgentLabel) activeAgentLabel.innerText = agentName || message;
       } else {
-        update3DStudioState(stageName);
+        if (statusLabel) statusLabel.innerText = stageName;
+        if (activeAgentLabel) activeAgentLabel.innerText = `${agentName ? `[${agentName}] ` : ''}${message || ''}`;
+      }
+
+      // Visuelle Echtzeit-Kopplung der 3D-Szene an den Workflow (inkl. Etagen-Routing EG/UG)
+      const targetFloor = (agentName && agentName.includes('UG')) || (message && message.includes('UG')) || stageName.includes('UG')
+        ? 'UG'
+        : ((agentName && agentName.includes('EG')) || (message && message.includes('EG')) ? 'EG' : undefined);
+
+      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+        window.update3DStudioState(stageName, targetFloor);
+      } else {
+        update3DStudioState(stageName, targetFloor);
       }
 
       if (stageName.includes('1/4')) {

@@ -45,6 +45,7 @@ let targetCameraPos = null;
 let targetLookAt = null;
 
 // Aufzug- & Untergeschoss (UG / Keller) State
+let targetCameraY = 5;
 let elevatorCabin = null;
 let targetElevatorY = 1.0;
 let currentFloor = 'EG';
@@ -427,6 +428,11 @@ function setupBasementFloor(THREE_LIB) {
   basementFloor.receiveShadow = true;
   basementGroup.add(basementFloor);
 
+  // Gitter-Optik (Cyber / Industrie-Grid auf y = -15)
+  const ugGrid = new THREE_LIB.GridHelper(36, 36, 0x06b6d4, 0x1e293b);
+  ugGrid.position.y = -14.98;
+  basementGroup.add(ugGrid);
+
   // Gelb-orange Industrie-Kantenmarkierung (Warnstreifen-Effekt)
   const warningRingGeo = new THREE_LIB.TorusGeometry(18.5, 0.08, 8, 48);
   const warningRingMat = new THREE_LIB.MeshBasicMaterial({ color: 0xd97706 });
@@ -604,18 +610,17 @@ function setupGlassElevator(THREE_LIB) {
     shaftGroup.add(rail);
   });
 
-  // Gläserne Schacht-Verkleidung
-  const glassShaftGeo = new THREE_LIB.BoxGeometry(2.2, 19.0, 2.2);
-  const glassShaftMat = new THREE_LIB.MeshPhysicalMaterial({
+  // Gläserne Schacht-Verkleidung (von y = 0 nach y = -15)
+  const glassShaftGeo = new THREE_LIB.BoxGeometry(2.4, 15.0, 2.4);
+  const glassShaftMat = new THREE_LIB.MeshStandardMaterial({
     color: 0x38bdf8,
     transparent: true,
-    opacity: 0.15,
+    opacity: 0.2,
     roughness: 0.1,
-    transmission: 0.85,
     side: THREE_LIB.DoubleSide
   });
   const glassShaft = new THREE_LIB.Mesh(glassShaftGeo, glassShaftMat);
-  glassShaft.position.set(0, -6.0, 0);
+  glassShaft.position.set(0, -7.5, 0); // Reicht genau von y = 0 bis y = -15
   shaftGroup.add(glassShaft);
 
   // EG & UG Plattform-Zugänge / Türrahmen
@@ -1393,6 +1398,8 @@ export function switchFloor(targetFloor) {
   const THREE = getTHREE();
   if (!THREE) return;
   currentFloor = targetFloor === 'UG' ? 'UG' : 'EG';
+  targetCameraY = (currentFloor === 'UG') ? -10 : 5;
+  targetElevatorY = (currentFloor === 'UG') ? -14.0 : 1.0;
 
   const btnEg = document.getElementById('ctrl-floor-eg');
   const btnUg = document.getElementById('ctrl-floor-ug');
@@ -1400,17 +1407,11 @@ export function switchFloor(targetFloor) {
   if (currentFloor === 'UG') {
     if (btnEg) btnEg.classList.remove('active');
     if (btnUg) btnUg.classList.add('active');
-    targetCameraPos = new THREE.Vector3(0, -6.5, 23);
-    targetLookAt = new THREE.Vector3(0, -14.5, 0);
-    targetElevatorY = -14.0;
   } else {
     if (btnUg) btnUg.classList.remove('active');
     if (btnEg) btnEg.classList.add('active');
-    targetCameraPos = new THREE.Vector3(0, 24, 25);
-    targetLookAt = new THREE.Vector3(0, 1.2, 0);
-    targetElevatorY = 1.0;
   }
-  console.log(`[Studio 3D] Etagen-Fahrt: Ziel=${currentFloor}`);
+  console.log(`[Studio 3D] Etagen-Fahrt: Ziel=${currentFloor}, targetCameraY=${targetCameraY}`);
 }
 
 function setupCameraButtons() {
@@ -1495,11 +1496,33 @@ export function setStageIn3D(stageNum) {
 
 /**
  * Passt das Aussehen der 3D-Objekte abhängig vom Workflow-Status dynamisch an
- * @param {string|number} stageInput - 'idle', 'stage1', 'stage2', 'stage3', 'stage4'
+ * @param {string|number} stageInput - 'idle', 'stage1', 'stage2', 'stage3', 'stage4', 'routing'
+ * @param {string} [floor] - 'EG' | 'UG'
  */
-export function update3DStudioState(stageInput) {
+export function update3DStudioState(stageInput, floor) {
   const THREE = getTHREE();
   if (!THREE || !scene) return;
+
+  // Zustandsbasierte native Kamera-Animation laut Anforderung
+  if (floor !== undefined && floor !== null) {
+    targetCameraY = (floor === 'UG') ? -10 : 5;
+    currentFloor = (floor === 'UG') ? 'UG' : 'EG';
+    targetElevatorY = (floor === 'UG') ? -14.0 : 1.0;
+  } else if (typeof stageInput === 'string' && (stageInput.toLowerCase().includes('ug') || stageInput.toLowerCase().includes('keller') || stageInput.toLowerCase().includes('untergeschoss'))) {
+    targetCameraY = -10;
+    currentFloor = 'UG';
+    targetElevatorY = -14.0;
+  }
+
+  const btnEg = document.getElementById('ctrl-floor-eg');
+  const btnUg = document.getElementById('ctrl-floor-ug');
+  if (currentFloor === 'UG') {
+    if (btnEg) btnEg.classList.remove('active');
+    if (btnUg) btnUg.classList.add('active');
+  } else {
+    if (btnUg) btnUg.classList.remove('active');
+    if (btnEg) btnEg.classList.add('active');
+  }
 
   let stage = 'idle';
   if (typeof stageInput === 'number') {
@@ -1521,7 +1544,7 @@ export function update3DStudioState(stageInput) {
     stageTransitionTimeout = null;
   }
 
-  console.log(`[Studio 3D] Workflow-Zustand gewechselt zu: "${stage}"`);
+  console.log(`[Studio 3D] Workflow-Zustand gewechselt zu: "${stage}" (targetCameraY: ${targetCameraY}, Floor: ${currentFloor})`);
 
   // --- ZUSTAND: UG ACTIVE (UNTERGESCHOSS / HARDWARE- & NON-CODE-TASKS) ---
   if (stage === 'ug_active') {
@@ -1803,6 +1826,12 @@ function animate() {
         stream.mesh.visible = false;
       }
     }
+  }
+
+  // Native zustandsbasierte Kamera-Animation laut Anforderung (ohne GSAP / TWEEN)
+  if (typeof targetCameraY === 'number') {
+    camera.position.y += (targetCameraY - camera.position.y) * 0.05;
+    camera.lookAt(scene.position);
   }
 
   if (targetCameraPos && targetLookAt) {
