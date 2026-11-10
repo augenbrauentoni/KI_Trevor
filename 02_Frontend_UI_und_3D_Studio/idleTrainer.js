@@ -58,38 +58,156 @@ try {
 } catch { /* ignore */ }
 
 /**
+ * Mappt eine Abteilung auf einen standardisierten Code (z. B. EG_BACKEND, EG_FRONTEND)
+ */
+export function getDepartmentCode(dept) {
+  if (!dept) return 'EG_ALLGEMEIN';
+  const idMap = {
+    1: 'EG_PLANUNG',
+    2: 'EG_ARCHITEKTUR',
+    3: 'EG_FRONTEND',
+    4: 'EG_BACKEND',
+    5: 'EG_DATENBANK',
+    6: 'EG_TESTING',
+    7: 'EG_SECURITY',
+    8: 'EG_DEVOPS',
+    9: 'EG_UI_UX',
+    10: 'EG_DOKU',
+    11: 'UG_ARCHIV',
+    12: 'UG_SERVERRAUM',
+    13: 'UG_WERKSTATT',
+    14: 'UG_LOUNGE'
+  };
+  if (idMap[dept.id]) return idMap[dept.id];
+  const floor = dept.floor || 'EG';
+  const cleanName = (dept.name || 'DEPT').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+  return `${floor}_${cleanName}`;
+}
+
+/**
+ * Sendet eine Trainings-Erkenntnis nach dem exakten JSON-Schema an /api/memory/save
+ * Nutzt relative URL (NICHT mehr an localhost) für zuverlässigen Online-/Cloud-Betrieb.
+ * @param {object} memoryRecord 
+ */
+export async function saveInsightToCloudMemory(memoryRecord) {
+  if (!memoryRecord) return false;
+
+  const payload = {
+    department: memoryRecord.department,
+    topic: memoryRecord.topic,
+    tags: memoryRecord.tags,
+    problem_statement: memoryRecord.problem_statement,
+    solution_pattern: memoryRecord.solution_pattern,
+    reusable_code_snippet: memoryRecord.reusable_code_snippet
+  };
+
+  try {
+    const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+    const resp = await fetch(`${baseUrl}/api/memory/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      console.warn(`[IdleTrainer] Cloud-Memory Save Fehler (${resp.status})`);
+      return false;
+    }
+
+    const data = await resp.json();
+    console.log(`[IdleTrainer] Erkenntnis im Cloud-Gedächtnis gesichert (${data.storage || 'cloud'}): "${payload.topic}"`);
+    return true;
+  } catch (err) {
+    console.warn('[IdleTrainer] Cloud-Memory Endpunkt /api/memory/save nicht erreichbar:', err.message);
+    return false;
+  }
+}
+
+/**
  * Generiert realistische, tiefgreifende Trainings-Erkenntnisse pro Agent
+ * im exakten JSON-Schema für das Supabase Cloud-Gedächtnis.
  */
 function generateInsightForAgent(agent, department, project) {
   const area = project.focusAreas[Math.floor(Math.random() * project.focusAreas.length)];
-  
-  const templates = [
+  const deptCode = getDepartmentCode(department);
+
+  const structuredTemplates = [
     {
-      action: `Untersucht Codebasis von "${project.name}" auf ${area}`,
-      insight: `Optimierungs-Erkenntnis für ${area}: Durch Einsatz von memoisierten Selektoren und Index-Scans wird die Antwortzeit um 42% gesenkt.`
+      topic: 'Sichere Umgebungsvariablen',
+      tags: ['nodejs', 'security', 'dotenv'],
+      problem_statement: 'API-Keys waren im Frontend-Code ungeschützt sichtbar.',
+      solution_pattern: 'Auslagerung der Fetch-Calls in einen Node.js Proxy.',
+      reusable_code_snippet: 'const apiKey = process.env.GEMINI_API_KEY;',
+      action: `Untersucht Sicherheits-Architektur von "${project.name}" auf ${area}`
     },
     {
-      action: `Simuliert Grenzfälle & Sicherheits-Szenarien in "${project.name}"`,
-      insight: `Sicherheits-Guardrail: Parameter in ${area} müssen serverseitig vor Injection geschützt werden. RLS-Policy 'auth.uid() = user_id' zwingend erforderlich.`
+      topic: 'Three.js Render-Loop Stabilität',
+      tags: ['threejs', 'webgl', 'performance', 'lerp'],
+      problem_statement: 'Kamera-Sprünge führten zu Frame-Drops und inkonsistenten Animationen.',
+      solution_pattern: 'Verwendung von camera.position.lerp() innerhalb der animate()-Schleife ohne externe Bibliotheken.',
+      reusable_code_snippet: 'camera.position.lerp(targetCameraPosition, 0.08);',
+      action: `Optimiert 3D Render-Pipeline in "${project.name}" für ${area}`
     },
     {
-      action: `Refaktoriert Modulgrenzen und Schnittstellen für ${area}`,
-      insight: `Architektur-Erkenntnis: Trennung von Datenbeschaffung und Rendering verhindert Race-Conditions bei instabilem Schul-WLAN.`
+      topic: 'Supabase Row-Level-Security & Auth',
+      tags: ['supabase', 'sql', 'rls', 'security'],
+      problem_statement: 'Mandanten-Daten konnten ohne Autorisierungsprüfung direkt manipuliert werden.',
+      solution_pattern: 'Aktivierung von ROW LEVEL SECURITY mit strikten Policies für auth.uid().',
+      reusable_code_snippet: 'CREATE POLICY "Users access own rows" ON tasks FOR ALL USING (auth.uid() = user_id);',
+      action: `Auditiert Zugriffsrechte & RLS-Policies für ${area}`
     },
     {
-      action: `Führt Ladezeiten- und Bundle-Analyse an "${project.name}" durch`,
-      insight: `Performance-Erkenntnis: Lazy-Loading für 3D-Assets und Dynamic-Imports spart 1.8 MB initialen Download-Traffic.`
+      topic: 'Offline-PWA Caching & Service Worker',
+      tags: ['pwa', 'service-worker', 'offline', 'cache'],
+      problem_statement: 'Bei Verbindungsabbrüchen stürzte die Web-App ohne Datensicherung ab.',
+      solution_pattern: 'Implementierung einer Cache-First Strategie mit IndexedDB-Spiegelung.',
+      reusable_code_snippet: 'caches.open("trevor-v1").then(cache => cache.addAll(["/index.html", "/app.js"]));',
+      action: `Testet Offline-Resilienz und PWA-Service-Worker in "${project.name}"`
+    },
+    {
+      topic: 'Code-RAG Sandbox-Isolation',
+      tags: ['rag', 'sandbox', 'security', 'path-traversal'],
+      problem_statement: 'Dateipfade aus Prompts könnten über Directory Traversal ("..") auf Systemdateien zugreifen.',
+      solution_pattern: 'Pfad-Validierung mit path.resolve() und relativer Präfix-Prüfung auf den Projekt-Root.',
+      reusable_code_snippet: 'const rel = path.relative(normBase, normTarget); return !rel.startsWith("..");',
+      action: `Prüft Sandbox-Schutz und Pfad-Hygiene für ${area}`
+    },
+    {
+      topic: 'Strukturierte JSON-Inferenz mit Fallbacks',
+      tags: ['llm', 'json', 'fallback', 'heuristics'],
+      problem_statement: 'LLM-Antworten enthielten unvorhersehbares Markdown und Syntaxfehler.',
+      solution_pattern: 'Regex-Extraktion von JSON-Blöcken kombiniert mit deterministischen Heuristik-Fallbacks.',
+      reusable_code_snippet: 'const match = response.match(/\\[\\s*[\\d\\s,]+\\s*\\]/); return match ? JSON.parse(match[0]) : fallback;',
+      action: `Analysiert Ausfallsicherheit und JSON-Parsing für ${area}`
+    },
+    {
+      topic: 'Web Audio Synthese ohne Assets',
+      tags: ['webaudio', 'sound', 'synthesizer', 'browser-native'],
+      problem_statement: 'Externe MP3-Dateien führten zu Ladeverzögerungen und Autoplay-Blockaden.',
+      solution_pattern: 'Native Oszillator-Synthese über AudioContext mit dynamischem Gain-Envelope.',
+      reusable_code_snippet: 'const osc = ctx.createOscillator(); osc.type = "sine"; osc.frequency.setValueAtTime(520, ctx.currentTime);',
+      action: `Optimiert Audio-Feedback und Sound-Synthese in "${project.name}"`
     }
   ];
 
-  const choice = templates[Math.floor(Math.random() * templates.length)];
+  const choice = structuredTemplates[Math.floor(Math.random() * structuredTemplates.length)];
 
   return {
+    department: deptCode,
+    topic: choice.topic,
+    tags: choice.tags,
+    problem_statement: choice.problem_statement,
+    solution_pattern: choice.solution_pattern,
+    reusable_code_snippet: choice.reusable_code_snippet,
+
+    // Runtime-Metadaten für UI-Inspektor:
     projectId: project.id,
     projectName: project.name,
     focusArea: area,
     currentAction: choice.action,
-    insight: choice.insight,
+    insight: `${choice.topic}: ${choice.solution_pattern}`,
     timestamp: new Date().toISOString()
   };
 }
@@ -121,6 +239,8 @@ export function executeTrainingStep(departments) {
     projectName: project.name,
     focusArea: data.focusArea,
     insight: data.insight,
+    topic: data.topic,
+    department: data.department,
     timestamp: data.timestamp
   });
 
@@ -129,12 +249,15 @@ export function executeTrainingStep(departments) {
     learnedInsightsMemory[agent.id].pop();
   }
 
-  // Persistieren
+  // Persistieren in LocalStorage
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem('trevor_learned_insights', JSON.stringify(learnedInsightsMemory));
     }
   } catch { /* ignore */ }
+
+  // Zwingend: Asynchron an /api/memory/save senden (relativer Pfad)
+  saveInsightToCloudMemory(data).catch(() => {});
 
   return {
     agentId: agent.id,

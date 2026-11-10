@@ -26,7 +26,9 @@ import {
   stopIdleTraining,
   getAgentCurrentActivity,
   getAgentLearnedInsights,
-  getAllLearnedKnowledgeSummary
+  getAllLearnedKnowledgeSummary,
+  saveInsightToCloudMemory,
+  getDepartmentCode
 } from './idleTrainer.js';
 import { getLLMConfig, saveLLMConfig, queryLLM } from './llmEngine.js';
 import { WorkflowOrchestrator, orchestrator } from './workflowOrchestrator.js';
@@ -3337,6 +3339,9 @@ if (typeof window !== 'undefined') {
   window.toggleVoiceRecognition = toggleVoiceRecognition;
   window.toggleJarvisVoiceEnabled = toggleJarvisVoiceEnabled;
   window.cancelAllActiveTasks = cancelAllActiveTasks;
+  window.saveInsightToCloudMemory = saveInsightToCloudMemory;
+  window.getDepartmentCode = getDepartmentCode;
+  window.searchCloudMemory = (q) => orchestrator.searchCloudMemory(q);
   if (!Array.isArray(window.selectedContextFiles)) {
     window.selectedContextFiles = [];
   }

@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** J.A.R.V.I.S. Voice-Interface & 3D Arc-Reactor Sync VOLLSTÄNDIG IMPLEMENTIERT & VERIFIZIERT 🎙️⚡
-- **Datum / Letztes Update:** 2026-11-10 22:30:00
+- **Status:** Cloud-Gedächtnis (Supabase RAG-Archiv) & Idle-Trainer Lernlogik VOLLSTÄNDIG IMPLEMENTIERT & VERIFIZIERT 🧠☁️
+- **Datum / Letztes Update:** 2026-11-10 22:35:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -469,4 +469,41 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
 
 5. **Globale Fenster-Exporte ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
    - `window.speakAsJarvis`, `window.stopJarvisSpeech`, `window.toggleVoiceRecognition`, `window.toggleJarvisVoiceEnabled`, `window.cancelAllActiveTasks`.
+
+---
+
+## 23. Cloud-Gedächtnis (Supabase RAG-Archiv) & Idle-Trainer Lernlogik
+
+1. **Backend Proxy & Supabase Integration ([`server.js`](file:///C:/Users/User/Desktop/KI_Trevor/server.js)):**
+   - Supabase Client via `@supabase/supabase-js` unter Verwendung von `process.env.SUPABASE_URL` und `process.env.SUPABASE_ANON_KEY` angebunden.
+   - **`POST /api/memory/save`:** Speichert strukturierte Agenten-Erkenntnisse via `supabase.from('trevor_memory').insert([memoryRecord])`. Robuster In-Memory-Fallback bei fehlenden Cloud-Secrets garantiert unterbrechungsfreien Betrieb.
+   - **`POST /api/memory/search` (und GET):** Durchsucht das Langzeitgedächtnis nach Stichworten (`q`) via Supabase-Volltextfilter bzw. `.or(...)` über `topic`, `problem_statement`, `solution_pattern` und `department`. Liefert maximal die 3 relevantesten Einträge zurück (`limit(3)`).
+   - `inMemoryStore` mit Default-Architektur-Snippets geseedet (Umgebungsvariablen, Three.js Lerp-Stabilität, Supabase RLS).
+
+2. **Strukturiertes JSON-Schema & Idle-Trainer ([`idleTrainer.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/idleTrainer.js)):**
+   - Die Analyse-Ergebnisse des autonomen Leerlauf-Trainings werden im exakten JSON-Schema erzeugt und an `/api/memory/save` gesendet:
+     ```json
+     {
+       "department": "EG_BACKEND",
+       "topic": "Sichere Umgebungsvariablen",
+       "tags": ["nodejs", "security", "dotenv"],
+       "problem_statement": "API-Keys waren im Frontend-Code ungeschützt sichtbar.",
+       "solution_pattern": "Auslagerung der Fetch-Calls in einen Node.js Proxy.",
+       "reusable_code_snippet": "const apiKey = process.env.GEMINI_API_KEY;"
+     }
+     ```
+   - Funktion `saveInsightToCloudMemory(memoryRecord)`: Sendet relative HTTP POST-Requests an `/api/memory/save` (kein hardcodierter localhost-Aufruf mehr) für nahtlose Cloud- und Render-Deployments.
+   - Zuverlässige Abteilungs-Code Generierung mit `getDepartmentCode(dept)` (`EG_PLANUNG`, `EG_ARCHITEKTUR`, `EG_FRONTEND`, `EG_BACKEND`, `UG_SERVERRAUM`, `UG_WERKSTATT` etc.).
+
+3. **Langzeit-Kontext RAG-Suche ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Neue Orchestrator-Methode `searchCloudMemory(query)`: Fragt `/api/memory/search` nach thematisch passenden Lösungsmustern ab.
+   - In `executeFullWorkflow`: Vor Stufe 2 wird das Supabase-Gedächtnis mit dem Kundenauftrag durchsucht.
+   - In `executeWorkerTasks`: Gefundene Best-Practice Patterns und wiederverwendbare Code-Snippets werden als `BEWÄHRTE LÖSUNGSMUSTER AUS DEM CLOUD-GEDÄCHTNIS (SUPABASE RAG)` direkt in den Prompt der Fach-PCs injiziert.
+
+4. **Datenbank-Schema & RLS ([`01_Datenbank_Supabase/schema.sql`](file:///C:/Users/User/Desktop/KI_Trevor/01_Datenbank_Supabase/schema.sql)):**
+   - Tabelle `trevor_memory` angelegt mit relationalen Indizes auf `department` und `created_at`.
+   - Auto-Update Trigger `tr_trevor_memory_updated_at` für `updated_at`.
+   - RLS-Policies `"Public access trevor_memory"` für autorisierten und anonymen Zugriff.
+   - Initiale Seed-Datensätze für Best-Practice Architekturen hinterlegt.
+
 

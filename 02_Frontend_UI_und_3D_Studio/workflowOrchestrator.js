@@ -162,6 +162,28 @@ Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-brit
     }
 
     // -------------------------------------------------------------------------
+    // CLOUD-GEDÄCHTNIS: SUPABASE RAG-ABRUF FÜR LANGZEIT-KONTEXT
+    // -------------------------------------------------------------------------
+    let cloudMemoryContext = '';
+    try {
+      const memoryHits = await this.searchCloudMemory(userPrompt);
+      if (memoryHits && memoryHits.length > 0) {
+        onStatusUpdate(
+          'Stufe 1/4: Cloud-Gedächtnis (RAG)',
+          'Trevor',
+          `${memoryHits.length} bewährte Lösungsmuster aus dem Supabase-Gedächtnis geladen...`
+        );
+        cloudMemoryContext = memoryHits.map(m => {
+          const codeSnippet = m.reusable_code_snippet ? `\nCode-Snippet:\n\`\`\`\n${m.reusable_code_snippet}\n\`\`\`` : '';
+          return `### [Gedächtnis / ${m.department || 'ALLGEMEIN'}] ${m.topic}\n- Problem: ${m.problem_statement}\n- Lösungsmuster: ${m.solution_pattern}${codeSnippet}`;
+        }).join('\n\n');
+        console.log(`[WorkflowOrchestrator] Cloud-Gedächtnis: ${memoryHits.length} Einträge für Fach-Agenten geladen.`);
+      }
+    } catch (memErr) {
+      console.warn('[WorkflowOrchestrator] Cloud-Gedächtnis RAG Abruf übersprungen:', memErr.message);
+    }
+
+    // -------------------------------------------------------------------------
     // STUFE 2: FACH-AGENTEN (WORKER EXECUTION) MIT CODE-RAG INJEKTION
     // -------------------------------------------------------------------------
     onStatusUpdate(
@@ -170,7 +192,7 @@ Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-brit
       'Fach-Agenten erarbeiten konkrete technische Lösungen und Dateipfade...'
     );
 
-    const workerOutputs = await this.executeWorkerTasks(subTasks, userPrompt, onStatusUpdate, codeContext);
+    const workerOutputs = await this.executeWorkerTasks(subTasks, userPrompt, onStatusUpdate, codeContext, cloudMemoryContext);
     console.log(`[Stufe 2] ${Object.keys(workerOutputs).length} Fach-Ausarbeitungen erstellt.`);
 
     // -------------------------------------------------------------------------
@@ -431,13 +453,39 @@ Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. 
   }
 
   /**
-   * 2. executeWorkerTasks: Sub-Agenten bearbeiten ihre Teilaufgaben (mit Code-RAG Injektion)
+   * Durchsucht das Supabase Cloud-Gedächtnis (/api/memory/search)
+   * Gibt maximal 3 relevante Treffer zurück.
    */
-  async executeWorkerTasks(subTasks, userPrompt, onStatusUpdate = () => {}, codeContext = '') {
+  async searchCloudMemory(query) {
+    if (!query || typeof query !== 'string') return [];
+    try {
+      const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+      const resp = await fetch(`${baseUrl}/api/memory/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: query })
+      });
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return Array.isArray(data.results) ? data.results.slice(0, 3) : [];
+    } catch (err) {
+      console.warn('[WorkflowOrchestrator] Fehler bei Cloud-Gedächtnis-Suche:', err.message);
+      return [];
+    }
+  }
+
+  /**
+   * 2. executeWorkerTasks: Sub-Agenten bearbeiten ihre Teilaufgaben (mit Code-RAG & Cloud-Gedächtnis Injektion)
+   */
+  async executeWorkerTasks(subTasks, userPrompt, onStatusUpdate = () => {}, codeContext = '', cloudMemoryContext = '') {
     const workerOutputs = {};
 
     const ragContextSection = codeContext
       ? `\n\nHier ist der aktuelle Code der betroffenen Dateien:\n"""\n${codeContext}\n"""\nNutze diesen Quellcode als Referenz, um präzise und kompatible Änderungen vorzuschlagen.\n`
+      : '';
+
+    const memoryContextSection = cloudMemoryContext
+      ? `\n\nBEWÄHRTE LÖSUNGSMUSTER AUS DEM CLOUD-GEDÄCHTNIS (SUPABASE RAG):\n"""\n${cloudMemoryContext}\n"""\nBerücksichtige diese bewährten Architekturmuster und Code-Snippets in deiner Ausarbeitung.\n`
       : '';
 
     for (const subTask of subTasks) {
@@ -456,7 +504,7 @@ Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. 
 Aufgabe: ${pc.easy_explanation}.
 Erstelle eine konkrete technische Lösung mit relevanten Dateipfaden (z. B. 02_Frontend_UI_und_3D_Studio/..., 06_Deployment_und_Config/..., 01_Datenbank_Supabase/...).`;
 
-        const userMsg = `AUFTRAG:\n"""\n${userPrompt}\n"""${ragContextSection}\n\nErstelle deine technische Detailausarbeitung:`;
+        const userMsg = `AUFTRAG:\n"""\n${userPrompt}\n"""${ragContextSection}${memoryContextSection}\n\nErstelle deine technische Detailausarbeitung:`;
 
         const output = await queryLLM(systemPrompt, userMsg, false);
 

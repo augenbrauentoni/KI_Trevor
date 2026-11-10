@@ -113,6 +113,21 @@ CREATE TABLE IF NOT EXISTS department_metrics (
 );
 
 -- -----------------------------------------------------------------------------
+-- 8. TABLE: trevor_memory (Cloud-Gedächtnis & Supabase RAG-Archiv)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS trevor_memory (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    department TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    tags TEXT[] NOT NULL DEFAULT '{}',
+    problem_statement TEXT NOT NULL,
+    solution_pattern TEXT NOT NULL,
+    reusable_code_snippet TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+-- -----------------------------------------------------------------------------
 -- INDEXES FOR MAXIMUM QUERY PERFORMANCE
 -- -----------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
@@ -126,6 +141,8 @@ CREATE INDEX IF NOT EXISTS idx_optimizations_dept ON system_optimizations(depart
 CREATE INDEX IF NOT EXISTS idx_task_decisions_task ON task_decisions(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_decisions_step ON task_decisions(step_id);
 CREATE INDEX IF NOT EXISTS idx_dept_metrics_floor ON department_metrics(floor);
+CREATE INDEX IF NOT EXISTS idx_trevor_memory_dept ON trevor_memory(department);
+CREATE INDEX IF NOT EXISTS idx_trevor_memory_created_at ON trevor_memory(created_at DESC);
 
 -- -----------------------------------------------------------------------------
 -- AUTO-UPDATE TRIGGER FOR updated_at COLUMNS
@@ -162,6 +179,12 @@ CREATE TRIGGER tr_system_optimizations_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS tr_trevor_memory_updated_at ON trevor_memory;
+CREATE TRIGGER tr_trevor_memory_updated_at
+    BEFORE UPDATE ON trevor_memory
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- -----------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- Default: Enable RLS and grant full access for authenticated and anon users
@@ -174,6 +197,7 @@ ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_optimizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_decisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE department_metrics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trevor_memory ENABLE ROW LEVEL SECURITY;
 
 DO $$ 
 BEGIN
@@ -197,6 +221,9 @@ BEGIN
 
     DROP POLICY IF EXISTS "Public access department_metrics" ON department_metrics;
     CREATE POLICY "Public access department_metrics" ON department_metrics FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Public access trevor_memory" ON trevor_memory;
+    CREATE POLICY "Public access trevor_memory" ON trevor_memory FOR ALL USING (true) WITH CHECK (true);
 END $$;
 
 -- -----------------------------------------------------------------------------
@@ -250,3 +277,31 @@ VALUES
     (13, 'Die Werkstatt', 'UG'),
     (14, 'Die Lounge', 'UG')
 ON CONFLICT (department_id) DO NOTHING;
+
+-- Seed Cloud-Gedächtnis (trevor_memory)
+INSERT INTO trevor_memory (department, topic, tags, problem_statement, solution_pattern, reusable_code_snippet)
+VALUES
+    (
+        'EG_BACKEND',
+        'Sichere Umgebungsvariablen',
+        ARRAY['nodejs', 'security', 'dotenv'],
+        'API-Keys waren im Frontend-Code ungeschützt sichtbar.',
+        'Auslagerung der Fetch-Calls in einen Node.js Proxy.',
+        'const apiKey = process.env.GEMINI_API_KEY;'
+    ),
+    (
+        'EG_FRONTEND',
+        'Three.js Render-Loop Stabilität',
+        ARRAY['threejs', 'webgl', 'performance', 'lerp'],
+        'Kamera-Sprünge führten zu Frame-Drops und inkonsistenten Animationen.',
+        'Verwendung von camera.position.lerp() innerhalb der animate()-Schleife ohne externe Bibliotheken.',
+        'camera.position.lerp(targetCameraPosition, 0.08);'
+    ),
+    (
+        'EG_DATENBANK',
+        'Supabase RLS-Richtlinien & Multi-Tenant Isolation',
+        ARRAY['supabase', 'sql', 'rls', 'security'],
+        'Direkter Datenbankzugriff ohne Autorisierungsprüfung gefährdet Mandanten-Daten.',
+        'Aktivierung von ROW LEVEL SECURITY mit strikten Policies für auth.uid().',
+        'CREATE POLICY "Users access own rows" ON tasks FOR ALL USING (auth.uid() = user_id);'
+    );
