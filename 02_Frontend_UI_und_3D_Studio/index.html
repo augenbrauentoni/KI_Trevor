@@ -315,6 +315,23 @@
         <div id="tab-content-trevor-active" style="display: flex; flex-direction: column; gap: 14px;">
           <!-- BEREICH A: NEUER AUFTRAG -->
           <div id="section-task-input" style="display: flex; flex-direction: column; gap: 10px;">
+            
+            <!-- Kompakte Dual-LLM-Konfigurationsleiste -->
+            <div class="llm-config-compact-bar" style="display: flex; gap: 10px; align-items: center; background: rgba(15, 23, 42, 0.7); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--arc-cyan);">
+                <span>⚡</span>
+                <span>ENGINE:</span>
+              </div>
+              <select id="quick-llm-provider-select" class="search-input" style="flex: 1; padding: 4px 8px; font-size: 12px; height: 32px;">
+                <option value="gemini">Google Gemini 2.5 Flash (Cloud API)</option>
+                <option value="ollama">Ollama Lokal (Qwen 2.5 3B)</option>
+              </select>
+              <div id="quick-gemini-key-wrapper" style="flex: 1.5; display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 11px; color: var(--text-dim); white-space: nowrap;">🔑 Gemini Key:</span>
+                <input type="password" id="quick-gemini-key-input" class="search-input" placeholder="API-Key hier einfügen (wird lokal im Browser gesichert)..." style="flex: 1; padding: 4px 8px; font-size: 12px; height: 32px;">
+              </div>
+            </div>
+
             <label style="font-size: 13px; font-weight: 700; color: #fff;">
               Dein Software-Auftrag an Trevor:
             </label>
@@ -378,7 +395,7 @@
               <!-- Button für dynamischen Teil-Export -->
               <div style="margin-top: 12px; display: flex; gap: 8px;">
                 <button id="btn-export-selected-steps" class="btn-submit-task" style="flex: 1; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
-                  <span>🚀 Ausgewählte Schritte für Antigravity exportieren</span>
+                  <span>🚀 Ausgewählte [JA]-Schritte an Antigravity senden</span>
                 </button>
               </div>
             </div>
