@@ -1465,7 +1465,7 @@ async function writeDirectToFileSystem() {
 // =============================================================================
 
 /**
- * Rendert die interaktive Checkliste der Maßnahmen im Trevor Command Terminal
+ * Rendert die interaktive Checkliste der Maßnahmen im Trevor Command Terminal (Dark-Slate Design & Multi-Filter)
  * @param {Array} steps - Liste der Maßnahmen { id, title, description, file, target_file, department, approved, enabled, logicVerified }
  */
 export function renderInteractiveRoadmap(steps) {
@@ -1480,11 +1480,42 @@ export function renderInteractiveRoadmap(steps) {
   if (!state.activeTask.checkpoint_data) state.activeTask.checkpoint_data = {};
   state.activeTask.checkpoint_data.structured_steps = validSteps;
 
-  container.innerHTML = validSteps.map((step) => {
+  const updateStatsAndCounters = () => {
+    const total = validSteps.length;
+    const approved = validSteps.filter(s => s.approved !== false && s.enabled !== false).length;
+    const rejected = total - approved;
+
+    const counterBadge = container.querySelector('.roadmap-counter-badge');
+    if (counterBadge) {
+      counterBadge.innerHTML = `Freigegeben: <strong>${approved} von ${total}</strong> Maßnahmen`;
+    }
+
+    const btnAll = container.querySelector('.roadmap-quick-btn[data-filter="all"]');
+    const btnApp = container.querySelector('.roadmap-quick-btn[data-filter="approved"]');
+    const btnRej = container.querySelector('.roadmap-quick-btn[data-filter="rejected"]');
+    if (btnAll) btnAll.innerText = `Alle (${total})`;
+    if (btnApp) btnApp.innerText = `Nur [JA] (${approved})`;
+    if (btnRej) btnRej.innerText = `Nur [NEIN] (${rejected})`;
+  };
+
+  const initialApproved = validSteps.filter(s => s.approved !== false && s.enabled !== false).length;
+
+  const statsBarHtml = `
+    <div class="roadmap-stats-bar">
+      <span class="roadmap-counter-badge">Freigegeben: <strong>${initialApproved} von ${validSteps.length}</strong> Maßnahmen</span>
+      <div class="roadmap-filter-buttons">
+        <button class="roadmap-quick-btn active" data-filter="all">Alle (${validSteps.length})</button>
+        <button class="roadmap-quick-btn" data-filter="approved">Nur [JA] (${initialApproved})</button>
+        <button class="roadmap-quick-btn" data-filter="rejected">Nur [NEIN] (${validSteps.length - initialApproved})</button>
+      </div>
+    </div>
+  `;
+
+  const cardsHtml = validSteps.map((step) => {
     const isApproved = step.approved !== false && step.enabled !== false;
     const targetFile = step.file || step.target_file || '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md';
     return `
-      <div class="roadmap-step-card ${isApproved ? 'enabled' : 'disabled'}" id="step-card-${escapeHtml(step.id)}">
+      <div class="roadmap-step-card ${isApproved ? 'enabled' : 'disabled'}" id="step-card-${escapeHtml(step.id)}" data-approved="${isApproved}">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <span class="step-id-badge">${escapeHtml(step.id)}</span>
@@ -1510,6 +1541,29 @@ export function renderInteractiveRoadmap(steps) {
     `;
   }).join('');
 
+  container.innerHTML = statsBarHtml + cardsHtml;
+
+  // Filter-Buttons Verhalten
+  const filterBtns = container.querySelectorAll('.roadmap-quick-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.dataset.filter;
+
+      container.querySelectorAll('.roadmap-step-card').forEach(card => {
+        const approved = card.dataset.approved === 'true';
+        if (filter === 'all') {
+          card.style.display = 'block';
+        } else if (filter === 'approved') {
+          card.style.display = approved ? 'block' : 'none';
+        } else if (filter === 'rejected') {
+          card.style.display = !approved ? 'block' : 'none';
+        }
+      });
+    });
+  });
+
   // Event-Listener für Schalter / Checkboxen
   container.querySelectorAll('.step-checkbox').forEach(input => {
     input.addEventListener('change', (e) => {
@@ -1524,12 +1578,14 @@ export function renderInteractiveRoadmap(steps) {
       if (card) {
         card.classList.toggle('enabled', checked);
         card.classList.toggle('disabled', !checked);
+        card.dataset.approved = checked ? 'true' : 'false';
       }
       const btnSpan = e.target.parentElement.querySelector('.switch-toggle-btn');
       if (btnSpan) {
         btnSpan.innerText = checked ? 'JA' : 'NEIN';
         btnSpan.className = `switch-toggle-btn ${checked ? 'yes' : 'no'}`;
       }
+      updateStatsAndCounters();
       saveLocalCheckpoint();
     });
   });
@@ -1545,6 +1601,57 @@ export function extractClientStructuredSteps(task) {
 
   const pStr = task?.user_prompt || 'Software Modul';
   const projectName = state.selectedProject || 'KI_Trevor';
+
+  // Erkennung von Kundenaufträgen bzgl. Optimierungen & Neuerungs-Katalogen
+  const isOptimizationTask = /optimier|verbesser|neuerung|katalog|road/i.test(pStr);
+  if (isOptimizationTask) {
+    return [
+      {
+        id: 'step_1',
+        title: 'Interaktive Benutzeroberfläche & Checkliste [step_1]',
+        department: '3. Aussehen & Bedienung (Frontend)',
+        file: '02_Frontend_UI_und_3D_Studio/app.js',
+        target_file: '02_Frontend_UI_und_3D_Studio/app.js',
+        description: 'Implementierung der Dark-Slate Komponenten und der dynamischen [JA]/[NEIN] Entscheidungsliste für Optimierungen und Neuerungen.',
+        logicVerified: true,
+        approved: true,
+        enabled: true
+      },
+      {
+        id: 'step_2',
+        title: 'Dual-Engine REST-Endpunkte & Task-Router [step_2]',
+        department: '5. Server & Hintergrund-Logik (Backend)',
+        file: '06_Deployment_und_Config/server.js',
+        target_file: '06_Deployment_und_Config/server.js',
+        description: 'Absicherung der API-Endpunkte für Gemini und Ollama Inferenz sowie Task-Historie.',
+        logicVerified: true,
+        approved: true,
+        enabled: true
+      },
+      {
+        id: 'step_3',
+        title: 'Supabase Schema & Row-Level-Security Policies [step_3]',
+        department: '6. Datenbank & Speicher',
+        file: '01_Datenbank_Supabase/schema.sql',
+        target_file: '01_Datenbank_Supabase/schema.sql',
+        description: 'Tabellenstrukturen, relationale Indizes und RLS-Sicherheitsregeln absichern.',
+        logicVerified: true,
+        approved: true,
+        enabled: true
+      },
+      {
+        id: 'step_4',
+        title: 'Three.js 3D-Campus Render-Loop & State-Sync [step_4]',
+        department: '4. 3D-Campus & Grafiken',
+        file: '02_Frontend_UI_und_3D_Studio/studio3D.js',
+        target_file: '02_Frontend_UI_und_3D_Studio/studio3D.js',
+        description: 'Optimierung des OrbitControls Damping, 60 FPS Animation-Frames und Raum-Statusanzeigen.',
+        logicVerified: true,
+        approved: true,
+        enabled: true
+      }
+    ];
+  }
 
   return [
     {

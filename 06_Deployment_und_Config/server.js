@@ -119,13 +119,189 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Task-Historie abfragen
+  // --- DUAL-ENGINE LLM REST-ENDPUNKTE ---
+
+  // LLM Health & Status Check
+  if (pathname === '/api/llm/health' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    let ollamaStatus = { online: false, models: [] };
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const ollamaResp = await fetch('http://localhost:11434/api/tags', { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (ollamaResp.ok) {
+        const data = await ollamaResp.json();
+        ollamaStatus = { online: true, models: (data.models || []).map(m => m.name) };
+      }
+    } catch {
+      ollamaStatus = { online: false, error: 'Ollama offline oder nicht erreichbar' };
+    }
+
+    res.end(JSON.stringify({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      engines: {
+        gemini: { available: true, defaultModel: 'gemini-2.5-flash' },
+        ollama: ollamaStatus
+      }
+    }, null, 2));
+    return;
+  }
+
+  // Dual-Engine Inferenz-Proxy (Gemini Cloud / Ollama Lokal)
+  if (pathname === '/api/llm/query' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { provider = 'gemini', systemPrompt = '', userPrompt = '', apiKey = '', model, expectJson = false } = body;
+
+      if (!userPrompt) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'userPrompt erforderlich.' }));
+        return;
+      }
+
+      // 1. Ollama Lokal Inferenz
+      if (provider === 'ollama') {
+        const ollamaModel = model || 'qwen2.5-coder:3b';
+        const ollamaPayload = {
+          model: ollamaModel,
+          system: systemPrompt,
+          prompt: userPrompt,
+          stream: false,
+          ...(expectJson ? { format: 'json' } : {})
+        };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        const resp = await fetch('http://localhost:11434/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ollamaPayload),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!resp.ok) {
+          throw new Error(`Ollama Inferenz fehlgeschlagen mit Status ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          provider: 'ollama',
+          model: ollamaModel,
+          text: data.response || '',
+          timestamp: new Date().toISOString()
+        }));
+        return;
+      }
+
+      // 2. Google Gemini Cloud Inferenz
+      else {
+        const geminiKey = apiKey || process.env.GEMINI_API_KEY || '';
+        if (!geminiKey) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Kein Gemini API-Key übergeben oder konfiguriert.' }));
+          return;
+        }
+
+        const geminiModel = model || 'gemini-2.5-flash';
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`;
+        const contents = [];
+
+        const combinedPrompt = systemPrompt
+          ? `[SYSTEM ANWEISUNG]\n${systemPrompt}\n\n[USER AUFTRAG]\n${userPrompt}`
+          : userPrompt;
+
+        contents.push({
+          role: 'user',
+          parts: [{ text: combinedPrompt }]
+        });
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        const resp = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!resp.ok) {
+          const errText = await resp.text();
+          throw new Error(`Gemini API Fehler (${resp.status}): ${errText.slice(0, 150)}`);
+        }
+
+        const data = await resp.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          provider: 'gemini',
+          model: geminiModel,
+          text,
+          timestamp: new Date().toISOString()
+        }));
+        return;
+      }
+    } catch (err) {
+      console.error('[Server LLM Router] Fehler:', err.message);
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
+  // --- TASK-ROUTER & HISTORIE ---
+
+  // Aktiven Checkpoint abrufen
+  if (pathname === '/api/task/active' && req.method === 'GET') {
+    try {
+      const cpFile = path.join(ROOT_DIR, '00_Checkpoints_und_Status', 'active_checkpoint.json');
+      if (fs.existsSync(cpFile)) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        fs.createReadStream(cpFile).pipe(res);
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, activeTask: null }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
+  // Checkpoint sicher speichern
+  if (pathname === '/api/task/checkpoint' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const cpFile = path.join(ROOT_DIR, '00_Checkpoints_und_Status', 'active_checkpoint.json');
+      fs.writeFileSync(cpFile, JSON.stringify(body, null, 2), 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Checkpoint erfolgreich gespeichert.' }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
+
+  // Task-Historie abfragen (mit strikter Parameter-Validierung)
   if (pathname === '/api/task/history' && req.method === 'GET') {
     try {
-      const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+      const rawLimit = parseInt(url.searchParams.get('limit') || '20', 10);
+      const limit = isNaN(rawLimit) ? 20 : Math.min(Math.max(rawLimit, 1), 100);
       const history = await getTaskHistory(limit);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, tasks: history }));
+      res.end(JSON.stringify({ success: true, tasks: history, limit }));
       return;
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -272,6 +448,14 @@ const server = http.createServer(async (req, res) => {
     if (!fs.existsSync(filePath)) {
       filePath = path.join(ROOT_DIR, pathname);
     }
+  }
+
+  // Sandbox-Prüfung gegen Directory Traversal (../)
+  const resolvedPath = path.resolve(filePath);
+  if (!resolvedPath.startsWith(ROOT_DIR)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('403 Forbidden: Zugriff außerhalb des Projekt-Roots verweigert.');
+    return;
   }
 
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {

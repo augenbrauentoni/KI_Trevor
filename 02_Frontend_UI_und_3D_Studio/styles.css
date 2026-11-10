@@ -1477,9 +1477,60 @@ body {
 }
 
 .switch-toggle-btn.no {
-  background: #374151;
-  color: #9ca3af;
-  border: 1px solid #4b5563;
+  background: #e11d48;
+  color: #fff;
+  border: 1px solid #f43f5e;
+}
+
+/* --- Dark-Slate Stats-Bar & Filter für Roadmap --- */
+.roadmap-stats-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.roadmap-counter-badge {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.roadmap-counter-badge strong {
+  color: #38bdf8;
+}
+
+.roadmap-filter-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.roadmap-quick-btn {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.roadmap-quick-btn:hover {
+  background: rgba(51, 65, 85, 0.9);
+  color: #fff;
+}
+
+.roadmap-quick-btn.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
 }
 
 .code-preview-collapsible {

@@ -275,10 +275,14 @@ export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorCli
 
   if (controls) {
     controls.enableDamping = true;
-    controls.dampingFactor = 0.06;
+    controls.dampingFactor = 0.05;
+    controls.rotateSpeed = 0.75;
+    controls.zoomSpeed = 0.95;
+    controls.panSpeed = 0.8;
+    controls.screenSpacePanning = true;
     controls.maxPolarAngle = Math.PI / 2.05;
-    controls.minDistance = 6;
-    controls.maxDistance = 75;
+    controls.minDistance = 5;
+    controls.maxDistance = 80;
     controls.target.set(0, 1.2, 0);
   }
 
@@ -1650,12 +1654,20 @@ export function update3DStudioState(stageInput, floor) {
       decisionTerminalScreen.material.emissive.setHex(0x06b6d4);
       decisionTerminalScreen.material.emissiveIntensity = 0.8;
     }
+
+    if (STUDIO_HIERARCHY?.departments) {
+      STUDIO_HIERARCHY.departments.forEach(d => updateRoomMicroStatus(d.id, 'Online 24/7'));
+    }
   }
 
   // --- ZUSTAND: STAGE 1 (DISPATCHER / TREVOR) ---
   else if (stage === 'stage1') {
     if (currentFloor === 'UG') {
       switchFloor('EG');
+    }
+
+    if (STUDIO_HIERARCHY?.departments) {
+      STUDIO_HIERARCHY.departments.forEach(d => updateRoomMicroStatus(d.id, 'Bereit für Auftrag'));
     }
 
     // Spotlight über Trevors CEO-Schreibtisch wird aktiviert
@@ -1718,12 +1730,26 @@ export function update3DStudioState(stageInput, floor) {
         item.mesh.material.emissiveIntensity = 0.3;
       }
     });
+
+    if (STUDIO_HIERARCHY?.departments) {
+      STUDIO_HIERARCHY.departments.forEach(d => {
+        const isCurrentFloor = (currentFloor === 'UG' && d.floor === 'UG') || (currentFloor === 'EG' && d.floor !== 'UG');
+        updateRoomMicroStatus(d.id, isCurrentFloor ? 'Arbeitet an Modul... 💻' : 'Standby');
+      });
+    }
   }
 
   // --- ZUSTAND: STAGE 3 (ABTEILUNGSLEITER / AUDIT) ---
   else if (stage === 'stage3') {
     if (trevorSpotlight) {
       trevorSpotlight.intensity = 1.2;
+    }
+
+    if (STUDIO_HIERARCHY?.departments) {
+      STUDIO_HIERARCHY.departments.forEach(d => {
+        const isCurrentFloor = (currentFloor === 'UG' && d.floor === 'UG') || (currentFloor === 'EG' && d.floor !== 'UG');
+        updateRoomMicroStatus(d.id, isCurrentFloor ? 'Lead-Audit aktiv 🔍' : 'Standby');
+      });
     }
 
     // Bildschirme der Fach-Agenten dimmen wieder ab
@@ -1791,6 +1817,10 @@ export function update3DStudioState(stageInput, floor) {
       decisionTerminalScreen.material.emissiveIntensity = 3.6;
     }
 
+    if (STUDIO_HIERARCHY?.departments) {
+      STUDIO_HIERARCHY.departments.forEach(d => updateRoomMicroStatus(d.id, 'Geprüft & Freigegeben ✔'));
+    }
+
     // Sanfter Übergang zurück zu idle nach Erfolgs-Feedback (und zurück ins EG falls im UG)
     stageTransitionTimeout = setTimeout(() => {
       if (currentWorkflowStage === 'stage4') {
@@ -1803,10 +1833,15 @@ export function update3DStudioState(stageInput, floor) {
   }
 }
 
+let lastFrameTime = performance.now();
+
 function animate() {
   animationFrameId = requestAnimationFrame(animate);
 
-  const time = performance.now() * 0.001;
+  const now = performance.now();
+  const delta = Math.min((now - lastFrameTime) * 0.001, 0.1);
+  lastFrameTime = now;
+  const time = now * 0.001;
 
   if (trevorGroup && !isQuietMode) {
     trevorGroup.position.y = Math.sin(time * 2.2) * 0.05;
@@ -1889,6 +1924,27 @@ function onWindowResize() {
   renderer.setSize(width, height);
 }
 
+/**
+ * Ressourcen-Freigabe für saubere Speicherverwaltung & Prevents Memory Leaks
+ */
+export function dispose3DStudio() {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+  if (stageTransitionTimeout) {
+    clearTimeout(stageTransitionTimeout);
+    stageTransitionTimeout = null;
+  }
+  if (controls) {
+    controls.dispose();
+  }
+  if (renderer && renderer.domElement && renderer.domElement.parentElement) {
+    renderer.domElement.parentElement.removeChild(renderer.domElement);
+  }
+  console.log('[Studio 3D] Ressourcen erfolgreich freigegeben.');
+}
+
 // Globale Fenster-Exporte für maximale Interoperabilität
 if (typeof window !== 'undefined') {
   window.update3DStudioState = update3DStudioState;
@@ -1898,4 +1954,5 @@ if (typeof window !== 'undefined') {
   window.updateRoomMicroStatus = updateRoomMicroStatus;
   window.switchFloor = switchFloor;
   window.getCurrentFloor = () => currentFloor;
+  window.dispose3DStudio = dispose3DStudio;
 }

@@ -71,6 +71,48 @@ CREATE TABLE IF NOT EXISTS user_settings (
 );
 
 -- -----------------------------------------------------------------------------
+-- 5. TABLE: system_optimizations (Backlog für System-Neuerungen & Optimierungen)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS system_optimizations (
+    id TEXT PRIMARY KEY,
+    category TEXT NOT NULL,
+    department_id INT NOT NULL,
+    title TEXT NOT NULL,
+    target_file TEXT NOT NULL,
+    description TEXT,
+    priority TEXT NOT NULL DEFAULT 'HIGH' CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
+    status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'approved', 'in_progress', 'completed', 'rejected')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+-- -----------------------------------------------------------------------------
+-- 6. TABLE: task_decisions (Interaktive [JA]/[NEIN] Entscheidungen pro Schritt)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS task_decisions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    step_id TEXT NOT NULL,
+    step_title TEXT NOT NULL,
+    decision TEXT NOT NULL CHECK (decision IN ('JA', 'NEIN', 'APPROVED', 'REJECTED')),
+    target_file TEXT,
+    feedback TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+-- -----------------------------------------------------------------------------
+-- 7. TABLE: department_metrics (Monitoring für alle 14 Abteilungen EG & UG)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS department_metrics (
+    department_id INT PRIMARY KEY,
+    department_name TEXT NOT NULL,
+    floor TEXT NOT NULL DEFAULT 'EG' CHECK (floor IN ('EG', 'UG')),
+    total_tasks_assigned INT NOT NULL DEFAULT 0,
+    total_tasks_completed INT NOT NULL DEFAULT 0,
+    last_active_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+-- -----------------------------------------------------------------------------
 -- INDEXES FOR MAXIMUM QUERY PERFORMANCE
 -- -----------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
@@ -79,6 +121,11 @@ CREATE INDEX IF NOT EXISTS idx_tasks_current_stage ON tasks(current_stage);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_task_id ON agent_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_agent_id ON agent_logs(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_department_id ON agent_logs(department_id);
+CREATE INDEX IF NOT EXISTS idx_optimizations_status ON system_optimizations(status);
+CREATE INDEX IF NOT EXISTS idx_optimizations_dept ON system_optimizations(department_id);
+CREATE INDEX IF NOT EXISTS idx_task_decisions_task ON task_decisions(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_decisions_step ON task_decisions(step_id);
+CREATE INDEX IF NOT EXISTS idx_dept_metrics_floor ON department_metrics(floor);
 
 -- -----------------------------------------------------------------------------
 -- AUTO-UPDATE TRIGGER FOR updated_at COLUMNS
@@ -109,6 +156,12 @@ CREATE TRIGGER tr_user_settings_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS tr_system_optimizations_updated_at ON system_optimizations;
+CREATE TRIGGER tr_system_optimizations_updated_at
+    BEFORE UPDATE ON system_optimizations
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- -----------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- Default: Enable RLS and grant full access for authenticated and anon users
@@ -118,6 +171,9 @@ ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_optimizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_decisions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE department_metrics ENABLE ROW LEVEL SECURITY;
 
 DO $$ 
 BEGIN
@@ -132,6 +188,15 @@ BEGIN
 
     DROP POLICY IF EXISTS "Public access user_settings" ON user_settings;
     CREATE POLICY "Public access user_settings" ON user_settings FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Public access system_optimizations" ON system_optimizations;
+    CREATE POLICY "Public access system_optimizations" ON system_optimizations FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Public access task_decisions" ON task_decisions;
+    CREATE POLICY "Public access task_decisions" ON task_decisions FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Public access department_metrics" ON department_metrics;
+    CREATE POLICY "Public access department_metrics" ON department_metrics FOR ALL USING (true) WITH CHECK (true);
 END $$;
 
 -- -----------------------------------------------------------------------------
@@ -154,3 +219,34 @@ VALUES (
     'active'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Seed Freigegebene Master-Optimierungen (Roadmap)
+INSERT INTO system_optimizations (id, category, department_id, title, target_file, description, priority, status)
+VALUES
+    ('OPT-01', 'Frontend', 3, 'Interaktive Benutzeroberfläche & Checkliste', '02_Frontend_UI_und_3D_Studio/app.js', 'Dark-Slate [JA]/[NEIN] Entscheidungsliste mit Multi-Filter & Live-Counter', 'HIGH', 'completed'),
+    ('OPT-02', 'Backend', 5, 'Dual-Engine REST-Endpunkte & Task-Router', '06_Deployment_und_Config/server.js', 'Absicherung der API-Endpunkte für Gemini und Ollama Inferenz sowie Task-Historie', 'HIGH', 'completed'),
+    ('OPT-03', 'Database', 6, 'Supabase Schema & Row-Level-Security Policies', '01_Datenbank_Supabase/schema.sql', 'Tabellenstrukturen, relationale Indizes und RLS-Sicherheitsregeln absichern', 'HIGH', 'completed'),
+    ('OPT-04', '3D-Campus', 4, 'Three.js 3D-Campus Render-Loop & State-Sync', '02_Frontend_UI_und_3D_Studio/studio3D.js', 'Optimierung des OrbitControls Damping, 60 FPS Animation-Frames und Raum-Statusanzeigen', 'HIGH', 'in_progress')
+ON CONFLICT (id) DO UPDATE SET
+    status = EXCLUDED.status,
+    title = EXCLUDED.title,
+    description = EXCLUDED.description;
+
+-- Seed 14 Abteilungen (10 EG, 4 UG)
+INSERT INTO department_metrics (department_id, department_name, floor)
+VALUES
+    (1, 'Ideen & Planung', 'EG'),
+    (2, 'Bauplan & Technik', 'EG'),
+    (3, 'Aussehen & Bedienung (Frontend)', 'EG'),
+    (4, '3D-Campus & Grafiken', 'EG'),
+    (5, 'Server & Hintergrund-Logik (Backend)', 'EG'),
+    (6, 'Datenbank & Speicher', 'EG'),
+    (7, 'Verbindungen & Schnittstellen (APIs)', 'EG'),
+    (8, 'Qualitäts- & Fehlerprüfung (QA)', 'EG'),
+    (9, 'Absicherung & Passwörter (Security)', 'EG'),
+    (10, 'Bereitstellung & Wartung (DevOps)', 'EG'),
+    (11, 'Das Archiv', 'UG'),
+    (12, 'Der Serverraum', 'UG'),
+    (13, 'Die Werkstatt', 'UG'),
+    (14, 'Die Lounge', 'UG')
+ON CONFLICT (department_id) DO NOTHING;
