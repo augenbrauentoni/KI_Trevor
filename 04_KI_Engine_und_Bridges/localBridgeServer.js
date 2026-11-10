@@ -42,8 +42,17 @@ const server = http.createServer((req, res) => {
 
     req.on('end', () => {
       try {
-        const payload = JSON.parse(body);
-        const taskContent = payload.content || body;
+        let taskContent = '';
+        if (body.trim().startsWith('{')) {
+          try {
+            const payload = JSON.parse(body);
+            taskContent = payload.content || body;
+          } catch {
+            taskContent = body;
+          }
+        } else {
+          taskContent = body;
+        }
 
         // Ordner sicherstellen
         if (!fs.existsSync(OUTPUT_DIR)) {
@@ -73,6 +82,21 @@ const server = http.createServer((req, res) => {
   res.writeHead(404, HEADERS);
   res.end(JSON.stringify({ error: 'Endpoint nicht gefunden' }));
 });
+
+server.on('error', (err) => {
+  console.error('[Bridge] Serverfehler:', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Bridge] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Bridge] Unhandled Rejection:', reason);
+});
+
+// Heartbeat hält den Node Event Loop dauerhaft aktiv
+setInterval(() => {}, 1000 * 60 * 30);
 
 server.listen(PORT, () => {
   console.log(`====================================================`);

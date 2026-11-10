@@ -1,2 +1,1 @@
-# Antigravity Task
-Export via Server 3000.
+# Direct Plain Text Task Export
