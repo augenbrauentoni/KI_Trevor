@@ -38,6 +38,7 @@ export const STUDIO_HIERARCHY = {
   departments: [
     {
       id: 1,
+      floor: "EG",
       code: "dept_plan",
       name: "1. Ideen & Planung",
       description: "Prüft deine Idee und plant alle Funktionen",
@@ -91,6 +92,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 2,
+      floor: "EG",
       code: "dept_arch",
       name: "2. Bauplan & Technik",
       description: "Legt Ordnerstruktur, Sprachen und Systemaufbau fest",
@@ -144,6 +146,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 3,
+      floor: "EG",
       code: "dept_design",
       name: "3. Optik & Bedienung",
       description: "Entwirft Farben, Buttons und einfache Bedienbarkeit",
@@ -197,6 +200,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 4,
+      floor: "EG",
       code: "dept_fe",
       name: "4. Sichtbare Webseite (Frontend)",
       description: "Programmiert alles, was man im Browser sieht und anklickt",
@@ -259,6 +263,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 5,
+      floor: "EG",
       code: "dept_be",
       name: "5. Server & Hintergrund-Logik (Backend)",
       description: "Programmiert die Berechnungen und Datenverarbeitung im Hintergrund",
@@ -312,6 +317,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 6,
+      floor: "EG",
       code: "dept_db",
       name: "6. Datenbank & Speicher",
       description: "Verwaltet Tabellen, Supabase und sichere Datenspeicherung",
@@ -365,6 +371,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 7,
+      floor: "EG",
       code: "dept_qa",
       name: "7. Fehlersuche & Stabilität",
       description: "Findet Bugs, testet Abläufe und sichert Qualität",
@@ -418,6 +425,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 8,
+      floor: "EG",
       code: "dept_sec",
       name: "8. Sicherheit & Schutz",
       description: "Schützt vor Hackerangriffen, schützt Daten und sperrt Lücken",
@@ -471,6 +479,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 9,
+      floor: "EG",
       code: "dept_ops",
       name: "9. Veröffentlichung & Server",
       description: "Bringt die App online (Render, Vercel, Docker, GitHub)",
@@ -533,6 +542,7 @@ export const STUDIO_HIERARCHY = {
     },
     {
       id: 10,
+      floor: "EG",
       code: "dept_doc",
       name: "10. Dokumentation & Übergabe",
       description: "Schreibt verständliche Anleitungen und das Übergabe-Paket",
@@ -581,6 +591,229 @@ export const STUDIO_HIERARCHY = {
           department_id: 10,
           focus: "Generiert den fertigen ANTIGRAVITY_TASK.md Prompt",
           easy_explanation: "Formuliert den finalen, wasserdichten Master-Prompt für Antigravity mit allen Checkpoints."
+        }
+      ]
+    },
+    // =========================================================================
+    // UNTERGESCHOSS (KELLER / UG): NON-CODING & HARDWARE-ABTEILUNGEN
+    // =========================================================================
+    {
+      id: 11,
+      floor: "UG",
+      code: "dept_archiv",
+      name: "Das Archiv",
+      description: "Allgemeinwissen, Recherche, Textverfassung & kreatives Brainstorming",
+      easy_explanation: "Verwaltet das weltweite Wissen, recherchiert Fakten, formuliert Texte und entwickelt kreative Konzepte abseits von Code.",
+      color: "#8b5cf6",
+      floor_type: "concrete",
+      micro_status: "📚 Durchsucht Wissensdatenbank",
+      quick_prompts: [
+        "📖 Recherche & Fakten-Zusammenfassung erstellen",
+        "✍️ Detaillierten Text / Artikel formulieren",
+        "💡 Kreatives Brainstorming durchführen"
+      ],
+      chef_agent: {
+        id: "chef_archiv",
+        name: "Archiv-Direktor",
+        title: "Leiter Archiv & Wissensmanagement",
+        role: "chef_agent",
+        department_id: 11,
+        floor: "UG",
+        focus: "Strukturiert Wissen, validiert Quellen & kuratiert Texte",
+        easy_explanation: "Prüft Fakten, ordnet Wissen logisch und leitet die Recherche-Spezialisten."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_archiv_1",
+          name: "Fakten- & Wissens-Forscher",
+          title: "Knowledge Retrieval Specialist",
+          role: "pc_agent",
+          department_id: 11,
+          focus: "Sucht Fakten, verifiziert Quellen und ordnet Kontext",
+          easy_explanation: "Findet verlässliche Fakten und Hintergründe zu jedem Thema."
+        },
+        {
+          id: "pc_archiv_2",
+          name: "Texter & Redakteur",
+          title: "Content & Prose Stylist",
+          role: "pc_agent",
+          department_id: 11,
+          focus: "Verfasst ansprechende Texte, Leitfäden und Artikel",
+          easy_explanation: "Schreibt professionelle, verständliche Texte und Berichte."
+        },
+        {
+          id: "pc_archiv_3",
+          name: "Kreativ- & Brainstorm-Partner",
+          title: "Ideation & Synthesis Specialist",
+          role: "pc_agent",
+          department_id: 11,
+          focus: "Entwickelt unkonventionelle Ideen und strukturierte Konzepte",
+          easy_explanation: "Generiert neue Blickwinkel und Ideen abseits des Mainstreams."
+        }
+      ]
+    },
+    {
+      id: 12,
+      floor: "UG",
+      code: "dept_serverraum",
+      name: "Der Serverraum",
+      description: "Netzwerktechnik, Systemintegration, Infrastruktur & Server-Cluster",
+      easy_explanation: "Überwacht Router, Firewalls, Server-Racks und sorgt für unterbrechungsfreie Netzwerke und VPN-Tunnel.",
+      color: "#06b6d4",
+      floor_type: "tech_servers",
+      micro_status: "🖥️ Überwacht Server-Racks",
+      quick_prompts: [
+        "🌐 Netzwerk-Topologie & Routing planen",
+        "🛡️ Firewall-Regeln & VPN konfigurieren",
+        "⚙️ Server-Cluster & Storage partitionieren"
+      ],
+      chef_agent: {
+        id: "chef_serverraum",
+        name: "Infrastruktur-Leiter",
+        title: "SysAdmin & Network Architect",
+        role: "chef_agent",
+        department_id: 12,
+        floor: "UG",
+        focus: "Koordiniert Hardware-Server, Verkabelung & Netzwerke",
+        easy_explanation: "Leitet das Serverraum-Team und stellt stabile Verbindungen sicher."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_server_1",
+          name: "Netzwerk- & Routing-Ingenieur",
+          title: "Network Infrastructure Engineer",
+          role: "pc_agent",
+          department_id: 12,
+          focus: "Konfiguriert Subnetze, VLANs und Routing-Tabellen",
+          easy_explanation: "Plant und verbindet sichere Firmen- und Heimnetzwerke."
+        },
+        {
+          id: "pc_server_2",
+          name: "Firewall- & Security-Guard",
+          title: "Perimeter Security Specialist",
+          role: "pc_agent",
+          department_id: 12,
+          focus: "Überwacht Ports, filtert Datenverkehr und blockiert Angriffe",
+          easy_explanation: "Schützt das Netzwerk gegen unbefugte Zugriffe von außen."
+        },
+        {
+          id: "pc_server_3",
+          name: "Cluster- & Storage-Admin",
+          title: "Storage & Virtualization Admin",
+          role: "pc_agent",
+          department_id: 12,
+          focus: "Verwaltet NAS, RAID-Verbünde und Virtualisierungs-Nodes",
+          easy_explanation: "Sorgt für redundanten Speicher und zuverlässige Server-Hardware."
+        }
+      ]
+    },
+    {
+      id: 13,
+      floor: "UG",
+      code: "dept_werkstatt",
+      name: "Die Werkstatt",
+      description: "Hardware, Elektronik, Schaltpläne, Löten & Mikrocontroller (ESP32/Arduino/Raspberry Pi)",
+      easy_explanation: "Entwirft Schaltpläne, wählt elektronische Bauteile aus und programmiert Hardware und Mikrocontroller.",
+      color: "#f97316",
+      floor_type: "concrete",
+      micro_status: "🔧 Schaltungs- & Hardwaretest",
+      quick_prompts: [
+        "⚡ ESP32 / Arduino Schaltung entwerfen",
+        "📐 PCB-Schaltplan & Bauteilliste prüfen",
+        "🎛️ Sensor-Integration & Pinout abstimmen"
+      ],
+      chef_agent: {
+        id: "chef_werkstatt",
+        name: "Werkstatt-Meister",
+        title: "Chief Hardware & Electronics Engineer",
+        role: "chef_agent",
+        department_id: 13,
+        floor: "UG",
+        focus: "Leitet Elektronik-Entwicklung, PCB-Designs & Mikrocontroller",
+        easy_explanation: "Prüft Schaltungen auf Kurzschlüsse, Spannungsstabilität und Funktion."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_werk_1",
+          name: "Schaltplan- & PCB-Designer",
+          title: "Circuit & PCB Design Engineer",
+          role: "pc_agent",
+          department_id: 13,
+          focus: "Erstellt Schaltpläne, Leiterbahnen und BOM-Stücklisten",
+          easy_explanation: "Zeichnet funktionierende Elektronikschaltungen."
+        },
+        {
+          id: "pc_werk_2",
+          name: "Mikrocontroller- & Firmware-Spezialist",
+          title: "Embedded & Microcontroller Expert",
+          role: "pc_agent",
+          department_id: 13,
+          focus: "Schreibt C++/MicroPython für ESP32, STM32 und Arduino",
+          easy_explanation: "Programmiert Chips, Steuerungen und Sensoren."
+        },
+        {
+          id: "pc_werk_3",
+          name: "Sensor- & Aktor-Ingenieur",
+          title: "IoT & Mechatronics Specialist",
+          role: "pc_agent",
+          department_id: 13,
+          focus: "Integriert Motoren, Servos, Relais und Umweltsensoren",
+          easy_explanation: "Verbindet reale Sensoren und Schalter mit Mikrocontrollern."
+        }
+      ]
+    },
+    {
+      id: 14,
+      floor: "UG",
+      code: "dept_lounge",
+      name: "Die Lounge",
+      description: "Alltagsplanung, Produktivität, Freizeit, Gaming & Off-Topic",
+      easy_explanation: "Hilft bei täglichen Zeitplänen, Entspannung, Lifestyle, Gaming-Tipps und zwanglosem Austausch.",
+      color: "#10b981",
+      floor_type: "carpet",
+      micro_status: "☕ Pausiert & plant Alltags-Routinen",
+      quick_prompts: [
+        "📅 Realistischen Tages- & Wochenplan aufstellen",
+        "🎮 Gaming-Empfehlungen & Tipps einholen",
+        "🧘 Produktivitäts- & Pause-Routinen optimieren"
+      ],
+      chef_agent: {
+        id: "chef_lounge",
+        name: "Lounge-Host",
+        title: "Lifestyle & Productivity Concierge",
+        role: "chef_agent",
+        department_id: 14,
+        floor: "UG",
+        focus: "Begleitet Alltagsorganisation, Pausenzeiten & Work-Life-Balance",
+        easy_explanation: "Sorgt für gute Laune, klare Tagesstruktur und erholsame Pausen."
+      },
+      specialist_pcs: [
+        {
+          id: "pc_lounge_1",
+          name: "Tages- & Terminplaner",
+          title: "Daily Schedule & Habit Coach",
+          role: "pc_agent",
+          department_id: 14,
+          focus: "Strukturiert Termine, To-Dos und Gewohnheiten",
+          easy_explanation: "Bringt Ordnung in deinen Alltag und Terminkalender."
+        },
+        {
+          id: "pc_lounge_2",
+          name: "Gaming- & Entertainment-Guide",
+          title: "Gaming & Pop Culture Specialist",
+          role: "pc_agent",
+          department_id: 14,
+          focus: "Empfiehlt Spiele, Filme, Hobbys und Entertainment",
+          easy_explanation: "Kennt die besten Spiele, Setups und Freizeit-Tipps."
+        },
+        {
+          id: "pc_lounge_3",
+          name: "Work-Life- & Mindset-Berater",
+          title: "Wellness & Focus Advisor",
+          role: "pc_agent",
+          department_id: 14,
+          focus: "Fördert Konzentration, Pausenmanagement und Ergonomie",
+          easy_explanation: "Hilft dir, ohne Stress und fokussiert durch den Tag zu kommen."
         }
       ]
     }

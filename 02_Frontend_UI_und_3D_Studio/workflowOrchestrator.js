@@ -30,59 +30,82 @@ export class WorkflowOrchestrator {
     console.log(`======================================================\n`);
 
     // -------------------------------------------------------------------------
+    // PRE-ROUTING: LLM-KLASSIFIZIERUNG (SOFTWARE_DEV vs. ALLGEMEIN_HARDWARE)
+    // -------------------------------------------------------------------------
+    onStatusUpdate(
+      'Stufe 1/4: Pre-Routing (Etagen-Klassifizierung)',
+      'Trevor',
+      'Klassifiziert Auftrag: Prüfe ob Software-Code (EG) oder Non-Code/Hardware/Archiv (UG)...'
+    );
+
+    const routing = await this.classifyTaskType(userPrompt);
+    console.log(`[Pre-Routing] Klassifizierung: ${routing.classification} -> Ziel-Etage: ${routing.floor} (${routing.reason})`);
+
+    // 3D-Bühne sofort über Ziel-Etage informieren (Kamera-Fahrt UG/EG)
+    if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+      window.update3DStudioState(routing.floor === 'UG' ? 'ug_active' : 'stage1');
+    }
+
+    // -------------------------------------------------------------------------
     // STUFE 1: TREVOR (CEO & DISPATCHER)
     // -------------------------------------------------------------------------
     onStatusUpdate(
       'Stufe 1/4: Trevor (CEO & Dispatcher)',
       'Trevor',
-      'Analysiert den Auftrag und zerlegt ihn in spezifische Abteilungs-Tasks...'
+      routing.floor === 'UG'
+        ? `ALLGEMEIN_HARDWARE erkannt -> Verteilt Aufgaben an das Untergeschoss (UG: Archiv, Serverraum, Werkstatt, Lounge)...`
+        : `SOFTWARE_DEV erkannt -> Verteilt Aufgaben an den Software-Campus (EG)...`
     );
 
-    const subTasks = await this.dispatchTask(userPrompt);
-    console.log(`[Stufe 1] Auftrag in ${subTasks.length} Abteilungs-Tasks zerlegt.`);
+    const subTasks = await this.dispatchTask(userPrompt, routing);
+    console.log(`[Stufe 1] Auftrag in ${subTasks.length} Abteilungs-Tasks (${routing.floor}) zerlegt.`);
 
     // -------------------------------------------------------------------------
-    // CODE-RAG: KONTEXT-ABRUF AUS DATEIEN (LOKALE BRIDGE PORT 3001)
+    // CODE-RAG: KONTEXT-ABRUF AUS DATEIEN (NUR BEI SOFTWARE_DEV / EG)
     // -------------------------------------------------------------------------
     let codeContext = '';
-    try {
-      let candidateFiles = [];
-      let isManualSelection = false;
+    if (routing.classification === 'SOFTWARE_DEV') {
+      try {
+        let candidateFiles = [];
+        let isManualSelection = false;
 
-      // Priorität 1: Manuelle Dateiauswahl des Nutzers im UI (window.selectedContextFiles)
-      if (typeof window !== 'undefined' && Array.isArray(window.selectedContextFiles) && window.selectedContextFiles.length > 0) {
-        candidateFiles = [...window.selectedContextFiles];
-        isManualSelection = true;
-        console.log(`[WorkflowOrchestrator] Code-RAG: Verwende ${candidateFiles.length} manuell ausgewählte Kontext-Dateien aus window.selectedContextFiles (Regex-Fallback übersprungen).`);
-      } else {
-        // Priorität 2: Automatische Regex-Erkennung aus Prompt & Dispatcher-Antwort
-        candidateFiles = this.extractCandidateFilePaths(subTasks.rawAnalysis || '', userPrompt);
-      }
-
-      if (candidateFiles.length > 0) {
-        onStatusUpdate(
-          'Stufe 1/4: Code-RAG (Kontext-Abruf)',
-          'Trevor',
-          isManualSelection
-            ? `Lese Quellcode von ${candidateFiles.length} manuell gewählten Kontext-Dateien (Sandbox) via Bridge (Port 3001)...`
-            : `Lese Quellcode von ${candidateFiles.length} identifizierten Projektdateien via Bridge (Port 3001)...`
-        );
-
-        const fetchedFiles = await this.fetchFilesContext(candidateFiles);
-        if (fetchedFiles && fetchedFiles.length > 0) {
-          codeContext = fetchedFiles.map(f => {
-            const snippet = f.content.length > 6000 
-              ? `${f.content.slice(0, 6000)}\n// ... [weiterer Code gekürzt für Prompt-Kontext]` 
-              : f.content;
-            return `### DATEI: ${f.path}\n\`\`\`\n${snippet}\n\`\`\``;
-          }).join('\n\n');
-
-          console.log(`[WorkflowOrchestrator] Code-RAG: ${fetchedFiles.length} Dateien erfolgreich für Fach-Agenten geladen.`);
+        // Priorität 1: Manuelle Dateiauswahl des Nutzers im UI (window.selectedContextFiles)
+        if (typeof window !== 'undefined' && Array.isArray(window.selectedContextFiles) && window.selectedContextFiles.length > 0) {
+          candidateFiles = [...window.selectedContextFiles];
+          isManualSelection = true;
+          console.log(`[WorkflowOrchestrator] Code-RAG: Verwende ${candidateFiles.length} manuell ausgewählte Kontext-Dateien aus window.selectedContextFiles (Regex-Fallback übersprungen).`);
+        } else {
+          // Priorität 2: Automatische Regex-Erkennung aus Prompt & Dispatcher-Antwort
+          candidateFiles = this.extractCandidateFilePaths(subTasks.rawAnalysis || '', userPrompt);
         }
+
+        if (candidateFiles.length > 0) {
+          onStatusUpdate(
+            'Stufe 1/4: Code-RAG (Kontext-Abruf)',
+            'Trevor',
+            isManualSelection
+              ? `Lese Quellcode von ${candidateFiles.length} manuell gewählten Kontext-Dateien (Sandbox) via Bridge (Port 3001)...`
+              : `Lese Quellcode von ${candidateFiles.length} identifizierten Projektdateien via Bridge (Port 3001)...`
+          );
+
+          const fetchedFiles = await this.fetchFilesContext(candidateFiles);
+          if (fetchedFiles && fetchedFiles.length > 0) {
+            codeContext = fetchedFiles.map(f => {
+              const snippet = f.content.length > 6000 
+                ? `${f.content.slice(0, 6000)}\n// ... [weiterer Code gekürzt für Prompt-Kontext]` 
+                : f.content;
+              return `### DATEI: ${f.path}\n\`\`\`\n${snippet}\n\`\`\``;
+            }).join('\n\n');
+
+            console.log(`[WorkflowOrchestrator] Code-RAG: ${fetchedFiles.length} Dateien erfolgreich für Fach-Agenten geladen.`);
+          }
+        }
+      } catch (ragErr) {
+        console.warn('[WorkflowOrchestrator] Code-RAG nicht verfügbar (Bridge offline?):', ragErr.message);
+        codeContext = '';
       }
-    } catch (ragErr) {
-      console.warn('[WorkflowOrchestrator] Code-RAG nicht verfügbar (Bridge offline?):', ragErr.message);
-      codeContext = '';
+    } else {
+      console.log('[WorkflowOrchestrator] Code-RAG für UG / ALLGEMEIN_HARDWARE automatisch übersprungen (Token-Ersparnis).');
     }
 
     // -------------------------------------------------------------------------
@@ -125,20 +148,71 @@ export class WorkflowOrchestrator {
   }
 
   /**
-   * 1. dispatchTask: Trevor zerlegt den Auftrag in Abteilungs-Tasks
+   * 0. classifyTaskType: Pre-Routing per LLM (SOFTWARE_DEV vs. ALLGEMEIN_HARDWARE)
    */
-  async dispatchTask(userPrompt) {
-    const availableDepts = this.hierarchy.departments.map(d => `${d.id}. ${d.name}: ${d.easy_explanation}`).join('\n');
+  async classifyTaskType(userPrompt) {
+    const systemPrompt = `Du bist Trevors KI-Routing-Classifier.
+Analysiere die Benutzeranfrage und klassifiziere sie in genau EINE von zwei Kategorien:
+1. SOFTWARE_DEV: Webentwicklung, Apps, Three.js, JavaScript, Python, APIs, SQL, Frontend, Backend, Bugs, Code-Architektur (Ziel: Erdgeschoss EG).
+2. ALLGEMEIN_HARDWARE: Physische Hardware, Elektronik, ESP32, Arduino, Raspberry Pi, Löten, PCB, Serverraum-Verkabelung/Netzwerkinfrastruktur, Allgemeinwissen, Recherche, Textverfassung, Brainstorming, Alltagsorganisation oder Gaming/Freizeit (Ziel: Untergeschoss UG).
+
+Antworte ausschließlich im JSON-Format:
+{
+  "classification": "SOFTWARE_DEV" oder "ALLGEMEIN_HARDWARE",
+  "floor": "EG" oder "UG",
+  "reason": "Kurze Begründung"
+}`;
+
+    try {
+      const resp = await queryLLM(systemPrompt, `Aufgabe: "${userPrompt}"`, false);
+      const parsed = JSON.parse(resp);
+      const isUG = (parsed.classification || '').toUpperCase().includes('HARDWARE') || (parsed.floor || '').toUpperCase() === 'UG';
+      return {
+        classification: isUG ? 'ALLGEMEIN_HARDWARE' : 'SOFTWARE_DEV',
+        floor: isUG ? 'UG' : 'EG',
+        reason: parsed.reason || 'LLM Pre-Routing Klassifizierung'
+      };
+    } catch {
+      // Heuristischer Fallback bei Offline-Betrieb / JSON-Parse-Fehler
+      const p = userPrompt.toLowerCase();
+      const ugKeywords = [
+        'hardware', 'elektronik', 'schaltung', 'löten', 'sensor', 'esp32', 'arduino', 'raspberry',
+        'serverraum', 'netzwerktechnik', 'kabel', 'router', 'switch', 'rack', 'vpn', 'patchpanel',
+        'archiv', 'recherche', 'text schreiben', 'aufsatz', 'brainstorming', 'allgemeinwissen', 'artikel',
+        'lounge', 'gaming', 'alltag', 'freizeit', 'pause', 'terminplan', 'lifestyle', 'kaffee'
+      ];
+      const isUG = ugKeywords.some(kw => p.includes(kw));
+      return {
+        classification: isUG ? 'ALLGEMEIN_HARDWARE' : 'SOFTWARE_DEV',
+        floor: isUG ? 'UG' : 'EG',
+        reason: isUG ? 'Heuristik: Hardware/Non-Coding Schlüsselwörter erkannt' : 'Heuristik: Standard Software-Entwicklung'
+      };
+    }
+  }
+
+  /**
+   * 1. dispatchTask: Trevor zerlegt den Auftrag in Abteilungs-Tasks (gefiltert nach Etage)
+   */
+  async dispatchTask(userPrompt, routing = { classification: 'SOFTWARE_DEV', floor: 'EG' }) {
+    const targetFloor = routing.floor || (routing.classification === 'ALLGEMEIN_HARDWARE' ? 'UG' : 'EG');
+
+    // Filtere verfügbare Abteilungen strikt nach Etage!
+    const availableDeptsList = this.hierarchy.departments.filter(d => {
+      if (targetFloor === 'UG') return d.floor === 'UG';
+      return d.floor !== 'UG';
+    });
+
+    const availableDepts = availableDeptsList.map(d => `${d.id}. ${d.name} (${d.floor || 'EG'}): ${d.easy_explanation}`).join('\n');
 
     const systemPrompt = `Du bist Trevor, der Studio-Director und Master-Dispatcher von "Trevor AI Software Studio".
-Deine Aufgabe in Stufe 1 ist es, den Kundenauftrag zu analysieren, festzulegen welche Fachabteilungen benötigt werden und betroffene Projektdateien (z. B. 02_Frontend_UI_und_3D_Studio/app.js, 06_Deployment_und_Config/server.js, 04_KI_Engine_und_Bridges/localBridgeServer.js, etc.) zu benennen.
+Deine Aufgabe in Stufe 1 ist es, den Kundenauftrag für die Etage [${targetFloor}] zu analysieren und relevante Abteilungen auszuwählen.
 
-VERFÜGBARE ABTEILUNGEN:
+VERFÜGBARE ABTEILUNGEN AUF ETAGE ${targetFloor}:
 ${availableDepts}
 
-Wähle die relevanten Abteilungs-IDs (als Array von Zahlen, z. B. [1, 2, 3, 5, 6, 10]), nenne die betroffenen Dateien und gib eine kurze Begründung.`;
+Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. ${targetFloor === 'UG' ? '[11, 12, 13]' : '[1, 2, 3, 5, 6, 10]'}), nenne eventuell betroffene Dateien/Module und gib eine kurze Begründung.`;
 
-    const userMsg = `KUNDENAUFTRAG:\n"""\n${userPrompt}\n"""\n\nWelche Abteilungen und Dateien sind erforderlich?`;
+    const userMsg = `KUNDENAUFTRAG:\n"""\n${userPrompt}\n"""\n\nWelche Abteilungen auf Etage ${targetFloor} sind erforderlich?`;
 
     // Heuristik & LLM
     let selectedDeptIds = [];
@@ -154,29 +228,45 @@ Wähle die relevanten Abteilungs-IDs (als Array von Zahlen, z. B. [1, 2, 3, 5, 6
 
     if (!selectedDeptIds || selectedDeptIds.length === 0) {
       const p = userPrompt.toLowerCase();
-      selectedDeptIds = [1, 2]; // Planung & Architektur immer
-      if (p.includes('ui') || p.includes('frontend') || p.includes('design') || p.includes('button')) selectedDeptIds.push(3);
-      if (p.includes('3d') || p.includes('canvas') || p.includes('three') || p.includes('grafik')) selectedDeptIds.push(4);
-      if (p.includes('backend') || p.includes('server') || p.includes('api') || p.includes('auth')) selectedDeptIds.push(5);
-      if (p.includes('datenbank') || p.includes('database') || p.includes('sql') || p.includes('supabase')) selectedDeptIds.push(6);
-      if (p.includes('ki') || p.includes('llm') || p.includes('gemini') || p.includes('ollama')) selectedDeptIds.push(7);
-      if (p.includes('test') || p.includes('qa') || p.includes('fehler')) selectedDeptIds.push(8);
-      selectedDeptIds.push(10); // Antigravity Synthesis
+      if (targetFloor === 'UG') {
+        // Fallback für Untergeschoss
+        selectedDeptIds = [];
+        if (p.includes('archiv') || p.includes('text') || p.includes('recherche') || p.includes('wissen') || p.includes('artikel') || p.includes('brainstorm')) selectedDeptIds.push(11);
+        if (p.includes('server') || p.includes('netzwerk') || p.includes('router') || p.includes('rack') || p.includes('vpn') || p.includes('firewall')) selectedDeptIds.push(12);
+        if (p.includes('hardware') || p.includes('elektronik') || p.includes('esp32') || p.includes('arduino') || p.includes('schaltung') || p.includes('löten') || p.includes('sensor')) selectedDeptIds.push(13);
+        if (p.includes('lounge') || p.includes('alltag') || p.includes('gaming') || p.includes('freizeit') || p.includes('termin') || p.includes('pause')) selectedDeptIds.push(14);
+        if (selectedDeptIds.length === 0) {
+          selectedDeptIds = [11, 13]; // Standard: Archiv & Werkstatt
+        }
+      } else {
+        // Fallback für Erdgeschoss
+        selectedDeptIds = [1, 2]; // Planung & Architektur immer
+        if (p.includes('ui') || p.includes('frontend') || p.includes('design') || p.includes('button')) selectedDeptIds.push(3);
+        if (p.includes('3d') || p.includes('canvas') || p.includes('three') || p.includes('grafik')) selectedDeptIds.push(4);
+        if (p.includes('backend') || p.includes('server') || p.includes('api') || p.includes('auth')) selectedDeptIds.push(5);
+        if (p.includes('datenbank') || p.includes('database') || p.includes('sql') || p.includes('supabase')) selectedDeptIds.push(6);
+        if (p.includes('ki') || p.includes('llm') || p.includes('gemini') || p.includes('ollama')) selectedDeptIds.push(7);
+        if (p.includes('test') || p.includes('qa') || p.includes('fehler')) selectedDeptIds.push(8);
+        selectedDeptIds.push(10); // Antigravity Synthesis
+      }
     }
 
     selectedDeptIds = Array.from(new Set(selectedDeptIds));
-    const activeDepts = this.hierarchy.departments.filter(d => selectedDeptIds.includes(d.id));
+    const activeDepts = availableDeptsList.filter(d => selectedDeptIds.includes(d.id));
+    const finalDepts = activeDepts.length > 0 ? activeDepts : availableDeptsList.slice(0, 2);
 
-    const subTasks = activeDepts.map(dept => ({
+    const subTasks = finalDepts.map(dept => ({
       departmentId: dept.id,
       departmentName: dept.name,
       departmentCode: dept.code,
+      floor: dept.floor || targetFloor,
       leadAgent: dept.chef_agent,
       workerAgents: dept.specialist_pcs,
-      mission: `Spezifische technische Ausarbeitung für ${dept.name} zum Auftrag: "${userPrompt.slice(0, 80)}"`
+      mission: `Spezifische Ausarbeitung auf Etage ${dept.floor || targetFloor} (${dept.name}) zum Auftrag: "${userPrompt.slice(0, 80)}"`
     }));
 
     subTasks.rawAnalysis = dispatchRawAnalysis;
+    subTasks.routing = routing;
     return subTasks;
   }
 

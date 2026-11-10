@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Smart Context Manager (Code-RAG), Strikte Sandbox-Isolation (`/api/list-files` & `/api/read-files`) & UI-Dateiwähler zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
-- **Datum / Letztes Update:** 2026-11-10 18:45:00
+- **Status:** KI-Campus Erweiterung – Physisches Untergeschoss (UG auf y = -15), Gläserner Aufzug, 4 Non-Code/Hardware-Abteilungen & Intelligentes Pre-Routing zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
+- **Datum / Letztes Update:** 2026-11-10 19:05:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -80,7 +80,7 @@ Verknüpft die Workflow-Stufen dynamisch mit der Three.js 3D-Szene für plastisc
    - Direkte Provider-Auswahl (Gemini / Ollama) und Passwort-Feld für den Gemini API-Key direkt im Trevor-Eingabebereich (`#quick-llm-provider-select`, `#quick-gemini-key-input`).
    - Synchronisation mit den globalen Studio-Einstellungen und dem `llmEngine`-State.
 2. **Interaktive Maßnahmen-Karten (`renderInteractiveRoadmap`):**
-   - Jede Maßnahmen-Karte enthält ID, Abteilungs-Badge, Badge `<span class="badge-logic-verified">✔ Logik geprüft durch Abteilungsleiter</span>`, Titel, Ziel-Dateipfad und Schalter `[JA]/[NEIN]`.
+   - Jede Maßnahme wird als interaktive Karte mit ID, Abteilungs-Badge, Badge `<span class="badge-logic-verified">✔ Logik geprüft durch Abteilungsleiter</span>`, Titel, Ziel-Dateipfad und Schalter `[JA]/[NEIN]` gerendert.
    - Klick auf `[NEIN]` dimmt die Karte ab und schließt sie vom finalen Export aus.
    - Buttons `"Alle [JA]"` (`#btn-roadmap-all-yes`) und `"Alle [NEIN]"` (`#btn-roadmap-all-no`) zur schnellen Gesamtauswahl.
 3. **Selektiver Export an Antigravity (`exportSelectedStepsForAntigravity`, `buildAntigravityPromptForSteps`):**
@@ -139,12 +139,56 @@ Vollständige Kontrolle über den Quellcode-Kontext mit kryptographisch robuster
 
 ---
 
-## 8. Verifikation & Test-Ergebnisse
+## 8. KI-Campus Erweiterung: Untergeschoss (UG / Keller auf y = -15) & Intelligente Pre-Routing Logik
 
-- **Sandbox-Sicherheit (`/api/list-files`):** Erfolgreich verifiziert; Traversal-Versuche mit `../` und manipulierten Ordnern werden zuverlässig mit HTTP `403 Forbidden` abgewiesen.
-- **Sandbox-Sicherheit (`/api/read-files`):** Erfolgreich verifiziert; Zugriff auf Systemdateien oder Nachbar-Verzeichnisse wird mit 403 Forbidden abgewiesen, kein externer Quellcode wird geleakt.
-- **Workflow-Priorisierung:** Erfolgreich verifiziert; `window.selectedContextFiles` hat strikte Priorität vor automatischer Regex-Erkennung.
-- **UI-Dateiwähler:** Erfolgreich verifiziert; Tags lassen sich klickend aktivieren/deaktivieren, synchronisieren `window.selectedContextFiles` und aktualisieren den Badge-Zähler.
+Vollständige architektonische und algorithmische Erweiterung des Multi-Agenten-Systems um eine dedizierte physische Kellerebene für non-coding und hardwarenahe Workflows:
+
+1. **Agenten-Datenstruktur & 4 neue Abteilungen ([`hierarchyData.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/hierarchyData.js)):**
+   - Allen 10 Software-Abteilungen wurde die Eigenschaft `floor: 'EG'` explizit zugewiesen.
+   - 4 neue Abteilungen mit `floor: 'UG'` integriert:
+     - **Das Archiv (id: 11, Farbe: `#8b5cf6`):** Allgemeinwissen, Recherche, Textverfassung, kreatives Brainstorming (`chef_archiv`, 3 Spezialisten `pc_archiv_1..3`).
+     - **Der Serverraum (id: 12, Farbe: `#06b6d4`):** Netzwerktechnik, Systemintegration, Infrastruktur, Routing (`chef_serverraum`, 3 Spezialisten `pc_server_1..3`).
+     - **Die Werkstatt (id: 13, Farbe: `#f97316`):** Hardware, Elektronik, Schaltpläne, Löten, ESP32/Mikrocontroller (`chef_werkstatt`, 3 Spezialisten `pc_werk_1..3`).
+     - **Die Lounge (id: 14, Farbe: `#6366f1`):** Alltagsplanung, Entlastung, Kreativpausen, Off-Topic, Gaming (`chef_lounge`, 3 Spezialisten `pc_lounge_1..3`).
+   - Gesamtsystem umfasst nun **14 Abteilungen, 14 Chef-Agenten und 42 Spezial-PCs** (57 Agenten insgesamt inklusive Trevor CEO).
+
+2. **Intelligentes Pre-Routing & Token-Ersparnis ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Methode `classifyTaskType(userPrompt)` klassifiziert Prompts vorab via LLM (bzw. regelbasiertem Heuristik-Fallback) in `SOFTWARE_DEV` (Ziel: EG) oder `ALLGEMEIN_HARDWARE` (Ziel: UG).
+   - **Logik-Gabelung:**
+     - Bei `SOFTWARE_DEV`: Teilaufgaben gehen streng an Software-Abteilungen (1–10 im EG). Code-RAG sucht und liest aktiv Quellcode-Dateien.
+     - Bei `ALLGEMEIN_HARDWARE`: Teilaufgaben gehen streng an Untergeschoss-Abteilungen (11–14 im UG). Der Code-RAG Schritt wird **vollständig übersprungen**, um Tokens zu sparen und irrelevanten Quellcode-Ballast zu eliminieren.
+
+3. **3D-Architektur des Untergeschosses auf y = -15 ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - Industrieller Betonboden (`y = -15.25`, Radius 18.5) mit gelb-oranger Sicherheits-Kantenmarkierung und konzentrischen Führungsringen.
+   - 4 massive tragende Stahl-Pfeiler von `y = -15` bis `y = 0` mit Fuß- und Kopfmanschetten.
+   - Zentrales Holographisches Hardware-Terminal (`coreHub`) mit rotierendem Cyan-Ring und schwebendem 3D-Billboard-Schild.
+   - Industrielle Server-Cluster mit pulsierenden LEDs (`blinkingLeds`) in Grün, Cyan, Bernstein und Rot.
+   - Eigene atmosphärisch gedimmte Industrie-Punktbeleuchtung (`ugLights`).
+   - Eigene thematische Raumrequisiten für UG-Pods: Bücherregale im Archiv, Doppel-Serverracks im Serverraum, Werkbank & Werkzeugkasten in der Werkstatt, Leder-Sofa in der Lounge.
+
+4. **Gläserner Campus-Aufzug (EG ⇄ UG, [`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - Gläserner Schacht (Höhe 19m, Führungsschienen, Türportale auf beiden Ebenen).
+   - Animierte Fahrstuhlkabine mit beleuchtetem Cyan-Boden und Innenlicht.
+   - Gleitet sanft per Interpolation (`targetElevatorY`) zwischen `y = 1.0` (EG) und `y = -14.0` (UG).
+   - Interaktiver Raycasting-Klick auf den Aufzug im 3D-Canvas wechselt direkt die Etage.
+
+5. **Kamera-Fahrten & UI-Steuerung ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js), [`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html), [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Kamera-Fahrt `switchFloor('UG')`: Schwenkt die Kamera animiert per Lerp nach unten (`targetCameraPos: (0, -6.5, 23)`, `targetLookAt: (0, -14.5, 0)`).
+   - Nach Fertigstellung (`stage4` / `idle`) fährt die Kamera automatisch wieder nach oben zu Trevor ins EG.
+   - Quick-Buttons im 3D-Canvas-Overlay: `#ctrl-floor-eg` (`🏢 EG (Software)`) und `#ctrl-floor-ug` (`🔻 UG (Keller)`).
+   - Abteilungspills im Header zeigen Keller-Bereiche mit auffälligem `[UG]`-Badge an.
+
+---
+
+## 9. Verifikation & Test-Ergebnisse
+
+- **Automatisierte Integrations-Suite (`test_ug_integration.mjs`):**
+  - **Hierarchie-Validierung:** Exakt 14 Abteilungen (10 EG, 4 UG), alle 4 UG-Abteilungen (11, 12, 13, 14) verfügen über korrekte Chef-Agenten (`floor: 'UG'`) und je 3 Spezialisten.
+  - **Pre-Routing Klassifikation:** Software-Prompts (z. B. React/Supabase) werden zu 100 % als `SOFTWARE_DEV` (EG) erkannt. Hardware-, Netzwerk-, Archiv- und Brainstorming-Prompts (z. B. ESP32/Schaltung/Server-Cluster) werden zu 100 % als `ALLGEMEIN_HARDWARE` (UG) erkannt.
+  - **Etagen-Isolation im Dispatcher:** Bei `ALLGEMEIN_HARDWARE` werden Aufgaben strikt und ausschließlich an Abteilungen 11–14 geroutet. Bei `SOFTWARE_DEV` ausschließlich an Abteilungen 1–10.
+  - **Code-RAG Bypass:** Token-Einsparung durch Überspringen des Datei-Einlesens bei Keller-Tasks erfolgreich verifiziert.
+- **Three.js Syntax- & Modul-Integrität:**
+  - `node -c` auf allen 4 Frontend-Modulen (`hierarchyData.js`, `workflowOrchestrator.js`, `studio3D.js`, `app.js`) fehlerfrei abgeschlossen (0 Syntaxfehler).
 - **Server & Bridges:**
   - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
   - Lokale Bridge (Port 3001): `http://localhost:3001/api/status`, `/api/list-files`, `/api/read-files` & `/api/export-task` (online)

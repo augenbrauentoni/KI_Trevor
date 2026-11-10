@@ -44,6 +44,12 @@ let isQuietMode = false;
 let targetCameraPos = null;
 let targetLookAt = null;
 
+// Aufzug- & Untergeschoss (UG / Keller) State
+let elevatorCabin = null;
+let targetElevatorY = 1.0;
+let currentFloor = 'EG';
+const ugLights = [];
+
 // Geteilte Texturen für realistische Monitore
 let codeScreenTexture = null;
 let serverScreenTexture = null;
@@ -278,8 +284,12 @@ export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorCli
   // 7. Helle & plastische Studio-Beleuchtung
   setupCampusLighting(THREE_LIB);
 
-  // 8. Große, zusammenhängende Haupt-Büroetage (Open-Space Architektur-Floor)
+  // 8. Große, zusammenhängende Haupt-Büroetage (Open-Space Architektur-Floor EG)
   setupUnifiedOfficeFloor(THREE_LIB);
+
+  // 8b. Industrielles Untergeschoss (UG auf y = -15) & Gläserner Aufzug
+  setupBasementFloor(THREE_LIB);
+  setupGlassElevator(THREE_LIB);
 
   // 9. Trevor im Iron-Man Look (Zentrale Glas-Rotunde)
   setupTrevorIronManMech(THREE_LIB);
@@ -395,6 +405,285 @@ function setupUnifiedOfficeFloor(THREE_LIB) {
   });
 
   scene.add(floorGroup);
+}
+
+/**
+ * Untergeschoss (UG / Keller auf y = -15):
+ * Industrieller Betonboden, tragende Stahlstützen zwischen EG und UG,
+ * Server-Cluster mit pulsierenden LEDs, Core-Terminal und gedimmte Industriebeleuchtung.
+ */
+function setupBasementFloor(THREE_LIB) {
+  const basementGroup = new THREE_LIB.Group();
+
+  // 1. Großes industrielles Beton-Fundament (y = -15)
+  const floorGeo = new THREE_LIB.CylinderGeometry(18.5, 18.8, 0.5, 48);
+  const floorMat = new THREE_LIB.MeshStandardMaterial({
+    color: 0x090d16, // Dunkler Industrie-Beton
+    roughness: 0.85,
+    metalness: 0.15
+  });
+  const basementFloor = new THREE_LIB.Mesh(floorGeo, floorMat);
+  basementFloor.position.y = -15.25;
+  basementFloor.receiveShadow = true;
+  basementGroup.add(basementFloor);
+
+  // Gelb-orange Industrie-Kantenmarkierung (Warnstreifen-Effekt)
+  const warningRingGeo = new THREE_LIB.TorusGeometry(18.5, 0.08, 8, 48);
+  const warningRingMat = new THREE_LIB.MeshBasicMaterial({ color: 0xd97706 });
+  const warningRing = new THREE_LIB.Mesh(warningRingGeo, warningRingMat);
+  warningRing.rotation.x = Math.PI / 2;
+  warningRing.position.y = -14.99;
+  basementGroup.add(warningRing);
+
+  // Innere Orientierungs-Ringe im UG-Boden
+  [5.5, 10.5, 15.5].forEach((r, idx) => {
+    const ringGeo = new THREE_LIB.RingGeometry(r - 0.05, r + 0.05, 48);
+    const ringMat = new THREE_LIB.MeshBasicMaterial({
+      color: idx === 1 ? 0x06b6d4 : 0x334155,
+      side: THREE_LIB.DoubleSide,
+      transparent: true,
+      opacity: 0.35
+    });
+    const ring = new THREE_LIB.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = -14.98;
+    basementGroup.add(ring);
+  });
+
+  // 2. 4 massive tragende Stahl-Pfeiler zwischen EG (y=0) und UG (y=-15)
+  const pillarOffsets = [
+    { x: 9.5, z: 9.5 },
+    { x: -9.5, z: 9.5 },
+    { x: 9.5, z: -9.5 },
+    { x: -9.5, z: -9.5 }
+  ];
+  pillarOffsets.forEach(pos => {
+    // Säulenschaft
+    const pillarGeo = new THREE_LIB.CylinderGeometry(0.55, 0.65, 15.0, 16);
+    const pillarMat = new THREE_LIB.MeshStandardMaterial({
+      color: 0x1e293b,
+      metalness: 0.8,
+      roughness: 0.35
+    });
+    const pillar = new THREE_LIB.Mesh(pillarGeo, pillarMat);
+    pillar.position.set(pos.x, -7.5, pos.z);
+    pillar.castShadow = true;
+    basementGroup.add(pillar);
+
+    // Fußmanschette unten (y = -15)
+    const baseGeo = new THREE_LIB.CylinderGeometry(0.9, 1.0, 0.4, 16);
+    const collarMat = new THREE_LIB.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.2 });
+    const collarBottom = new THREE_LIB.Mesh(baseGeo, collarMat);
+    collarBottom.position.set(pos.x, -14.8, pos.z);
+    basementGroup.add(collarBottom);
+
+    // Kopfmanschette oben (y = 0)
+    const collarTop = new THREE_LIB.Mesh(baseGeo, collarMat);
+    collarTop.position.set(pos.x, -0.2, pos.z);
+    basementGroup.add(collarTop);
+  });
+
+  // 3. Zentrales UG-Hardware-Terminal (Zentraler Technik-Hub)
+  const coreHubGeo = new THREE_LIB.CylinderGeometry(1.6, 1.8, 0.7, 24);
+  const coreHubMat = new THREE_LIB.MeshStandardMaterial({
+    color: 0x0f172a,
+    metalness: 0.85,
+    roughness: 0.25
+  });
+  const coreHub = new THREE_LIB.Mesh(coreHubGeo, coreHubMat);
+  coreHub.position.set(0, -14.65, 0);
+  coreHub.userData = {
+    type: 'ug_terminal',
+    name: 'UG Central Hardware Core',
+    floor: 'UG',
+    role: 'Keller-Infrastruktur & Racks',
+    status: 'Servercluster, Archiv & Hardware-Bridges aktiv'
+  };
+  interactiveObjects.push(coreHub);
+  basementGroup.add(coreHub);
+
+  // Holographischer Ring über dem Core
+  const holoGeo = new THREE_LIB.TorusGeometry(1.4, 0.05, 8, 32);
+  const holoMat = new THREE_LIB.MeshBasicMaterial({ color: 0x06b6d4, wireframe: true });
+  const holoRing = new THREE_LIB.Mesh(holoGeo, holoMat);
+  holoRing.rotation.x = Math.PI / 2;
+  holoRing.position.set(0, -14.15, 0);
+  basementGroup.add(holoRing);
+
+  // Schwebendes Label über UG-Hub
+  const ugHubLabel = createFloatingLabelSprite(
+    'UNTERGESCHOSS (UG)',
+    'Archiv · Serverraum · Werkstatt · Lounge',
+    '⚡ Keller-Infrastruktur online',
+    '#06b6d4'
+  );
+  ugHubLabel.position.set(0, -11.5, 0);
+  basementGroup.add(ugHubLabel);
+
+  // 4. Industrielle Server-Racks im UG-Hintergrund mit blinkenden LEDs
+  const rackCoords = [
+    { x: -3.8, z: -3.5, rot: 0.3 },
+    { x: 3.8, z: -3.5, rot: -0.3 },
+    { x: 0, z: -5.2, rot: 0 }
+  ];
+  rackCoords.forEach(c => {
+    const rackGeo = new THREE_LIB.BoxGeometry(1.4, 2.8, 0.7);
+    const rackMat = new THREE_LIB.MeshStandardMaterial({
+      color: 0x0a0f1d,
+      metalness: 0.9,
+      roughness: 0.2
+    });
+    const rack = new THREE_LIB.Mesh(rackGeo, rackMat);
+    rack.position.set(c.x, -13.6, c.z);
+    rack.rotation.y = c.rot;
+    basementGroup.add(rack);
+
+    // Blinking LEDs
+    const ledColors = [0x10b981, 0x06b6d4, 0xf59e0b, 0xef4444];
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 3; col++) {
+        const ledGeo = new THREE_LIB.BoxGeometry(0.08, 0.05, 0.03);
+        const colHex = ledColors[(row + col) % ledColors.length];
+        const ledMat = new THREE_LIB.MeshBasicMaterial({ color: colHex });
+        const led = new THREE_LIB.Mesh(ledGeo, ledMat);
+        led.position.set(
+          c.x + (col - 1) * 0.22,
+          -13.6 + (row - 2.5) * 0.35,
+          c.z + 0.36
+        );
+        basementGroup.add(led);
+        blinkingLeds.push(led);
+      }
+    }
+  });
+
+  // 5. Gedimmte industrielle Keller-Beleuchtung
+  const ugLight1 = new THREE_LIB.PointLight(0x06b6d4, 1.8, 22);
+  ugLight1.position.set(0, -11.0, 0);
+  basementGroup.add(ugLight1);
+  ugLights.push(ugLight1);
+
+  const ugLight2 = new THREE_LIB.PointLight(0xf59e0b, 1.2, 18);
+  ugLight2.position.set(0, -11.5, 6.0);
+  basementGroup.add(ugLight2);
+  ugLights.push(ugLight2);
+
+  const ugLight3 = new THREE_LIB.PointLight(0x38bdf8, 1.0, 16);
+  ugLight3.position.set(0, -11.5, -6.0);
+  basementGroup.add(ugLight3);
+  ugLights.push(ugLight3);
+
+  scene.add(basementGroup);
+}
+
+/**
+ * Gläserner Aufzugsschacht & Fahrstuhlkabine (EG ⇄ UG):
+ * Verbindet Erdgeschoss (y = 0) und Untergeschoss (y = -15).
+ * Sanfte Kabinenfahrt und anklickbare Aufzugsteuerung.
+ */
+function setupGlassElevator(THREE_LIB) {
+  const shaftX = -6.5;
+  const shaftZ = -5.0;
+
+  // 1. Schacht-Konstruktion
+  const shaftGroup = new THREE_LIB.Group();
+  shaftGroup.position.set(shaftX, 0, shaftZ);
+
+  // 4 tragende Führungsschienen (von y = -15.5 bis y = 3.5 -> Höhe 19m)
+  const railGeo = new THREE_LIB.BoxGeometry(0.12, 19.2, 0.12);
+  const railMat = new THREE_LIB.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.2 });
+  const railOffsets = [
+    { x: -1.05, z: -1.05 },
+    { x: 1.05, z: -1.05 },
+    { x: -1.05, z: 1.05 },
+    { x: 1.05, z: 1.05 }
+  ];
+  railOffsets.forEach(pos => {
+    const rail = new THREE_LIB.Mesh(railGeo, railMat);
+    rail.position.set(pos.x, -6.0, pos.z);
+    shaftGroup.add(rail);
+  });
+
+  // Gläserne Schacht-Verkleidung
+  const glassShaftGeo = new THREE_LIB.BoxGeometry(2.2, 19.0, 2.2);
+  const glassShaftMat = new THREE_LIB.MeshPhysicalMaterial({
+    color: 0x38bdf8,
+    transparent: true,
+    opacity: 0.15,
+    roughness: 0.1,
+    transmission: 0.85,
+    side: THREE_LIB.DoubleSide
+  });
+  const glassShaft = new THREE_LIB.Mesh(glassShaftGeo, glassShaftMat);
+  glassShaft.position.set(0, -6.0, 0);
+  shaftGroup.add(glassShaft);
+
+  // EG & UG Plattform-Zugänge / Türrahmen
+  [-15.0, 0.0].forEach(yLvl => {
+    const frameGeo = new THREE_LIB.BoxGeometry(2.3, 2.4, 0.1);
+    const frameMat = new THREE_LIB.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 });
+    const frame = new THREE_LIB.Mesh(frameGeo, frameMat);
+    frame.position.set(0, yLvl + 1.2, 1.15);
+    shaftGroup.add(frame);
+  });
+
+  scene.add(shaftGroup);
+
+  // 2. Bewegliche Fahrstuhlkabine
+  elevatorCabin = new THREE_LIB.Group();
+  elevatorCabin.position.set(shaftX, 1.0, shaftZ); // Start im EG
+
+  // Kabinen-Boden
+  const cabFloorGeo = new THREE_LIB.BoxGeometry(1.9, 0.15, 1.9);
+  const cabFloorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.85, roughness: 0.25 });
+  const cabFloor = new THREE_LIB.Mesh(cabFloorGeo, cabFloorMat);
+  cabFloor.position.y = -0.95;
+  elevatorCabin.add(cabFloor);
+
+  // Leuchtender Bodenrand (Cyan)
+  const floorGlowGeo = new THREE_LIB.BoxGeometry(1.92, 0.04, 1.92);
+  const floorGlowMat = new THREE_LIB.MeshBasicMaterial({ color: 0x06b6d4 });
+  const floorGlow = new THREE_LIB.Mesh(floorGlowGeo, floorGlowMat);
+  floorGlow.position.y = -0.9;
+  elevatorCabin.add(floorGlow);
+
+  // Kabinen-Decke mit Innenlicht
+  const cabCeilGeo = new THREE_LIB.BoxGeometry(1.9, 0.15, 1.9);
+  const cabCeil = new THREE_LIB.Mesh(cabCeilGeo, cabFloorMat);
+  cabCeil.position.y = 0.95;
+  elevatorCabin.add(cabCeil);
+
+  const cabLight = new THREE_LIB.PointLight(0x38bdf8, 1.8, 4);
+  cabLight.position.set(0, 0.7, 0);
+  elevatorCabin.add(cabLight);
+
+  // Kabinen-Glaswände
+  const cabGlassGeo = new THREE_LIB.BoxGeometry(1.85, 1.8, 1.85);
+  const cabGlassMat = new THREE_LIB.MeshPhysicalMaterial({
+    color: 0x06b6d4,
+    transparent: true,
+    opacity: 0.25,
+    roughness: 0.05,
+    transmission: 0.9,
+    side: THREE_LIB.DoubleSide
+  });
+  const cabGlass = new THREE_LIB.Mesh(cabGlassGeo, cabGlassMat);
+  elevatorCabin.add(cabGlass);
+
+  // Interaktiver Klickbereich für den Aufzug
+  const hitGeo = new THREE_LIB.BoxGeometry(2.1, 2.2, 2.1);
+  const hitMat = new THREE_LIB.MeshBasicMaterial({ visible: false });
+  const hitBox = new THREE_LIB.Mesh(hitGeo, hitMat);
+  hitBox.userData = {
+    type: 'elevator',
+    name: 'Gläserner Campus-Aufzug (EG ⇄ UG)',
+    role: 'Verbindet Software-Etage mit Untergeschoss',
+    status: 'Klicken zum Wechseln der Etage (EG / UG)'
+  };
+  elevatorCabin.add(hitBox);
+  interactiveObjects.push(hitBox);
+
+  scene.add(elevatorCabin);
 }
 
 /**
@@ -624,103 +913,137 @@ function setupTrevorIronManMech(THREE_LIB) {
 }
 
 /**
- * 10 Abteilungen kompakt und nah am Zentrum (Radius ~13)
+ * 14 Abteilungen:
+ * - 10 Software-Abteilungen im EG (Radius ~13, y = 0)
+ * - 4 Non-Code/Hardware/Archiv-Abteilungen im UG (Radius ~10.5, y = -15)
  */
 function setupCompactDepartments(THREE_LIB, hierarchyData) {
-  const depts = hierarchyData.departments;
-  const radius = 13.0; // Kompakter Radius: Alles sofort sichtbar!
+  const allDepts = hierarchyData.departments || [];
+  const egDepts = allDepts.filter(d => d.floor !== 'UG');
+  const ugDepts = allDepts.filter(d => d.floor === 'UG');
 
-  depts.forEach((dept, idx) => {
-    const angle = (idx / depts.length) * Math.PI * 2;
-    const posX = Math.cos(angle) * radius;
-    const posZ = Math.sin(angle) * radius;
+  // 1. EG-Abteilungen kreisförmig auf Ebene y = 0 anordnen (Software-Campus)
+  const egRadius = 13.0;
+  egDepts.forEach((dept, idx) => {
+    const angle = (idx / egDepts.length) * Math.PI * 2;
+    const posX = Math.cos(angle) * egRadius;
+    const posZ = Math.sin(angle) * egRadius;
 
     const podGroup = new THREE_LIB.Group();
     podGroup.position.set(posX, 0, posZ);
     podGroup.lookAt(0, 0, 0); // Blickwinkel zur Mitte gerichtet
 
-    // 1. Schwebendes 3D-Billboard Label mit Live-Sprechblase (Micro-Status)
-    const microStatus = dept.micro_status || '💬 Bereit für Anweisungen';
-    const roomLabel = createFloatingLabelSprite(dept.name, dept.chef_agent.name, microStatus, dept.color);
-    roomLabel.position.set(0, 4.4, 0);
-    podGroup.add(roomLabel);
-    deptBillboards[dept.id] = roomLabel;
+    buildDepartmentPod(THREE_LIB, podGroup, dept);
+    scene.add(podGroup);
+  });
 
-    // Eigene dezente Raumbeleuchtung in Abteilungsfarbe
-    const deptColor = parseInt(dept.color.replace('#', '0x'), 16);
-    const roomLight = new THREE_LIB.PointLight(deptColor, 1.4, 10);
-    roomLight.position.set(0, 2.8, 0);
-    podGroup.add(roomLight);
+  // 2. UG-Abteilungen im Untergeschoss auf Ebene y = -15 anordnen (Hardware / Archiv / Lounge)
+  const ugRadius = 10.5;
+  ugDepts.forEach((dept, idx) => {
+    const angle = (idx / ugDepts.length) * Math.PI * 2 + Math.PI / 4;
+    const posX = Math.cos(angle) * ugRadius;
+    const posZ = Math.sin(angle) * ugRadius;
 
-    // 2. Abteilungs-Teppich / Bodenplatte (abgerundet, edel)
-    let floorMat;
-    if (dept.floor_type === 'wood') {
-      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x78350f, roughness: 0.45, metalness: 0.1 });
-    } else if (dept.floor_type === 'tech_servers') {
-      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x020617, roughness: 0.25, metalness: 0.6 });
-    } else {
-      floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.65, metalness: 0.2 });
-    }
+    const podGroup = new THREE_LIB.Group();
+    podGroup.position.set(posX, -15, posZ);
+    podGroup.lookAt(0, -15, 0); // Blickwinkel zum UG-Kern
 
-    const plateGeo = new THREE_LIB.CylinderGeometry(3.8, 4.0, 0.2, 24);
-    const plate = new THREE_LIB.Mesh(plateGeo, floorMat);
-    plate.position.y = 0.1;
-    plate.receiveShadow = true;
-    plate.userData = { type: 'department', deptId: dept.id, name: dept.name, easy_explanation: dept.easy_explanation };
-    interactiveObjects.push(plate);
-    podGroup.add(plate);
-
-    // Akzent-Kantenring
-    const borderGeo = new THREE_LIB.TorusGeometry(3.8, 0.05, 8, 32);
-    const borderMat = new THREE_LIB.MeshBasicMaterial({ color: deptColor });
-    const border = new THREE_LIB.Mesh(borderGeo, borderMat);
-    border.rotation.x = Math.PI / 2;
-    border.position.y = 0.21;
-    podGroup.add(border);
-
-    // 3. Halbohe Glas-Trennwände mit schwarzem Aluminium-Rahmen
-    const glassGeo = new THREE_LIB.CylinderGeometry(3.7, 3.7, 1.5, 24, 1, true, -Math.PI / 1.5, Math.PI * 1.33);
-    const glassMat = new THREE_LIB.MeshPhysicalMaterial({
-      color: 0x0f172a,
-      transparent: true,
-      opacity: 0.3,
-      roughness: 0.1,
-      transmission: 0.75,
-      side: THREE_LIB.DoubleSide
-    });
-    const glass = new THREE_LIB.Mesh(glassGeo, glassMat);
-    glass.position.y = 0.95;
-    podGroup.add(glass);
-
-    // 4. Raum-Ausstattung: Requisiten, Pflanzen & Server
-    setupRoomProps(THREE_LIB, podGroup, dept);
-
-    // 5. Chef-Station mit Amber-Audit Monitor
-    setupChefStation(THREE_LIB, podGroup, dept);
-
-    // 6. Spezial-PCs mit leuchtenden Monitoren & Entwicklern
-    setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept);
-
+    buildDepartmentPod(THREE_LIB, podGroup, dept);
     scene.add(podGroup);
   });
 }
 
+function buildDepartmentPod(THREE_LIB, podGroup, dept) {
+  // 1. Schwebendes 3D-Billboard Label mit Live-Sprechblase (Micro-Status)
+  const microStatus = dept.micro_status || '💬 Bereit für Anweisungen';
+  const floorBadge = dept.floor === 'UG' ? ' [UG]' : '';
+  const roomLabel = createFloatingLabelSprite(`${dept.name}${floorBadge}`, dept.chef_agent ? dept.chef_agent.name : '', microStatus, dept.color);
+  roomLabel.position.set(0, 4.4, 0);
+  podGroup.add(roomLabel);
+  deptBillboards[dept.id] = roomLabel;
+
+  // Eigene dezente Raumbeleuchtung in Abteilungsfarbe
+  const deptColor = parseInt(dept.color.replace('#', '0x'), 16);
+  const roomLight = new THREE_LIB.PointLight(deptColor, 1.4, 10);
+  roomLight.position.set(0, 2.8, 0);
+  podGroup.add(roomLight);
+
+  // 2. Abteilungs-Teppich / Bodenplatte (abgerundet, edel)
+  let floorMat;
+  if (dept.floor_type === 'wood') {
+    floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x78350f, roughness: 0.45, metalness: 0.1 });
+  } else if (dept.floor_type === 'tech_servers') {
+    floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x020617, roughness: 0.25, metalness: 0.6 });
+  } else if (dept.floor_type === 'concrete' || dept.floor === 'UG') {
+    floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x111827, roughness: 0.8, metalness: 0.3 });
+  } else {
+    floorMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.65, metalness: 0.2 });
+  }
+
+  const plateGeo = new THREE_LIB.CylinderGeometry(3.8, 4.0, 0.2, 24);
+  const plate = new THREE_LIB.Mesh(plateGeo, floorMat);
+  plate.position.y = 0.1;
+  plate.receiveShadow = true;
+  plate.userData = {
+    type: 'department',
+    deptId: dept.id,
+    floor: dept.floor || 'EG',
+    name: dept.name,
+    easy_explanation: dept.easy_explanation
+  };
+  interactiveObjects.push(plate);
+  podGroup.add(plate);
+
+  // Akzent-Kantenring
+  const borderGeo = new THREE_LIB.TorusGeometry(3.8, 0.05, 8, 32);
+  const borderMat = new THREE_LIB.MeshBasicMaterial({ color: deptColor });
+  const border = new THREE_LIB.Mesh(borderGeo, borderMat);
+  border.rotation.x = Math.PI / 2;
+  border.position.y = 0.21;
+  podGroup.add(border);
+
+  // 3. Halbohe Glas-Trennwände mit schwarzem Aluminium-Rahmen
+  const glassGeo = new THREE_LIB.CylinderGeometry(3.7, 3.7, 1.5, 24, 1, true, -Math.PI / 1.5, Math.PI * 1.33);
+  const glassMat = new THREE_LIB.MeshPhysicalMaterial({
+    color: dept.floor === 'UG' ? 0x0b1120 : 0x0f172a,
+    transparent: true,
+    opacity: 0.3,
+    roughness: 0.1,
+    transmission: 0.75,
+    side: THREE_LIB.DoubleSide
+  });
+  const glass = new THREE_LIB.Mesh(glassGeo, glassMat);
+  glass.position.y = 0.95;
+  podGroup.add(glass);
+
+  // 4. Raum-Ausstattung: Requisiten, Pflanzen & Server
+  setupRoomProps(THREE_LIB, podGroup, dept);
+
+  // 5. Chef-Station mit Amber-Audit Monitor
+  setupChefStation(THREE_LIB, podGroup, dept);
+
+  // 6. Spezial-PCs mit leuchtenden Monitoren & Entwicklern
+  setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept);
+}
+
 function setupRoomProps(THREE_LIB, podGroup, dept) {
-  // Moderner Pflanzentopf (Grüne Akzente im Open-Space Büro)
-  const potGeo = new THREE_LIB.CylinderGeometry(0.28, 0.2, 0.45, 12);
-  const potMat = new THREE_LIB.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
-  const pot = new THREE_LIB.Mesh(potGeo, potMat);
-  pot.position.set(-2.8, 0.42, 1.2);
-  podGroup.add(pot);
+  // Pflanzentopf im EG (im UG dezentere Deko)
+  if (dept.floor !== 'UG') {
+    const potGeo = new THREE_LIB.CylinderGeometry(0.28, 0.2, 0.45, 12);
+    const potMat = new THREE_LIB.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+    const pot = new THREE_LIB.Mesh(potGeo, potMat);
+    pot.position.set(-2.8, 0.42, 1.2);
+    podGroup.add(pot);
 
-  const plantGeo = new THREE_LIB.DodecahedronGeometry(0.42, 1);
-  const plantMat = new THREE_LIB.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.8 });
-  const plant = new THREE_LIB.Mesh(plantGeo, plantMat);
-  plant.position.set(-2.8, 0.8, 1.2);
-  podGroup.add(plant);
+    const plantGeo = new THREE_LIB.DodecahedronGeometry(0.42, 1);
+    const plantMat = new THREE_LIB.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.8 });
+    const plant = new THREE_LIB.Mesh(plantGeo, plantMat);
+    plant.position.set(-2.8, 0.8, 1.2);
+    podGroup.add(plant);
+  }
 
-  // Server-Racks mit blinkenden LEDs in Backend, DB & Security
-  if (dept.id === 5 || dept.id === 6 || dept.id === 8) {
+  // Server-Racks mit blinkenden LEDs in Backend, DB, Security & Serverraum
+  if (dept.id === 5 || dept.id === 6 || dept.id === 8 || dept.id === 12) {
     const rackGeo = new THREE_LIB.BoxGeometry(0.7, 1.8, 0.55);
     const rackMat = new THREE_LIB.MeshStandardMaterial({ color: 0x020617, metalness: 0.85, roughness: 0.25 });
     const rack = new THREE_LIB.Mesh(rackGeo, rackMat);
@@ -746,6 +1069,42 @@ function setupRoomProps(THREE_LIB, podGroup, dept) {
     board.position.set(2.6, 1.2, 1.0);
     board.rotation.y = -Math.PI / 3;
     podGroup.add(board);
+  }
+
+  // Archiv (id: 11): Bücherregal & Wissens-Schrank
+  if (dept.id === 11) {
+    const shelfGeo = new THREE_LIB.BoxGeometry(0.5, 1.8, 1.3);
+    const shelfMat = new THREE_LIB.MeshStandardMaterial({ color: 0x451a03, roughness: 0.7 });
+    const shelf = new THREE_LIB.Mesh(shelfGeo, shelfMat);
+    shelf.position.set(2.6, 1.0, 0.8);
+    shelf.rotation.y = -Math.PI / 4;
+    podGroup.add(shelf);
+  }
+
+  // Werkstatt (id: 13): Werkbank & Toolbox
+  if (dept.id === 13) {
+    const benchGeo = new THREE_LIB.BoxGeometry(0.6, 0.8, 1.2);
+    const benchMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.4 });
+    const bench = new THREE_LIB.Mesh(benchGeo, benchMat);
+    bench.position.set(2.6, 0.5, 0.8);
+    bench.rotation.y = -Math.PI / 4;
+    podGroup.add(bench);
+
+    const toolboxGeo = new THREE_LIB.BoxGeometry(0.3, 0.25, 0.45);
+    const toolboxMat = new THREE_LIB.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3 });
+    const toolbox = new THREE_LIB.Mesh(toolboxGeo, toolboxMat);
+    toolbox.position.set(2.6, 1.05, 0.8);
+    podGroup.add(toolbox);
+  }
+
+  // Lounge (id: 14): Sofa & Tisch
+  if (dept.id === 14) {
+    const sofaGeo = new THREE_LIB.BoxGeometry(0.7, 0.6, 1.5);
+    const sofaMat = new THREE_LIB.MeshStandardMaterial({ color: 0x4338ca, roughness: 0.8 });
+    const sofa = new THREE_LIB.Mesh(sofaGeo, sofaMat);
+    sofa.position.set(2.6, 0.4, 0.8);
+    sofa.rotation.y = -Math.PI / 4;
+    podGroup.add(sofa);
   }
 }
 
@@ -774,6 +1133,7 @@ function setupChefStation(THREE_LIB, podGroup, dept) {
     type: 'chef',
     chefId: chef.id,
     deptId: dept.id,
+    floor: dept.floor || 'EG',
     name: chef.name,
     role: chef.focus || `Chef-Agent (${dept.name})`,
     department: dept.name,
@@ -803,7 +1163,8 @@ function setupChefStation(THREE_LIB, podGroup, dept) {
     mesh: screen,
     chefId: chef.id,
     deptId: dept.id,
-    deptColor: dept.color
+    deptColor: dept.color,
+    floor: dept.floor || 'EG'
   });
   podGroup.add(chefGroup);
 }
@@ -842,6 +1203,7 @@ function setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept) {
       type: 'pc',
       pcId: pc.id,
       deptId: dept.id,
+      floor: dept.floor || 'EG',
       name: pc.name,
       role: pc.title || pc.focus || 'Senior Software Engineer',
       department: dept.name,
@@ -933,24 +1295,31 @@ export function triggerDataStreamToTrevor(deptId) {
   if (!THREE_LIB || !scene) return;
 
   const depts = STUDIO_HIERARCHY.departments;
-  const idx = depts.findIndex(d => d.id === deptId);
-  if (idx === -1) return;
+  const dept = depts.find(d => d.id === deptId);
+  if (!dept) return;
 
-  const angle = (idx / depts.length) * Math.PI * 2;
-  const startX = Math.cos(angle) * 11.5;
-  const startZ = Math.sin(angle) * 11.5;
+  const isUG = dept.floor === 'UG';
+  const ugDepts = depts.filter(d => d.floor === 'UG');
+  const egDepts = depts.filter(d => d.floor !== 'UG');
+  const idx = isUG ? ugDepts.findIndex(d => d.id === deptId) : egDepts.findIndex(d => d.id === deptId);
+  const radius = isUG ? 10.5 : 13.0;
+  const angle = isUG ? (idx / (ugDepts.length || 1)) * Math.PI * 2 + Math.PI / 4 : (idx / (egDepts.length || 1)) * Math.PI * 2;
+  const startX = Math.cos(angle) * (radius - 1.5);
+  const startZ = Math.sin(angle) * (radius - 1.5);
+  const startY = isUG ? -13.8 : 1.2;
+  const endTarget = isUG ? new THREE_LIB.Vector3(0, -14.2, 0) : new THREE_LIB.Vector3(0, 2.2, 0);
 
   for (let i = 0; i < 5; i++) {
     const pGeo = new THREE_LIB.SphereGeometry(0.24, 12, 12);
-    const pMat = new THREE_LIB.MeshBasicMaterial({ color: 0x38bdf8 });
+    const pMat = new THREE_LIB.MeshBasicMaterial({ color: isUG ? 0x06b6d4 : 0x38bdf8 });
     const p = new THREE_LIB.Mesh(pGeo, pMat);
-    p.position.set(startX, 1.2, startZ);
+    p.position.set(startX, startY, startZ);
     scene.add(p);
 
     dynamicParticleStreams.push({
       mesh: p,
-      start: new THREE_LIB.Vector3(startX, 1.2, startZ),
-      end: new THREE_LIB.Vector3(0, 2.2, 0), // Trevors Arc-Reactor
+      start: new THREE_LIB.Vector3(startX, startY, startZ),
+      end: endTarget,
       progress: -(i * 0.18),
       speed: 0.022
     });
@@ -989,6 +1358,11 @@ function setupRaycasting(THREE_LIB, onAgentClick, onTrevorClick) {
       // 2. 3D-Kamera sanft auf das anvisierte Ziel ausrichten & zoomen
       if (data.type === 'trevor' || data.type === 'decision_terminal') {
         zoomToPosition(THREE_LIB, new THREE_LIB.Vector3(0, 1.2, 0), 10);
+      } else if (data.type === 'elevator') {
+        // Gläsernen Aufzug angeklickt -> Etage wechseln!
+        switchFloor(currentFloor === 'EG' ? 'UG' : 'EG');
+      } else if (data.type === 'ug_terminal') {
+        zoomToPosition(THREE_LIB, new THREE_LIB.Vector3(0, -14.5, 0), 10);
       } else if (data.type === 'pc') {
         zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 11);
       } else if (data.type === 'chef') {
@@ -1015,6 +1389,30 @@ function zoomToPosition(THREE_LIB, targetVec, distance = 12) {
   targetCameraPos = targetVec.clone().add(new THREE_LIB.Vector3(0, distance * 0.7, distance));
 }
 
+export function switchFloor(targetFloor) {
+  const THREE = getTHREE();
+  if (!THREE) return;
+  currentFloor = targetFloor === 'UG' ? 'UG' : 'EG';
+
+  const btnEg = document.getElementById('ctrl-floor-eg');
+  const btnUg = document.getElementById('ctrl-floor-ug');
+
+  if (currentFloor === 'UG') {
+    if (btnEg) btnEg.classList.remove('active');
+    if (btnUg) btnUg.classList.add('active');
+    targetCameraPos = new THREE.Vector3(0, -6.5, 23);
+    targetLookAt = new THREE.Vector3(0, -14.5, 0);
+    targetElevatorY = -14.0;
+  } else {
+    if (btnUg) btnUg.classList.remove('active');
+    if (btnEg) btnEg.classList.add('active');
+    targetCameraPos = new THREE.Vector3(0, 24, 25);
+    targetLookAt = new THREE.Vector3(0, 1.2, 0);
+    targetElevatorY = 1.0;
+  }
+  console.log(`[Studio 3D] Etagen-Fahrt: Ziel=${currentFloor}`);
+}
+
 function setupCameraButtons() {
   const btnRotLeft = document.getElementById('ctrl-rot-left');
   const btnRotRight = document.getElementById('ctrl-rot-right');
@@ -1022,17 +1420,18 @@ function setupCameraButtons() {
   const btnZoomOut = document.getElementById('ctrl-zoom-out');
   const btnReset = document.getElementById('ctrl-reset-cam');
   const btnQuiet = document.getElementById('ctrl-quiet-toggle');
+  const btnFloorEg = document.getElementById('ctrl-floor-eg');
+  const btnFloorUg = document.getElementById('ctrl-floor-ug');
 
   if (btnRotLeft) btnRotLeft.addEventListener('click', () => rotateCameraAroundCenter(0.25));
   if (btnRotRight) btnRotRight.addEventListener('click', () => rotateCameraAroundCenter(-0.25));
   if (btnZoomIn && controls) btnZoomIn.addEventListener('click', () => camera.position.multiplyScalar(0.85));
   if (btnZoomOut && controls) btnZoomOut.addEventListener('click', () => camera.position.multiplyScalar(1.15));
+  if (btnFloorEg) btnFloorEg.addEventListener('click', () => switchFloor('EG'));
+  if (btnFloorUg) btnFloorUg.addEventListener('click', () => switchFloor('UG'));
   if (btnReset) {
     btnReset.addEventListener('click', () => {
-      const THREE = getTHREE();
-      if (!THREE) return;
-      targetCameraPos = new THREE.Vector3(0, 24, 25);
-      targetLookAt = new THREE.Vector3(0, 1.2, 0);
+      switchFloor('EG');
     });
   }
   if (btnQuiet) {
@@ -1050,8 +1449,9 @@ function rotateCameraAroundCenter(angleDelta) {
   const newAngle = currentAngle + angleDelta;
   camera.position.x = Math.cos(newAngle) * radius;
   camera.position.z = Math.sin(newAngle) * radius;
-  camera.lookAt(0, 1.2, 0);
-  if (controls) controls.target.set(0, 1.2, 0);
+  const targetY = currentFloor === 'UG' ? -14.5 : 1.2;
+  camera.lookAt(0, targetY, 0);
+  if (controls) controls.target.set(0, targetY, 0);
 }
 
 export function updateAgentStatusIn3D(agentId, type, status) {
@@ -1106,7 +1506,8 @@ export function update3DStudioState(stageInput) {
     stage = `stage${stageInput}`;
   } else if (typeof stageInput === 'string') {
     const s = stageInput.toLowerCase();
-    if (s.includes('1') || s.includes('dispatch') || s.includes('ceo')) stage = 'stage1';
+    if (s.includes('ug') || s.includes('keller') || s.includes('untergeschoss') || s.includes('hardware')) stage = 'ug_active';
+    else if (s.includes('1') || s.includes('dispatch') || s.includes('ceo')) stage = 'stage1';
     else if (s.includes('2') || s.includes('fach') || s.includes('worker') || s.includes('spezialist')) stage = 'stage2';
     else if (s.includes('3') || s.includes('chef') || s.includes('audit') || s.includes('lead')) stage = 'stage3';
     else if (s.includes('4') || s.includes('synth') || s.includes('decision') || s.includes('freigabe')) stage = 'stage4';
@@ -1122,8 +1523,45 @@ export function update3DStudioState(stageInput) {
 
   console.log(`[Studio 3D] Workflow-Zustand gewechselt zu: "${stage}"`);
 
+  // --- ZUSTAND: UG ACTIVE (UNTERGESCHOSS / HARDWARE- & NON-CODE-TASKS) ---
+  if (stage === 'ug_active') {
+    switchFloor('UG');
+
+    ugLights.forEach(l => { if (l) l.intensity = 2.4; });
+
+    // UG Monitore bringen
+    allPcScreenMeshes.forEach(mesh => {
+      if (mesh && mesh.material) {
+        if (mesh.userData && mesh.userData.floor === 'UG') {
+          mesh.material.emissive = new THREE.Color(0x06b6d4);
+          mesh.material.emissiveIntensity = 2.8;
+        } else {
+          mesh.material.emissive.setHex(0x0a0f1d);
+          mesh.material.emissiveIntensity = 0.25;
+        }
+      }
+    });
+
+    allChefScreenMeshes.forEach(item => {
+      if (item.mesh && item.mesh.material) {
+        if (item.floor === 'UG') {
+          item.mesh.material.emissive = new THREE.Color(0xf59e0b);
+          item.mesh.material.emissiveIntensity = 2.8;
+        } else {
+          item.mesh.material.emissive.setHex(0x0f172a);
+          item.mesh.material.emissiveIntensity = 0.25;
+        }
+      }
+    });
+    return;
+  }
+
   // --- ZUSTAND: IDLE ---
   if (stage === 'idle') {
+    if (currentFloor === 'UG') {
+      switchFloor('EG');
+    }
+
     if (trevorSpotlight) {
       trevorSpotlight.intensity = 0.4;
       trevorSpotlight.color.setHex(0xfbbf24);
@@ -1160,6 +1598,10 @@ export function update3DStudioState(stageInput) {
 
   // --- ZUSTAND: STAGE 1 (DISPATCHER / TREVOR) ---
   else if (stage === 'stage1') {
+    if (currentFloor === 'UG') {
+      switchFloor('EG');
+    }
+
     // Spotlight über Trevors CEO-Schreibtisch wird aktiviert
     if (trevorSpotlight) {
       trevorSpotlight.intensity = 6.5;
@@ -1199,11 +1641,18 @@ export function update3DStudioState(stageInput) {
       trevorStageAuraLight.intensity = 1.0;
     }
 
-    // Materialien der PC-Bildschirme an den 33 Arbeitsplätzen leuchten auf
+    // Materialien der PC-Bildschirme der aktiven Etage leuchten auf
     allPcScreenMeshes.forEach(mesh => {
       if (mesh && mesh.material) {
-        mesh.material.emissive = new THREE.Color(0x00ff88); // Strahlendes Matrix-Grün/Cyan
-        mesh.material.emissiveIntensity = 2.8;
+        const isCurrentFloor = (currentFloor === 'UG' && mesh.userData && mesh.userData.floor === 'UG') ||
+                               (currentFloor === 'EG' && (!mesh.userData || mesh.userData.floor !== 'UG'));
+        if (isCurrentFloor) {
+          mesh.material.emissive = new THREE.Color(currentFloor === 'UG' ? 0x06b6d4 : 0x00ff88);
+          mesh.material.emissiveIntensity = 2.8;
+        } else {
+          mesh.material.emissive.setHex(0x0a0f1d);
+          mesh.material.emissiveIntensity = 0.25;
+        }
       }
     });
 
@@ -1229,16 +1678,24 @@ export function update3DStudioState(stageInput) {
       }
     });
 
-    // Bereiche der Abteilungsleiter leuchten auf (Audit Orange / Gold / Violett)
+    // Bereiche der Abteilungsleiter leuchten auf
     allChefScreenMeshes.forEach(item => {
       if (item.mesh && item.mesh.material) {
-        item.mesh.material.emissive = new THREE.Color(0xf59e0b); // Strahlendes Amber-Gold
-        item.mesh.material.emissiveIntensity = 3.2;
+        const isCurrentFloor = (currentFloor === 'UG' && item.floor === 'UG') ||
+                               (currentFloor === 'EG' && item.floor !== 'UG');
+        if (isCurrentFloor) {
+          item.mesh.material.emissive = new THREE.Color(0xf59e0b); // Strahlendes Amber-Gold
+          item.mesh.material.emissiveIntensity = 3.2;
+        } else {
+          item.mesh.material.emissive.setHex(0x0f172a);
+          item.mesh.material.emissiveIntensity = 0.25;
+        }
       }
     });
 
-    // Visuelle Datenströme zu Trevor triggern
-    STUDIO_HIERARCHY.departments.forEach((dept, i) => {
+    // Visuelle Datenströme triggern
+    const activeDepts = STUDIO_HIERARCHY.departments.filter(d => (currentFloor === 'UG' ? d.floor === 'UG' : d.floor !== 'UG'));
+    activeDepts.forEach((dept, i) => {
       setTimeout(() => triggerDataStreamToTrevor(dept.id), i * 120);
     });
   }
@@ -1278,9 +1735,12 @@ export function update3DStudioState(stageInput) {
       decisionTerminalScreen.material.emissiveIntensity = 3.6;
     }
 
-    // Sanfter Übergang zurück zu idle nach Erfolgs-Feedback
+    // Sanfter Übergang zurück zu idle nach Erfolgs-Feedback (und zurück ins EG falls im UG)
     stageTransitionTimeout = setTimeout(() => {
       if (currentWorkflowStage === 'stage4') {
+        if (currentFloor === 'UG') {
+          switchFloor('EG');
+        }
         update3DStudioState('idle');
       }
     }, 4500);
@@ -1315,6 +1775,11 @@ function animate() {
     trevorHands.forEach(h => {
       h.material.opacity = 0.7 + Math.sin(time * 4) * 0.3;
     });
+  }
+
+  // Sanftes Gleiten des gläsernen Aufzugs zwischen EG und UG
+  if (elevatorCabin && typeof targetElevatorY === 'number') {
+    elevatorCabin.position.y += (targetElevatorY - elevatorCabin.position.y) * 0.06;
   }
 
   if (!isQuietMode && blinkingLeds.length > 0) {
@@ -1368,4 +1833,6 @@ if (typeof window !== 'undefined') {
   window.setStageIn3D = setStageIn3D;
   window.triggerDataStreamToTrevor = triggerDataStreamToTrevor;
   window.updateRoomMicroStatus = updateRoomMicroStatus;
+  window.switchFloor = switchFloor;
+  window.getCurrentFloor = () => currentFloor;
 }

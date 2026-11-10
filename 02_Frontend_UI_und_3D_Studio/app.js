@@ -134,17 +134,19 @@ function renderDepartmentPills() {
   const container = document.getElementById('dept-pills-container');
   if (!container || !state.hierarchy) return;
 
+  const totalDepts = state.hierarchy.departments.length;
   let html = `
     <button class="dept-pill-btn ${state.selectedDeptFilter === 'all' ? 'active' : ''}" data-dept-id="all">
-      <span class="status-dot ready"></span> Alle 10 Bereiche
+      <span class="status-dot ready"></span> Alle ${totalDepts} Bereiche
     </button>
   `;
 
   state.hierarchy.departments.forEach(dept => {
     const isActive = state.selectedDeptFilter === String(dept.id);
+    const floorTag = dept.floor === 'UG' ? '<span style="font-size: 9px; opacity: 0.85; margin-left: 4px; color: #c084fc;">[UG]</span>' : '';
     html += `
-      <button class="dept-pill-btn ${isActive ? 'active' : ''}" data-dept-id="${dept.id}">
-        <span class="status-dot ready" id="dot-dept-${dept.id}"></span> ${dept.name}
+      <button class="dept-pill-btn ${isActive ? 'active' : ''}" data-dept-id="${dept.id}" title="${dept.floor === 'UG' ? 'Untergeschoss (Keller)' : 'Erdgeschoss (Software-Campus)'}">
+        <span class="status-dot ready" id="dot-dept-${dept.id}"></span> ${dept.name} ${floorTag}
       </button>
     `;
   });
