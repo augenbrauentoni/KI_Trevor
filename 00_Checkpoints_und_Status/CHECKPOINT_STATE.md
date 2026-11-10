@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Hierarchische Orchestrierung, Dual-LLM Engine, Code-RAG (Datei-Lesezugriff) & Interaktive [JA]/[NEIN] Checkliste zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
-- **Datum / Letztes Update:** 2026-11-10 18:18:00
+- **Status:** Hierarchische Orchestrierung, Dual-LLM Engine, Code-RAG & Visuelle 3D-Campus-Kopplung zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
+- **Datum / Letztes Update:** 2026-11-10 18:24:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -56,7 +56,25 @@ Ermöglicht den Fach-Agenten, realen existierenden Projektcode bei der Aufgabenb
 
 ---
 
-## 4. Interaktive Prompt-Roadmap & [JA]/[NEIN] Checkliste (`02_Frontend_UI_und_3D_Studio/`)
+## 4. Visuelle Echtzeit-Kopplung des 3D-Campus an den Workflow (`02_Frontend_UI_und_3D_Studio/studio3D.js` & `app.js`)
+
+Verknüpft die Workflow-Stufen dynamisch mit der Three.js 3D-Szene für plastisches Feedback:
+
+1. **Globale 3D-Status-API ([`update3DStudioState(stage)`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - Globale Verfügbarkeit über `window.update3DStudioState(stage)`.
+   - Performante Referenz-Arrays: `allPcScreenMeshes` (66 Bildschirme an 33 Arbeitsplätzen), `allChefScreenMeshes` (10 Chef-Monitore), `trevorSpotlight` (Spotlight über Trevor) und `trevorStageAuraLight`.
+2. **Visuelle Zustände der 4 Stufen:**
+   - **`idle`:** Standardbeleuchtung, alle Bildschirme leicht gedimmt (`emissiveIntensity: 0.4`), ruhiges Hintergrund-Atmen.
+   - **`stage1` (Dispatcher / Trevor):** Trevors goldener CEO-Spotlight (`trevorSpotlight`, Intensität 6.5) wird aktiviert; Karmesinrote Aura und Arc-Reactor pulsieren mit doppelter Frequenz. Bildschirme der Abteilungen bleiben im Standby.
+   - **`stage2` (Fach-Agenten / Worker):** Die Bildschirme aller 33 Spezial-Arbeitsplätze leuchten synchron in leuchtendem Matrix-Grün (`0x00ff88`, `emissiveIntensity: 2.8`) auf; Entwickler-Avatare tippen aktiv.
+   - **`stage3` (Abteilungsleiter / Audit):** Bildschirme der Fach-Agenten dimmen ab. Die Stationen der Abteilungsleiter leuchten intensiv in Audit-Amber/Gold (`0xf59e0b`, `emissiveIntensity: 3.2`) auf; animierte Datenstrahlen schießen zu Trevors Arc-Reactor in die Mitte.
+   - **`stage4` (Synthese / Trevor):** Alle Abteilungsbildschirme dimmen ab. Trevors gesamter Bereich erstrahlt in intensivem Gold/Smaragdgrün (Erfolgs-Feedback, `emissiveIntensity: 3.6` am Terminal), gefolgt von einem sanften automatischen Übergang zurück zu `idle`.
+3. **Echtzeit-Trigger in [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js):**
+   - Der `onStatusUpdate`-Callback von `executeFullWorkflow` ruft bei jedem Phasen- und Agentenwechsel sofort `window.update3DStudioState(stageName)` auf.
+
+---
+
+## 5. Interaktive Prompt-Roadmap & [JA]/[NEIN] Checkliste (`02_Frontend_UI_und_3D_Studio/`)
 
 1. **Kompakte Dual-LLM Leiste (`index.html`, `styles.css`, `app.js`):**
    - Direkte Provider-Auswahl (Gemini / Ollama) und Passwort-Feld für den Gemini API-Key direkt im Trevor-Eingabebereich (`#quick-llm-provider-select`, `#quick-gemini-key-input`).
@@ -72,10 +90,11 @@ Ermöglicht den Fach-Agenten, realen existierenden Projektcode bei der Aufgabenb
 
 ---
 
-## 5. Verifikation & Test-Ergebnisse
+## 6. Verifikation & Test-Ergebnisse
 
 - **Bridge `/api/read-files`:** Erfolgreich getestet mit vorhandenen Dateien (`index.html`, `CHECKPOINT_STATE.md`) und fehlenden Dateien (`non_existent_file.xyz`).
 - **Code-RAG Injektion:** Erfolgreich validiert; Dateipfade werden erkannt, Quellcode über die Bridge bezogen und für Stufe 2 Fach-PCs aufbereitet.
+- **3D-Campus Visuelle Kopplung:** Erfolgreich validiert via `test_studio3d_coupling.mjs`: Alle 5 visuellen Zustände (`idle`, `stage1`, `stage2`, `stage3`, `stage4`) reagieren performant ohne Render-Lag.
 - **Server & Bridges:**
   - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
   - Lokale Bridge (Port 3001): `http://localhost:3001/api/status` & `http://localhost:3001/api/read-files` (online)

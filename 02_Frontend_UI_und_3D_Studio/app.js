@@ -17,6 +17,7 @@ import {
   init3DStudio,
   updateAgentStatusIn3D,
   setStageIn3D,
+  update3DStudioState,
   triggerDataStreamToTrevor,
   updateRoomMicroStatus
 } from './studio3D.js';
@@ -604,24 +605,27 @@ async function dispatchNewTask() {
       if (statusLabel) statusLabel.innerText = stageName;
       if (activeAgentLabel) activeAgentLabel.innerText = `${agentName ? `[${agentName}] ` : ''}${message}`;
 
+      // Visuelle Echtzeit-Kopplung der 3D-Szene an den Workflow
+      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+        window.update3DStudioState(stageName);
+      } else {
+        update3DStudioState(stageName);
+      }
+
       if (stageName.includes('1/4')) {
         updateTrackerStage(1);
-        setStageIn3D(1);
         if (progressBar) progressBar.style.width = '25%';
         if (percentLabel) percentLabel.innerText = '25%';
       } else if (stageName.includes('2/4')) {
-        updateTrackerStage(1);
-        setStageIn3D(1);
+        updateTrackerStage(2);
         if (progressBar) progressBar.style.width = '50%';
         if (percentLabel) percentLabel.innerText = '50%';
       } else if (stageName.includes('3/4')) {
-        updateTrackerStage(2);
-        setStageIn3D(2);
+        updateTrackerStage(3);
         if (progressBar) progressBar.style.width = '75%';
         if (percentLabel) percentLabel.innerText = '75%';
       } else if (stageName.includes('4/4')) {
-        updateTrackerStage(3);
-        setStageIn3D(3);
+        updateTrackerStage(4);
         if (progressBar) progressBar.style.width = '100%';
         if (percentLabel) percentLabel.innerText = '100%';
       }
@@ -641,7 +645,11 @@ async function dispatchNewTask() {
     );
 
     updateTrackerStage(4);
-    setStageIn3D(4);
+    if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+      window.update3DStudioState('stage4');
+    } else {
+      update3DStudioState('stage4');
+    }
     saveLocalCheckpoint();
     updateCheckpointBadge('Entscheidung erforderlich (JA / NEIN)', false);
 

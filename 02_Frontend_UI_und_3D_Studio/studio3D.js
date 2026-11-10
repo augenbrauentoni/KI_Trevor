@@ -32,6 +32,14 @@ const dynamicParticleStreams = [];
 const blinkingLeds = [];
 const developerAvatars = [];
 
+// Referenzen für performante dynamische Workflow-Beleuchtung (Code-RAG & Stage-API)
+const allPcScreenMeshes = [];
+const allChefScreenMeshes = [];
+let trevorSpotlight = null;
+let trevorStageAuraLight = null;
+let currentWorkflowStage = 'idle';
+let stageTransitionTimeout = null;
+
 let isQuietMode = false;
 let targetCameraPos = null;
 let targetLookAt = null;
@@ -589,6 +597,19 @@ function setupTrevorIronManMech(THREE_LIB) {
   terminalGroup.add(decisionTerminalScreen);
 
   trevorGroup.add(terminalGroup);
+
+  // SpotLight direkt über Trevors CEO-Schreibtisch (Workflow Stage 1 & 4 Fokus)
+  trevorSpotlight = new THREE_LIB.SpotLight(0xfbbf24, 0.4, 28, Math.PI / 3.8, 0.35, 1.2);
+  trevorSpotlight.position.set(0, 14, 1.5);
+  trevorSpotlight.target = trevorGroup;
+  scene.add(trevorSpotlight);
+  scene.add(trevorSpotlight.target);
+
+  // Pulsierendes rotes/goldenes Aura-Licht für Trevor
+  trevorStageAuraLight = new THREE_LIB.PointLight(0xef4444, 0.6, 12);
+  trevorStageAuraLight.position.set(0, 3.2, 0);
+  trevorGroup.add(trevorStageAuraLight);
+
   scene.add(trevorGroup);
 }
 
@@ -757,6 +778,12 @@ function setupChefStation(THREE_LIB, podGroup, dept) {
   chefGroup.add(avatar);
 
   chefMeshMap[chef.id] = { screen, avatarArms: avatar.userData.arms };
+  allChefScreenMeshes.push({
+    mesh: screen,
+    chefId: chef.id,
+    deptId: dept.id,
+    deptColor: dept.color
+  });
   podGroup.add(chefGroup);
 }
 
@@ -822,6 +849,8 @@ function setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept) {
       screenRight,
       avatarArms: avatar.userData.arms
     };
+    allPcScreenMeshes.push(screenLeft);
+    allPcScreenMeshes.push(screenRight);
 
     podGroup.add(pcGroup);
   });
@@ -1013,14 +1042,200 @@ export function updateAgentStatusIn3D(agentId, type, status) {
 }
 
 export function setStageIn3D(stageNum) {
-  if (decisionTerminalScreen) {
-    if (stageNum === 4) {
-      decisionTerminalScreen.material.emissive.setHex(0x10b981);
-      decisionTerminalScreen.material.emissiveIntensity = 2.8;
-    } else {
+  update3DStudioState(stageNum);
+}
+
+/**
+ * Passt das Aussehen der 3D-Objekte abhängig vom Workflow-Status dynamisch an
+ * @param {string|number} stageInput - 'idle', 'stage1', 'stage2', 'stage3', 'stage4'
+ */
+export function update3DStudioState(stageInput) {
+  const THREE = getTHREE();
+  if (!THREE || !scene) return;
+
+  let stage = 'idle';
+  if (typeof stageInput === 'number') {
+    stage = `stage${stageInput}`;
+  } else if (typeof stageInput === 'string') {
+    const s = stageInput.toLowerCase();
+    if (s.includes('1') || s.includes('dispatch') || s.includes('ceo')) stage = 'stage1';
+    else if (s.includes('2') || s.includes('fach') || s.includes('worker') || s.includes('spezialist')) stage = 'stage2';
+    else if (s.includes('3') || s.includes('chef') || s.includes('audit') || s.includes('lead')) stage = 'stage3';
+    else if (s.includes('4') || s.includes('synth') || s.includes('decision') || s.includes('freigabe')) stage = 'stage4';
+    else if (s.includes('idle') || s.includes('bereit') || s.includes('training')) stage = 'idle';
+    else stage = stageInput;
+  }
+
+  currentWorkflowStage = stage;
+  if (stageTransitionTimeout) {
+    clearTimeout(stageTransitionTimeout);
+    stageTransitionTimeout = null;
+  }
+
+  console.log(`[Studio 3D] Workflow-Zustand gewechselt zu: "${stage}"`);
+
+  // --- ZUSTAND: IDLE ---
+  if (stage === 'idle') {
+    if (trevorSpotlight) {
+      trevorSpotlight.intensity = 0.4;
+      trevorSpotlight.color.setHex(0xfbbf24);
+    }
+    if (trevorStageAuraLight) {
+      trevorStageAuraLight.intensity = 0.6;
+      trevorStageAuraLight.color.setHex(0xef4444);
+    }
+    if (trevorArcLight) {
+      trevorArcLight.color.setHex(0x38bdf8);
+      trevorArcLight.intensity = 3.5;
+    }
+
+    // Bildschirme leicht gedimmt
+    allPcScreenMeshes.forEach(mesh => {
+      if (mesh && mesh.material) {
+        mesh.material.emissive.setHex(0x0f172a);
+        mesh.material.emissiveIntensity = 0.4;
+      }
+    });
+
+    allChefScreenMeshes.forEach(item => {
+      if (item.mesh && item.mesh.material) {
+        item.mesh.material.emissive.setHex(0x1e293b);
+        item.mesh.material.emissiveIntensity = 0.5;
+      }
+    });
+
+    if (decisionTerminalScreen && decisionTerminalScreen.material) {
       decisionTerminalScreen.material.emissive.setHex(0x06b6d4);
       decisionTerminalScreen.material.emissiveIntensity = 0.8;
     }
+  }
+
+  // --- ZUSTAND: STAGE 1 (DISPATCHER / TREVOR) ---
+  else if (stage === 'stage1') {
+    // Spotlight über Trevors CEO-Schreibtisch wird aktiviert
+    if (trevorSpotlight) {
+      trevorSpotlight.intensity = 6.5;
+      trevorSpotlight.color.setHex(0xfbbf24);
+    }
+    // Helligkeit um seinen Avatar herum pulsiert
+    if (trevorStageAuraLight) {
+      trevorStageAuraLight.intensity = 4.5;
+      trevorStageAuraLight.color.setHex(0xef4444);
+    }
+    if (trevorArcLight) {
+      trevorArcLight.color.setHex(0x38bdf8);
+      trevorArcLight.intensity = 7.0;
+    }
+
+    // Bildschirme im Standby
+    allPcScreenMeshes.forEach(mesh => {
+      if (mesh && mesh.material) {
+        mesh.material.emissive.setHex(0x0f172a);
+        mesh.material.emissiveIntensity = 0.3;
+      }
+    });
+    allChefScreenMeshes.forEach(item => {
+      if (item.mesh && item.mesh.material) {
+        item.mesh.material.emissive.setHex(0x1e293b);
+        item.mesh.material.emissiveIntensity = 0.3;
+      }
+    });
+  }
+
+  // --- ZUSTAND: STAGE 2 (FACH-AGENTEN / WORKER) ---
+  else if (stage === 'stage2') {
+    if (trevorSpotlight) {
+      trevorSpotlight.intensity = 1.0;
+    }
+    if (trevorStageAuraLight) {
+      trevorStageAuraLight.intensity = 1.0;
+    }
+
+    // Materialien der PC-Bildschirme an den 33 Arbeitsplätzen leuchten auf
+    allPcScreenMeshes.forEach(mesh => {
+      if (mesh && mesh.material) {
+        mesh.material.emissive = new THREE.Color(0x00ff88); // Strahlendes Matrix-Grün/Cyan
+        mesh.material.emissiveIntensity = 2.8;
+      }
+    });
+
+    allChefScreenMeshes.forEach(item => {
+      if (item.mesh && item.mesh.material) {
+        item.mesh.material.emissive.setHex(0x0f172a);
+        item.mesh.material.emissiveIntensity = 0.3;
+      }
+    });
+  }
+
+  // --- ZUSTAND: STAGE 3 (ABTEILUNGSLEITER / AUDIT) ---
+  else if (stage === 'stage3') {
+    if (trevorSpotlight) {
+      trevorSpotlight.intensity = 1.2;
+    }
+
+    // Bildschirme der Fach-Agenten dimmen wieder ab
+    allPcScreenMeshes.forEach(mesh => {
+      if (mesh && mesh.material) {
+        mesh.material.emissive.setHex(0x0f172a);
+        mesh.material.emissiveIntensity = 0.3;
+      }
+    });
+
+    // Bereiche der Abteilungsleiter leuchten auf (Audit Orange / Gold / Violett)
+    allChefScreenMeshes.forEach(item => {
+      if (item.mesh && item.mesh.material) {
+        item.mesh.material.emissive = new THREE.Color(0xf59e0b); // Strahlendes Amber-Gold
+        item.mesh.material.emissiveIntensity = 3.2;
+      }
+    });
+
+    // Visuelle Datenströme zu Trevor triggern
+    STUDIO_HIERARCHY.departments.forEach((dept, i) => {
+      setTimeout(() => triggerDataStreamToTrevor(dept.id), i * 120);
+    });
+  }
+
+  // --- ZUSTAND: STAGE 4 (SYNTHESE / TREVOR) ---
+  else if (stage === 'stage4') {
+    // Alles dimmt ab
+    allPcScreenMeshes.forEach(mesh => {
+      if (mesh && mesh.material) {
+        mesh.material.emissive.setHex(0x0a0f1d);
+        mesh.material.emissiveIntensity = 0.2;
+      }
+    });
+
+    allChefScreenMeshes.forEach(item => {
+      if (item.mesh && item.mesh.material) {
+        item.mesh.material.emissive.setHex(0x0f172a);
+        item.mesh.material.emissiveIntensity = 0.3;
+      }
+    });
+
+    // Trevors Bereich leuchtet kurz auf (Erfolgs-Feedback)
+    if (trevorSpotlight) {
+      trevorSpotlight.intensity = 9.0;
+      trevorSpotlight.color.setHex(0xfbbf24);
+    }
+    if (trevorStageAuraLight) {
+      trevorStageAuraLight.intensity = 7.0;
+      trevorStageAuraLight.color.setHex(0x10b981); // Smaragd-Grüner Erfolgs-Glow
+    }
+    if (trevorArcLight) {
+      trevorArcLight.intensity = 9.0;
+      trevorArcLight.color.setHex(0x38bdf8);
+    }
+    if (decisionTerminalScreen && decisionTerminalScreen.material) {
+      decisionTerminalScreen.material.emissive.setHex(0x10b981);
+      decisionTerminalScreen.material.emissiveIntensity = 3.6;
+    }
+
+    // Sanfter Übergang zurück zu idle nach Erfolgs-Feedback
+    stageTransitionTimeout = setTimeout(() => {
+      if (currentWorkflowStage === 'stage4') {
+        update3DStudioState('idle');
+      }
+    }, 4500);
   }
 }
 
@@ -1031,9 +1246,24 @@ function animate() {
 
   if (trevorGroup && !isQuietMode) {
     trevorGroup.position.y = Math.sin(time * 2.2) * 0.05;
-    if (trevorArcLight) {
-      trevorArcLight.intensity = 3.5 + Math.sin(time * 5.0) * 0.8;
+
+    // Dynamisches Pulsieren je nach Workflow-Stufe
+    if (currentWorkflowStage === 'stage1') {
+      if (trevorArcLight) trevorArcLight.intensity = 6.0 + Math.sin(time * 8.0) * 2.0;
+      if (trevorStageAuraLight) trevorStageAuraLight.intensity = 3.5 + Math.sin(time * 8.0) * 1.5;
+      if (trevorSpotlight) trevorSpotlight.intensity = 5.5 + Math.sin(time * 6.0) * 1.2;
+    } else if (currentWorkflowStage === 'stage4') {
+      if (trevorArcLight) trevorArcLight.intensity = 7.0 + Math.sin(time * 6.0) * 2.0;
+      if (trevorStageAuraLight) trevorStageAuraLight.intensity = 5.0 + Math.sin(time * 6.0) * 1.5;
+    } else {
+      if (trevorArcLight) {
+        trevorArcLight.intensity = 3.5 + Math.sin(time * 5.0) * 0.8;
+      }
+      if (trevorStageAuraLight) {
+        trevorStageAuraLight.intensity = 0.6 + Math.sin(time * 3.0) * 0.2;
+      }
     }
+
     trevorHands.forEach(h => {
       h.material.opacity = 0.7 + Math.sin(time * 4) * 0.3;
     });
@@ -1082,4 +1312,12 @@ function onWindowResize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+}
+
+// Globale Fenster-Exporte für maximale Interoperabilität
+if (typeof window !== 'undefined') {
+  window.update3DStudioState = update3DStudioState;
+  window.setStageIn3D = setStageIn3D;
+  window.triggerDataStreamToTrevor = triggerDataStreamToTrevor;
+  window.updateRoomMicroStatus = updateRoomMicroStatus;
 }
