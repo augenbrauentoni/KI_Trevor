@@ -91,6 +91,30 @@
 
       <!-- ANSICHT 1: 3D CAMPUS MIT IRON-MAN TREVOR & GLAS-BÜROS -->
       <div id="threejs-canvas-container">
+        <!-- Schwebendes Agenten-Inspektions-Panel (3D Raycaster Overlay) -->
+        <div id="agent-info-panel" class="agent-info-panel" style="display: none;">
+          <div class="agent-info-header">
+            <div class="agent-info-badge-row">
+              <span class="agent-info-avatar-icon" id="agent-info-icon">🤖</span>
+              <span class="agent-info-dept-badge" id="agent-info-dept">Frontend & 3D</span>
+            </div>
+            <button id="agent-info-close-btn" class="agent-info-close" title="Schließen">✕</button>
+          </div>
+          <div class="agent-info-body">
+            <h3 id="agent-info-name" class="agent-info-name">Spezial-Agent</h3>
+            <div id="agent-info-role" class="agent-info-role">Senior Software Architect</div>
+            <div class="agent-info-divider"></div>
+            <div class="agent-info-status-label">AKTUELLE AUFGABE & STATUS:</div>
+            <div id="agent-info-status" class="agent-info-status">Bereit für Arbeitsanweisungen im Studio</div>
+            <div id="agent-info-detail" class="agent-info-detail"></div>
+          </div>
+          <div class="agent-info-footer">
+            <button id="agent-info-action-btn" class="agent-info-btn">
+              <span>🔍 Vollständigen Inspektor & Terminal öffnen</span>
+            </button>
+          </div>
+        </div>
+
         <div class="canvas-controls-overlay">
           <button id="ctrl-rot-left" class="ctrl-btn" title="Kamera links drehen">⟲ Links drehen</button>
           <button id="ctrl-rot-right" class="ctrl-btn" title="Kamera rechts drehen">⟳ Rechts drehen</button>

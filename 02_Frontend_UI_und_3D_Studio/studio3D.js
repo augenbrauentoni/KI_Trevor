@@ -562,7 +562,17 @@ function setupTrevorIronManMech(THREE_LIB) {
     mechBody.add(knee);
   });
 
-  mechBody.userData = { type: 'trevor', name: 'Trevor (Director)' };
+  const trevorUserData = {
+    type: 'trevor',
+    name: 'Trevor (Director)',
+    role: 'Studio Director & CEO Dispatcher',
+    department: 'Command Core (Zentrale)',
+    easy_explanation: 'Koordiniert alle 10 Abteilungen, 43 Spezialisten und Antigravity-Outputs.',
+    status: 'MK-VII Iron-Man Armor aktiv & wachsam'
+  };
+  mechBody.userData = trevorUserData;
+  chest.userData = trevorUserData;
+  helmet.userData = trevorUserData;
   interactiveObjects.push(chest);
   interactiveObjects.push(helmet);
   trevorGroup.add(mechBody);
@@ -760,21 +770,32 @@ function setupChefStation(THREE_LIB, podGroup, dept) {
     roughness: 0.2,
     map: serverScreenTexture || null
   });
-  const screen = new THREE_LIB.Mesh(screenGeo, screenMat);
-  screen.position.set(0, 0.85, -0.05);
-  screen.userData = {
+  const chefUserData = {
     type: 'chef',
     chefId: chef.id,
     deptId: dept.id,
     name: chef.name,
-    easy_explanation: chef.easy_explanation
+    role: chef.focus || `Chef-Agent (${dept.name})`,
+    department: dept.name,
+    easy_explanation: chef.easy_explanation,
+    status: 'Leitet die Abteilung, prüft Logik & Schnittstellen'
   };
+  const screen = new THREE_LIB.Mesh(screenGeo, screenMat);
+  screen.position.set(0, 0.85, -0.05);
+  screen.userData = chefUserData;
   chefGroup.add(screen);
   interactiveObjects.push(screen);
 
   // Chef-Avatar
   const avatar = createStylizedDeveloperAvatar(THREE_LIB, dept.color, true);
   avatar.position.set(0, 0.1, 0.45);
+  avatar.userData = chefUserData;
+  avatar.traverse(child => {
+    if (child.isMesh) {
+      child.userData = chefUserData;
+      interactiveObjects.push(child);
+    }
+  });
   chefGroup.add(avatar);
 
   chefMeshMap[chef.id] = { screen, avatarArms: avatar.userData.arms };
@@ -817,17 +838,28 @@ function setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept) {
       map: codeScreenTexture || null
     });
 
+    const pcUserData = {
+      type: 'pc',
+      pcId: pc.id,
+      deptId: dept.id,
+      name: pc.name,
+      role: pc.title || pc.focus || 'Senior Software Engineer',
+      department: dept.name,
+      easy_explanation: pc.easy_explanation,
+      status: 'Entwickelt Fachmodule & Code'
+    };
+
     const screenLeft = new THREE_LIB.Mesh(screenGeo, screenMat.clone());
     screenLeft.position.set(-0.25, 0.8, 0.04);
     screenLeft.rotation.y = 0.14;
-    screenLeft.userData = { type: 'pc', pcId: pc.id, deptId: dept.id, name: pc.name, easy_explanation: pc.easy_explanation };
+    screenLeft.userData = pcUserData;
     pcGroup.add(screenLeft);
     interactiveObjects.push(screenLeft);
 
     const screenRight = new THREE_LIB.Mesh(screenGeo, screenMat.clone());
     screenRight.position.set(0.25, 0.8, 0.04);
     screenRight.rotation.y = -0.14;
-    screenRight.userData = { type: 'pc', pcId: pc.id, deptId: dept.id, name: pc.name, easy_explanation: pc.easy_explanation };
+    screenRight.userData = pcUserData;
     pcGroup.add(screenRight);
     interactiveObjects.push(screenRight);
 
@@ -841,6 +873,13 @@ function setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept) {
     // Entwickler-Avatar
     const avatar = createStylizedDeveloperAvatar(THREE_LIB, dept.color, false);
     avatar.position.set(0, 0.19, 0.45);
+    avatar.userData = pcUserData;
+    avatar.traverse(child => {
+      if (child.isMesh) {
+        child.userData = pcUserData;
+        interactiveObjects.push(child);
+      }
+    });
     pcGroup.add(avatar);
     developerAvatars.push(avatar);
 
@@ -932,21 +971,30 @@ function setupRaycasting(THREE_LIB, onAgentClick, onTrevorClick) {
 
     if (intersects.length > 0) {
       const hit = intersects[0].object;
-      const data = hit.userData;
+      let data = hit.userData;
+      if ((!data || !data.name) && hit.parent && hit.parent.userData) {
+        data = hit.parent.userData;
+      }
 
       if (!data) return;
 
+      // 1. Schwebendes Agenten-Info-Panel aufrufen & Event aussenden
+      if (typeof window !== 'undefined') {
+        if (typeof window.showAgentInfo === 'function') {
+          window.showAgentInfo(data);
+        }
+        window.dispatchEvent(new CustomEvent('agentSelected', { detail: data }));
+      }
+
+      // 2. 3D-Kamera sanft auf das anvisierte Ziel ausrichten & zoomen
       if (data.type === 'trevor' || data.type === 'decision_terminal') {
-        if (onTrevorClick) onTrevorClick();
+        zoomToPosition(THREE_LIB, new THREE_LIB.Vector3(0, 1.2, 0), 10);
       } else if (data.type === 'pc') {
         zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 11);
-        if (onAgentClick) onAgentClick(data.pcId, 'pc', data.deptId);
       } else if (data.type === 'chef') {
         zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 11);
-        if (onAgentClick) onAgentClick(data.chefId, 'chef', data.deptId);
       } else if (data.type === 'department') {
         zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 16);
-        if (onAgentClick) onAgentClick(`dept_${data.deptId}`, 'department', data.deptId);
       }
     }
   });

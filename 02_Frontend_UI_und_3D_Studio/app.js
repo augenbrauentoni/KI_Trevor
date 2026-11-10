@@ -409,6 +409,103 @@ function switchInspectorTab(tabName) {
 }
 
 // =============================================================================
+// SCHWEBENDES 3D-AGENTEN-INSPEKTIONS-PANEL (RAYCASTER OVERLAY)
+// =============================================================================
+export function showAgentInfo(data) {
+  if (!data) return;
+
+  const panel = document.getElementById('agent-info-panel');
+  if (!panel) return;
+
+  const nameEl = document.getElementById('agent-info-name');
+  const roleEl = document.getElementById('agent-info-role');
+  const deptEl = document.getElementById('agent-info-dept');
+  const statusEl = document.getElementById('agent-info-status');
+  const detailEl = document.getElementById('agent-info-detail');
+  const iconEl = document.getElementById('agent-info-icon');
+  const actionBtn = document.getElementById('agent-info-action-btn');
+
+  // 1. Icon & Abteilungs-Badge ermitteln
+  let icon = '🤖';
+  if (data.type === 'trevor') {
+    icon = '⚡';
+  } else if (data.type === 'chef') {
+    icon = '👔';
+  } else if (data.type === 'pc') {
+    icon = '💻';
+  } else if (data.type === 'decision_terminal') {
+    icon = '📋';
+  } else if (data.type === 'department') {
+    icon = '🏢';
+  }
+
+  if (iconEl) iconEl.innerText = icon;
+  if (nameEl) nameEl.innerText = data.name || 'Spezial-Agent';
+  if (roleEl) roleEl.innerText = data.role || (data.type === 'chef' ? 'Abteilungsleiter' : data.type === 'trevor' ? 'Studio Director' : 'Spezial-Entwickler');
+  if (deptEl) deptEl.innerText = data.department || (data.type === 'trevor' ? 'Command Core' : 'Architektur-Campus');
+
+  // 2. Dynamischen Status und Details ermitteln
+  let statusText = data.status || 'Bereit im 3D-Campus';
+  let detailText = data.easy_explanation || '';
+
+  const agentId = data.pcId || data.chefId;
+  if (data.type === 'trevor') {
+    if (state.activeTask && state.activeTask.status === 'running') {
+      statusText = `⚡ Orchestriert Auftrag: "${state.activeTask.user_prompt.slice(0, 45)}..."`;
+      detailText = `Aktuelle Phase: ${state.activeTask.current_stage || 'Verarbeitung'}`;
+    } else {
+      statusText = '⚡ Befehlszentrale bereit für neue Anweisungen';
+      detailText = 'Trevor überwacht alle 10 Abteilungen, 43 Spezialisten und generiert Antigravity-Prompts.';
+    }
+  } else if (data.type === 'decision_terminal') {
+    statusText = '📋 Interaktive Prompt-Roadmap & Entscheidungsmatrix';
+    detailText = 'Hier bestätigst oder korrigierst du geplante Schritte vor der Antigravity-Übergabe.';
+  } else if (agentId) {
+    if (state.activeTask && state.activeTask.status === 'running') {
+      const isWorking = state.activeTask.checkpoint_data?.pc_outputs?.[agentId] || state.activeTask.checkpoint_data?.chef_outputs?.[agentId];
+      if (isWorking) {
+        statusText = '✔ Teilaufgabe erfolgreich fertiggestellt';
+        detailText = `Ergebnis für Auftrag liegt vor.`;
+      } else {
+        statusText = '⚡ Berechnet aktuellen Software-Auftrag';
+        detailText = `Verarbeitet Auftragsschritt für ${data.name}...`;
+      }
+    } else {
+      try {
+        const training = getAgentCurrentActivity(agentId);
+        if (training) {
+          statusText = `🧠 Autonomes Training: ${training.currentAction || 'Aktiv'}`;
+          detailText = training.insight || data.easy_explanation || '';
+        }
+      } catch (err) {
+        // Fallback bleibt bestehen
+      }
+    }
+  }
+
+  if (statusEl) statusEl.innerText = statusText;
+  if (detailEl) detailEl.innerText = detailText;
+
+  // 3. Action-Button für Vollbild-Inspektor / Terminal konfigurieren
+  if (actionBtn) {
+    actionBtn.onclick = () => {
+      if (data.type === 'trevor' || data.type === 'decision_terminal') {
+        openTrevorModal();
+      } else if (data.type === 'pc') {
+        openAgentInspector(data.pcId, 'pc', data.deptId);
+      } else if (data.type === 'chef') {
+        openAgentInspector(data.chefId, 'chef', data.deptId);
+      } else if (data.type === 'department') {
+        openAgentInspector(`dept_${data.deptId}`, 'department', data.deptId);
+      }
+    };
+  }
+
+  // 4. Panel sichtbar schalten
+  panel.style.display = 'flex';
+}
+
+// =============================================================================
 // DIREKTE ABTEILUNGS-ANWEISUNG (BOTTOM-UP -> TREVOR)
 // =============================================================================
 async function dispatchDirectDepartmentInstruction() {
@@ -1619,6 +1716,21 @@ function setupEventListeners() {
     btnDispatchDirect.addEventListener('click', dispatchDirectDepartmentInstruction);
   }
 
+  // Schwebendes Agenten-Info-Panel: Schließen & Event-Verbindung
+  const btnAgentInfoClose = document.getElementById('agent-info-close-btn');
+  if (btnAgentInfoClose) {
+    btnAgentInfoClose.addEventListener('click', () => {
+      const panel = document.getElementById('agent-info-panel');
+      if (panel) panel.style.display = 'none';
+    });
+  }
+
+  window.addEventListener('agentSelected', (event) => {
+    if (event.detail && typeof showAgentInfo === 'function') {
+      showAgentInfo(event.detail);
+    }
+  });
+
   // Trevor Terminal Tabs
   const btnTrevorActive = document.getElementById('tab-btn-trevor-active');
   const btnTrevorHistory = document.getElementById('tab-btn-trevor-history');
@@ -1859,4 +1971,5 @@ if (typeof window !== 'undefined') {
   window.triggerBrowserDownload = triggerBrowserDownload;
   window.renderInteractiveRoadmap = renderInteractiveRoadmap;
   window.exportSelectedStepsForAntigravity = exportSelectedStepsForAntigravity;
+  window.showAgentInfo = showAgentInfo;
 }

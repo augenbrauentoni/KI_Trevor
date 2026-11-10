@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Hierarchische Orchestrierung, Dual-LLM Engine, Code-RAG & Visuelle 3D-Campus-Kopplung zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
-- **Datum / Letztes Update:** 2026-11-10 18:24:00
+- **Status:** 3D-Raycaster, Schwebendes Agenten-Inspektions-Panel & Avatar-Interaktion zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
+- **Datum / Letztes Update:** 2026-11-10 18:30:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -90,12 +90,37 @@ Verknüpft die Workflow-Stufen dynamisch mit der Three.js 3D-Szene für plastisc
 
 ---
 
-## 6. Verifikation & Test-Ergebnisse
+## 6. 3D-Raycaster & Schwebendes Agenten-Inspektions-Panel (`02_Frontend_UI_und_3D_Studio/`)
+
+Interaktive 3D-Inspektion der Avatare und Arbeitsplätze direkt im Three.js Canvas:
+
+1. **Präzise 3D-Raycasting Erkennung ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - Initialisiert Three.js `Raycaster` und normalisierte Maus-Koordinaten `(-1 bis +1)`.
+   - Alle visuellen Meshes der Avatare (Kopf, Torso, Gliedmaßen) sowie die Dual-Bildschirme und Abteilungs-Plattformen sind mit Metadaten (`userData`) in `interactiveObjects` registriert.
+   - Bei Mausklick auf einen Avatar, Chef oder Trevor ermittelt der Raycaster das Ziel und löst:
+     - Aufruf von `window.showAgentInfo(userData)` aus.
+     - Aussenden des CustomEvents `agentSelected` mit Event-Details aus.
+     - Sanfte Kamera-Fahrt (`zoomToPosition`) direkt auf den ausgewählten Spezialisten bzw. Trevor.
+   - Dynamischer Cursor-Wechsel (`pointer`) beim Überfahren interaktiver Avatare.
+2. **Schwebendes Dark-Mode Info-Panel ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) & [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css)):**
+   - Absolut über dem Three.js-Canvas positioniertes Overlay (`#agent-info-panel`).
+   - Gestaltet in dunklem Schiefergrau (`#1e1e1e` / `rgba(30, 30, 30, 0.94)`), mit Blur-Effekt (`backdrop-filter: blur(12px)`) und karmesinrotem/goldenen Neon-Glühen (`box-shadow: 0 0 20px rgba(239, 68, 68, 0.25)`).
+   - Enthält Abteilungs-Badge, Avatar-Icon, Name, Rolle/Titel, Status-Anzeige (Live-Auftrag oder autonomes Idle-Training) und Detail-Beschreibung.
+   - Beinhaltet Schließen-Button (`#agent-info-close-btn`) und Aktions-Button (`#agent-info-action-btn`).
+3. **UI-Synchronisation & Inspektor-Anbindung ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Die Funktion `showAgentInfo(data)` befüllt alle Felder des schwebenden Panels synchron.
+   - Erkennt automatisch den Status: Ist ein aktiver Auftrag in Arbeit, wird der aktuelle Workflow-Schritt angezeigt; im Leerlauf werden die autonomen Idle-Trainingsdaten (`getAgentCurrentActivity`) angezeigt.
+   - Ein Klick auf den Aktions-Button im Panel öffnet den vollständigen Modal-Inspektor (`openAgentInspector` bzw. `openTrevorModal`), wo direkte Anweisungen und gelerntes Wissen einsehbar sind.
+   - Schließen-Button blendet das schwebende Panel sauber aus.
+
+---
+
+## 7. Verifikation & Test-Ergebnisse
 
 - **Bridge `/api/read-files`:** Erfolgreich getestet mit vorhandenen Dateien (`index.html`, `CHECKPOINT_STATE.md`) und fehlenden Dateien (`non_existent_file.xyz`).
 - **Code-RAG Injektion:** Erfolgreich validiert; Dateipfade werden erkannt, Quellcode über die Bridge bezogen und für Stufe 2 Fach-PCs aufbereitet.
-- **3D-Campus Visuelle Kopplung:** Erfolgreich validiert via `test_studio3d_coupling.mjs`: Alle 5 visuellen Zustände (`idle`, `stage1`, `stage2`, `stage3`, `stage4`) reagieren performant ohne Render-Lag.
+- **3D-Campus Visuelle Kopplung:** Erfolgreich validiert; Alle 5 visuellen Zustände (`idle`, `stage1`, `stage2`, `stage3`, `stage4`) reagieren performant ohne Render-Lag.
+- **3D-Raycaster & Agenten-Inspektions-Panel:** 5/5 automatisierte Unit- & Integrations-Tests bestanden (PC-Klick, Trevor-Klick, Chef-Klick, Vollbild-Inspektor Modal Trigger, Schließen-Button).
 - **Server & Bridges:**
   - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
   - Lokale Bridge (Port 3001): `http://localhost:3001/api/status` & `http://localhost:3001/api/read-files` (online)
-  - Localtunnel: `https://famous-sloths-peel.loca.lt` (Bypass-IP: `88.67.105.95`)

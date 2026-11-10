@@ -340,6 +340,177 @@ body {
   z-index: 10;
 }
 
+/* =============================================================================
+   AGENT INFO PANEL (3D RAYCASTER FLOATING OVERLAY)
+   ============================================================================= */
+.agent-info-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 320px;
+  max-width: calc(100% - 40px);
+  background: rgba(30, 30, 30, 0.94);
+  border: 1px solid rgba(239, 68, 68, 0.5); /* Karmesinrot Neon-Glow */
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(239, 68, 68, 0.25);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: agentPanelSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #fff;
+  font-family: var(--font-sans);
+}
+
+@keyframes agentPanelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.agent-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agent-info-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-info-avatar-icon {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.agent-info-dept-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--arc-cyan);
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+}
+
+.agent-info-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.agent-info-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.agent-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-info-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.3px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+}
+
+.agent-info-role {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--iron-gold);
+}
+
+.agent-info-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 6px 0;
+}
+
+.agent-info-status-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.agent-info-status {
+  font-size: 12px;
+  color: #38bdf8;
+  font-weight: 600;
+  line-height: 1.4;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 3px solid #ef4444;
+}
+
+.agent-info-detail {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+.agent-info-footer {
+  margin-top: 6px;
+}
+
+.agent-info-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.35) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.agent-info-btn:hover {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  border-color: #ef4444;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+}
+
 .canvas-controls-overlay {
   position: absolute;
   right: 20px;
