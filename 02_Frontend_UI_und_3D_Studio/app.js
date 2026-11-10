@@ -46,7 +46,6 @@ const state = {
   settings: {
     llm_mode: 'gemini',
     gemini_model: 'gemini-2.5-flash',
-    copilot_model: 'gpt-4o-mini',
     ollama_url: 'http://localhost:11434',
     ollama_model: 'llama3',
     quiet_view: false
@@ -59,6 +58,7 @@ const state = {
 function bootTrevorApp() {
   console.log('[Trevor App] Initialisiere Studio-Shell (Master-Fix V2.6)...');
 
+  setupLoginScreen();
   loadLocalSettings();
   loadSelectedProject();
   loadTaskQueue();
@@ -1582,6 +1582,9 @@ export function returnToHub() {
   }
 
   if (typeof window !== 'undefined') {
+    if (typeof window.reset3DCamera === 'function') {
+      window.reset3DCamera();
+    }
     if (typeof window.switchFloor === 'function') {
       window.switchFloor('EG');
     }
@@ -2276,6 +2279,74 @@ function openChefReportsModal() {
   modal.classList.add('open');
 }
 
+/**
+ * Sicherheits-Overlay: Pin-Abfrage (Standard-PIN: "2026")
+ * Verhindert unberechtigten Zugriff auf das Command Center.
+ */
+function setupLoginScreen() {
+  const loginOverlay = document.getElementById('login-screen');
+  if (!loginOverlay) return;
+
+  const pinInput = document.getElementById('login-pin-input');
+  const submitBtn = document.getElementById('btn-login-submit');
+  const errorMsg = document.getElementById('login-error-msg');
+
+  // Prüfen, ob in dieser Session bereits freigeschaltet wurde
+  try {
+    if (sessionStorage.getItem('trevor_studio_unlocked') === 'true') {
+      loginOverlay.style.display = 'none';
+      return;
+    }
+  } catch (err) {
+    console.warn('[Trevor App] SessionStorage nicht verfügbar:', err);
+  }
+
+  loginOverlay.style.display = 'flex';
+
+  function handleUnlock() {
+    const enteredPin = (pinInput ? pinInput.value : '').trim();
+    if (enteredPin === '2026') {
+      try {
+        sessionStorage.setItem('trevor_studio_unlocked', 'true');
+      } catch (err) {
+        // ignore
+      }
+      loginOverlay.style.display = 'none';
+      if (errorMsg) errorMsg.style.display = 'none';
+    } else {
+      if (errorMsg) {
+        errorMsg.style.display = 'block';
+        errorMsg.textContent = '❌ Ungültige PIN. Zugriff verweigert! (PIN: 2026)';
+      }
+      if (pinInput) {
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    }
+  }
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleUnlock();
+    });
+  }
+
+  if (pinInput) {
+    pinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleUnlock();
+      }
+    });
+    setTimeout(() => {
+      if (loginOverlay.style.display !== 'none') {
+        pinInput.focus();
+      }
+    }, 150);
+  }
+}
+
 // =============================================================================
 // EVENT LISTENERS SETUP
 // =============================================================================
@@ -2700,15 +2771,28 @@ function saveSettings() {
 function updateUIThemeSettings() {
   const icon = document.getElementById('engine-mode-icon');
   const label = document.getElementById('engine-mode-label');
+  const aiBadge = document.getElementById('active-ai-badge');
+  const aiBadgeText = document.getElementById('active-ai-badge-text');
+
   if (state.settings.llm_mode === 'ollama') {
     if (icon) icon.innerText = '🖥️';
-    if (label) label.innerText = `Ollama Lokal (${state.settings.ollama_model})`;
-  } else if (state.settings.llm_mode === 'copilot') {
-    if (icon) icon.innerText = '⚡';
-    if (label) label.innerText = `Copilot Cloud (${state.settings.copilot_model || 'gpt-4o-mini'})`;
+    if (label) label.innerText = `Ollama Lokal (${state.settings.ollama_model || 'llama3'})`;
+    if (aiBadge) {
+      aiBadge.className = 'active-ai-badge badge-ollama';
+    }
+    if (aiBadgeText) {
+      aiBadgeText.innerText = `🖥️ AKTIVE ENGINE: Ollama Lokal (${state.settings.ollama_model || 'llama3'})`;
+    }
   } else {
+    // Standard: Google Gemini
     if (icon) icon.innerText = '☁️';
-    if (label) label.innerText = `Gemini Cloud (${state.settings.gemini_model})`;
+    if (label) label.innerText = `Gemini Cloud (${state.settings.gemini_model || 'gemini-2.5-flash'})`;
+    if (aiBadge) {
+      aiBadge.className = 'active-ai-badge badge-gemini';
+    }
+    if (aiBadgeText) {
+      aiBadgeText.innerText = `☁️ AKTIVE ENGINE: Google Gemini (${state.settings.gemini_model || 'gemini-2.5-flash'})`;
+    }
   }
 
   const quickProviderSelect = document.getElementById('quick-llm-provider-select');

@@ -1418,6 +1418,27 @@ export function switchFloor(targetFloor) {
   console.log(`[Studio 3D] Etagen-Fahrt: Ziel=${currentFloor}, targetCameraY=${targetCameraY}`);
 }
 
+/**
+ * Setzt die Kamera via lerp in der render-Schleife (animate) zwingend auf die Standard-Koordinaten
+ * zurück, um aus jedem Zoom und jeder Neigung herauszukommen.
+ */
+export function reset3DCamera() {
+  const THREE = getTHREE();
+  if (!THREE || !camera) return;
+
+  currentFloor = 'EG';
+  targetCameraY = 24;
+  targetCameraPos = new THREE.Vector3(0, 24, 25);
+  targetLookAt = new THREE.Vector3(0, 1.2, 0);
+
+  const btnEg = document.getElementById('ctrl-floor-eg');
+  const btnUg = document.getElementById('ctrl-floor-ug');
+  if (btnUg) btnUg.classList.remove('active');
+  if (btnEg) btnEg.classList.add('active');
+
+  console.log('[Studio 3D] reset3DCamera aktiviert: lerp zurück auf (0, 24, 25) und Target (0, 1.2, 0)');
+}
+
 function setupCameraButtons() {
   const btnRotLeft = document.getElementById('ctrl-rot-left');
   const btnRotRight = document.getElementById('ctrl-rot-right');
@@ -1436,7 +1457,7 @@ function setupCameraButtons() {
   if (btnFloorUg) btnFloorUg.addEventListener('click', () => switchFloor('UG'));
   if (btnReset) {
     btnReset.addEventListener('click', () => {
-      switchFloor('EG');
+      reset3DCamera();
     });
   }
   if (btnQuiet) {
@@ -1896,19 +1917,22 @@ function animate() {
     }
   }
 
-  // Native zustandsbasierte Kamera-Animation laut Anforderung (ohne GSAP / TWEEN)
-  if (typeof targetCameraY === 'number') {
-    camera.position.y += (targetCameraY - camera.position.y) * 0.05;
-    camera.lookAt(scene.position);
-  }
-
+  // Native zustandsbasierte Kamera-Animation & Lerp-Reset zu Standard-Koordinaten
   if (targetCameraPos && targetLookAt) {
-    camera.position.lerp(targetCameraPos, 0.06);
-    if (controls) controls.target.lerp(targetLookAt, 0.06);
-    if (camera.position.distanceTo(targetCameraPos) < 0.2) {
+    camera.position.lerp(targetCameraPos, 0.08);
+    if (controls) {
+      controls.target.lerp(targetLookAt, 0.08);
+    } else {
+      camera.lookAt(targetLookAt);
+    }
+    if (camera.position.distanceTo(targetCameraPos) < 0.15) {
+      camera.position.copy(targetCameraPos);
+      if (controls) controls.target.copy(targetLookAt);
       targetCameraPos = null;
       targetLookAt = null;
     }
+  } else if (typeof targetCameraY === 'number' && currentFloor === 'UG') {
+    camera.position.y += (targetCameraY - camera.position.y) * 0.05;
   }
 
   if (controls) controls.update();
@@ -1953,6 +1977,7 @@ if (typeof window !== 'undefined') {
   window.triggerDataStreamToTrevor = triggerDataStreamToTrevor;
   window.updateRoomMicroStatus = updateRoomMicroStatus;
   window.switchFloor = switchFloor;
+  window.reset3DCamera = reset3DCamera;
   window.getCurrentFloor = () => currentFloor;
   window.dispose3DStudio = dispose3DStudio;
 }

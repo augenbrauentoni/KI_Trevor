@@ -328,7 +328,7 @@ Erweiterung der Web-App um eine interaktive Auftragsliste (Queue), einen Frage-A
 
 ---
 
-## 18. Cloud Proxy Server für Secure API Keys (Render Web Service Umstellung)
+## 18. Cloud Proxy Server für Secure API Keys (Google Gemini Inferenz)
 
 Vollständige Umstellung der System-Architektur von einer rein statischen Seite auf einen vollwertigen Node.js Web Service für Render und Container-Deployments:
 
@@ -340,32 +340,54 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
 2. **Cloud Backend & Sichere API-Key Secrets ([`server.js`](file:///C:/Users/User/Desktop/KI_Trevor/server.js)):**
    - Express Web Service stellt das Frontend `02_Frontend_UI_und_3D_Studio` statisch bereit.
    - Neuer Sicherheits-Endpunkt **`POST /api/cloud-llm`**:
-     - Nimmt `{ provider, prompt, systemInstruction, model, expectJson }` entgegen.
-     - **Gemini**: Sendet Inferenz-Request an Google API unter strikter Nutzung von `process.env.GEMINI_API_KEY`.
-     - **Copilot**: Sendet Inferenz-Request an OpenAI/Azure API unter strikter Nutzung von `process.env.COPILOT_API_KEY`.
+     - Nimmt `{ prompt, systemInstruction, model, expectJson }` entgegen.
+     - **Gemini**: Sendet Inferenz-Request an die Google Gemini API (`gemini-2.5-flash`) unter strikter Nutzung von `process.env.GEMINI_API_KEY`.
+     - Copilot-Integration wurde gemäß Anforderung vollständig ausgelassen / entfernt.
      - Kein API-Key verlässt je das Backend oder gelangt in den Browser.
    - Integrierte Endpunkte für Code-RAG (`/api/list-files`, `/api/read-files`) und Task-Export (`/api/export-task`) mit Directory-Traversal-Schutz.
 
 3. **Frontend-Anpassung ohne Client-Keys ([`04_KI_Engine_und_Bridges/llmEngine.js`](file:///C:/Users/User/Desktop/KI_Trevor/04_KI_Engine_und_Bridges/llmEngine.js) & [`02_Frontend_UI_und_3D_Studio/llmEngine.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/llmEngine.js)):**
-   - Sämtliche `localStorage`-Logik für API-Keys (`trevor_gemini_key`, `trevor_gemini_api_key`) wurde rückstandslos entfernt.
+   - Sämtliche `localStorage`-Logik für API-Keys (`trevor_gemini_key`, `trevor_gemini_api_key`) und alle Copilot-Referenzen wurden rückstandslos entfernt.
    - `queryLLM`:
-     - Bei `gemini` oder `copilot`: Sendet standardmäßig `fetch('/api/cloud-llm', { method: 'POST', body: ... })`.
+     - Bei `gemini`: Sendet standardmäßig `fetch('/api/cloud-llm', { method: 'POST', body: ... })`.
      - Bei `ollama`: Inferenz läuft weiterhin direkt client-seitig auf `http://localhost:11434`.
 
 4. **UI-Sicherheit & Provider-Wahl ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) & [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
-   - Schnellauswahl für Provider erweitert: Google Gemini, GitHub Copilot und Ollama Lokal.
+   - Schnellauswahl für Provider auf Google Gemini und Ollama Lokal fokussiert.
    - Passwortfelder für API-Keys durch Sicherheits-Hinweis *"🔒 Cloud-Security: Backend Secrets (process.env) aktiv"* ersetzt.
 
 ---
 
-## 19. Verifikation & Test-Ergebnisse
+## 19. Prominentes KI-Badge, PIN-Sicherheits-Overlay ('2026') & 3D-Kamera-Reset-Lerp
 
-- **Automatisierte Cloud-Proxy Suite (`test_cloud_proxy_architecture.mjs`):**
-   - 27 von 27 Tests bestanden (100 % Erfolgsquote).
-   - `package.json` Validierung (type, start, express, cors).
-   - Statische Auslieferung von `index.html` und Modulen über Express.
-   - Schutz & 500-Status bei fehlenden Secrets (`missingKey: true`).
-   - 400-Status bei ungültigen Anfragen und unbekannten Providern.
-   - RAG- und Export-Endpunkte voll funktionsfähig.
+1. **App-Sicherheits-Overlay (`#login-screen` in `index.html`, `styles.css`, `app.js`):**
+   - Vollflächiges Dark-Slate / Glassmorphism-Overlay mit absolutem Vordergrund (`z-index: 9999`).
+   - Schützt das Command Center vor unautorisiertem Zugriff.
+   - PIN-Eingabefeld (`#login-pin-input`) mit automatischer Fokus-Setzung und Enter-Bestätigung.
+   - Bei Eingabe der Studio-PIN `"2026"` wird das Overlay ausgeblendet und der Zustand für die aktuelle Sitzung in `sessionStorage ('trevor_studio_unlocked')` gespeichert.
+   - Falsche Eingaben triggern eine animierte Fehlermeldung (`#login-error-msg`).
+
+2. **Prominentes KI-Status-Badge (`#active-ai-badge` in `index.html`, `styles.css`, `app.js`):**
+   - Platziert im oberen Header-Bereich für sofortige Sichtbarkeit des aktiven Inferenz-Treibers.
+   - Dynamisches Styling:
+     - **Google Gemini:** Smaragdgrünes Styling (`badge-gemini`), grüner pulsierender Dot (`.ai-badge-dot.pulse`), Text *"☁️ AKTIVE ENGINE: Google Gemini 2.5 Flash"*.
+     - **Ollama Lokal:** Karminrotes Neon-Styling (`badge-ollama`), roter pulsierender Dot, Text *"🖥️ AKTIVE ENGINE: Ollama Lokal (Qwen / Llama)"*.
+   - Aktualisiert sich in Echtzeit bei Klick auf die Engine-Pill oder Änderung in den Einstellungen über `updateUIThemeSettings()`.
+
+3. **3D-Kamera-Reset-Lerp & Vordergrund-Navigation (`studio3D.js`, `app.js`, `styles.css`):**
+   - Alle `.btn-back-to-hub` Schaltflächen sind im CSS mit `position: relative; z-index: 9999; pointer-events: auto;` abgesichert, sodass sie stets anklickbar im Vordergrund schweben.
+   - Funktion `export function reset3DCamera()` in `studio3D.js` setzt `targetCameraPos = (0, 24, 25)`, `targetLookAt = (0, 1.2, 0)` und `currentFloor = 'EG'`.
+   - Die Three.js Render-Loop (`animate`) führt eine sanfte Interpolation (`lerp(0.08)`) durch, wodurch die Kamera aus JEDEM Zoom-, Neigungs- oder Kellerzustand wieder flüssig in die neutrale EG-Übersicht gleitet.
+   - `window.returnToHub()` in `app.js` ruft `window.reset3DCamera()` automatisch auf.
+
+---
+
+## 20. Verifikation & Test-Ergebnisse
+
+- **Automatisierte Integrations-Suite:**
+   - Status 200 bei `GET /api/status` mit `status: online` und bereinigtem Payload ohne Copilot.
+   - `index.html` und `styles.css` Verifikation: `#login-screen`, `#login-pin-input`, `#btn-login-submit`, `#active-ai-badge`, `.badge-gemini`, `.badge-ollama`, `z-index: 9999` erfolgreich verifiziert.
+   - Vollständige Absenz von `copilot` in `index.html`, `app.js`, `llmEngine.js` und `server.js`.
+   - `POST /api/cloud-llm` schützt Keys und wirft 500 mit korrekter Fehlermeldung, wenn `GEMINI_API_KEY` nicht konfiguriert ist.
 - **Server-Status:**
-   - Root Node.js Web Service aktiv auf Port 3000 (`http://localhost:3000/api/status`).
+   - Root Node.js Web Service aktiv auf Port 3000 (`http://localhost:3000`).

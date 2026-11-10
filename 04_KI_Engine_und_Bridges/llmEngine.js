@@ -66,16 +66,16 @@ export async function queryLLM(systemPrompt, userPrompt, expectJson = false) {
   const provider = (config.provider || 'gemini').toLowerCase();
 
   // ---------------------------------------------------------------------------
-  // 1. CLOUD-KI: GEMINI ODER COPILOT VIA /api/cloud-llm (SECURE BACKEND PROXY)
+  // 1. CLOUD-KI: GOOGLE GEMINI VIA /api/cloud-llm (SECURE BACKEND PROXY)
   // ---------------------------------------------------------------------------
-  if (provider === 'gemini' || provider === 'copilot' || provider === 'openai') {
+  if (provider === 'gemini') {
     try {
       const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
       const resp = await fetch(`${baseUrl}/api/cloud-llm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: provider === 'openai' ? 'copilot' : provider,
+          provider: 'gemini',
           prompt: userPrompt,
           systemInstruction: systemPrompt,
           expectJson

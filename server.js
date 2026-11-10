@@ -66,7 +66,7 @@ function sanitizeExportFilename(rawFilename) {
 }
 
 // =============================================================================
-// 1. CLOUD-LLM PROXY ENDPUNKT (/api/cloud-llm) - SECURE API KEYS VIA PROCESS.ENV
+// 1. CLOUD-LLM PROXY ENDPUNKT (/api/cloud-llm) - GOOGLE GEMINI MIT SECURE KEY
 // =============================================================================
 app.post('/api/cloud-llm', async (req, res) => {
   try {
@@ -78,140 +78,75 @@ app.post('/api/cloud-llm', async (req, res) => {
 
     const prov = String(provider).toLowerCase();
 
-    // -------------------------------------------------------------------------
-    // A) GOOGLE GEMINI PROXY
-    // -------------------------------------------------------------------------
-    if (prov === 'gemini') {
-      const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-
-      if (!apiKey || apiKey.trim().length < 10) {
-        console.warn('[Cloud LLM Proxy] GEMINI_API_KEY nicht in Umgebungsvariablen gesetzt.');
-        return res.status(500).json({
-          error: 'GEMINI_API_KEY nicht im Server-Environment hinterlegt. Bitte Secret auf Render setzen.',
-          missingKey: true
-        });
-      }
-
-      const targetModel = model || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-
-      const payload = {
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }]
-          }
-        ]
-      };
-
-      if (systemInstruction) {
-        payload.systemInstruction = {
-          parts: [{ text: systemInstruction }]
-        };
-      }
-
-      if (expectJson) {
-        payload.generationConfig = {
-          responseMimeType: 'application/json',
-          temperature: 0.2
-        };
-      } else {
-        payload.generationConfig = {
-          temperature: 0.3
-        };
-      }
-
-      const fetchRes = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!fetchRes.ok) {
-        const errText = await fetchRes.text();
-        console.error(`[Cloud LLM Proxy] Gemini API HTTP-Fehler (${fetchRes.status}):`, errText);
-        return res.status(fetchRes.status).json({
-          error: `Gemini API Fehler (${fetchRes.status})`,
-          details: errText
-        });
-      }
-
-      const data = await fetchRes.json();
-      const textOutput = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      return res.json({
-        success: true,
-        provider: 'gemini',
-        model: targetModel,
-        text: textOutput,
-        response: textOutput
+    if (prov === 'ollama') {
+      return res.status(400).json({
+        error: 'Ollama läuft lokal auf dem Rechner des Benutzers (http://localhost:11434) und erfordert keinen Cloud-Proxy.'
       });
     }
 
-    // -------------------------------------------------------------------------
-    // B) COPILOT / OPENAI / AZURE PROXY
-    // -------------------------------------------------------------------------
-    if (prov === 'copilot' || prov === 'openai' || prov === 'azure') {
-      const apiKey = process.env.COPILOT_API_KEY || process.env.OPENAI_API_KEY;
+    // Google Gemini API Proxy mit Backend-Secret
+    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
-      if (!apiKey || apiKey.trim().length < 10) {
-        console.warn('[Cloud LLM Proxy] COPILOT_API_KEY nicht in Umgebungsvariablen gesetzt.');
-        return res.status(500).json({
-          error: 'COPILOT_API_KEY nicht im Server-Environment hinterlegt. Bitte Secret auf Render setzen.',
-          missingKey: true
-        });
-      }
+    if (!apiKey || apiKey.trim().length < 10) {
+      console.warn('[Cloud LLM Proxy] GEMINI_API_KEY nicht in Umgebungsvariablen gesetzt.');
+      return res.status(500).json({
+        error: 'GEMINI_API_KEY nicht im Server-Environment hinterlegt. Bitte Secret auf Render setzen.',
+        missingKey: true
+      });
+    }
 
-      const targetEndpoint = process.env.COPILOT_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
-      const targetModel = model || process.env.COPILOT_MODEL || 'gpt-4o-mini';
+    const targetModel = model || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
 
-      const messages = [];
-      if (systemInstruction) {
-        messages.push({ role: 'system', content: systemInstruction });
-      }
-      messages.push({ role: 'user', content: prompt });
+    const payload = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }]
+        }
+      ]
+    };
 
-      const payload = {
-        model: targetModel,
-        messages,
+    if (systemInstruction) {
+      payload.systemInstruction = {
+        parts: [{ text: systemInstruction }]
+      };
+    }
+
+    if (expectJson) {
+      payload.generationConfig = {
+        responseMimeType: 'application/json',
         temperature: 0.2
       };
+    } else {
+      payload.generationConfig = {
+        temperature: 0.3
+      };
+    }
 
-      if (expectJson) {
-        payload.response_format = { type: 'json_object' };
-      }
+    const fetchRes = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-      const fetchRes = await fetch(targetEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey.trim()}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!fetchRes.ok) {
-        const errText = await fetchRes.text();
-        console.error(`[Cloud LLM Proxy] Copilot API HTTP-Fehler (${fetchRes.status}):`, errText);
-        return res.status(fetchRes.status).json({
-          error: `Copilot API Fehler (${fetchRes.status})`,
-          details: errText
-        });
-      }
-
-      const data = await fetchRes.json();
-      const textOutput = data?.choices?.[0]?.message?.content || '';
-      return res.json({
-        success: true,
-        provider: 'copilot',
-        model: targetModel,
-        text: textOutput,
-        response: textOutput
+    if (!fetchRes.ok) {
+      const errText = await fetchRes.text();
+      console.error(`[Cloud LLM Proxy] Gemini API HTTP-Fehler (${fetchRes.status}):`, errText);
+      return res.status(fetchRes.status).json({
+        error: `Gemini API Fehler (${fetchRes.status})`,
+        details: errText
       });
     }
 
-    // Nicht unterstützter Provider
-    return res.status(400).json({
-      error: `Nicht unterstützter Cloud-Provider: "${provider}". Unterstützt werden: 'gemini', 'copilot'.`
+    const data = await fetchRes.json();
+    const textOutput = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return res.json({
+      success: true,
+      provider: 'gemini',
+      model: targetModel,
+      text: textOutput,
+      response: textOutput
     });
 
   } catch (err) {
@@ -230,8 +165,7 @@ app.get('/api/status', (req, res) => {
     version: '2.6.0',
     mode: 'node-web-service',
     cloudProxy: true,
-    geminiConfigured: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 10),
-    copilotConfigured: !!(process.env.COPILOT_API_KEY && process.env.COPILOT_API_KEY.length > 10)
+    geminiConfigured: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 10)
   });
 });
 
@@ -370,6 +304,5 @@ app.listen(PORT, () => {
   console.log(` [OK] Statisches Frontend: ${FRONTEND_DIR}`);
   console.log(` [OK] Cloud LLM Proxy:    POST http://localhost:${PORT}/api/cloud-llm`);
   console.log(` [OK] Gemini API-Key:     ${process.env.GEMINI_API_KEY ? '✔ Konfiguriert' : '❌ Nicht gesetzt'}`);
-  console.log(` [OK] Copilot API-Key:    ${process.env.COPILOT_API_KEY ? '✔ Konfiguriert' : '❌ Nicht gesetzt'}`);
   console.log('=============================================================================');
 });

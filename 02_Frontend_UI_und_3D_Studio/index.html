@@ -12,6 +12,23 @@
 <body>
 
   <!-- =========================================================================
+       0. SICHERHEITS-LOGIN SCREEN (OVERLAY PIN-ABFRAGE)
+       ========================================================================= -->
+  <div id="login-screen" class="login-screen-overlay" style="z-index: 9999;">
+    <div class="login-card">
+      <div class="login-logo-badge">TREVOR</div>
+      <h2 class="login-title">COMMAND CENTER ACCESS</h2>
+      <p class="login-subtitle">Sicherheitsbereich – Bitte Studio-PIN eingeben:</p>
+      <div class="login-input-row">
+        <input type="password" id="login-pin-input" class="login-pin-input" placeholder="••••" maxlength="8" autofocus autocomplete="off" />
+        <button id="btn-login-submit" class="btn-login-submit">Freischalten 🔓</button>
+      </div>
+      <div id="login-error-msg" class="login-error-msg" style="display: none;">❌ Ungültige PIN. Zugriff verweigert!</div>
+      <p class="login-hint">PIN: <code>2026</code></p>
+    </div>
+  </div>
+
+  <!-- =========================================================================
        1. TOP BAR & FILTER NAVIGATION
        ========================================================================= -->
   <header class="top-header">
@@ -44,6 +61,12 @@
 
       <!-- Engine & Checkpoint Controls -->
       <div class="header-right-controls">
+        <!-- Prominentes KI-Badge -->
+        <div id="active-ai-badge" class="active-ai-badge badge-gemini" title="Aktiver KI-Inferenz-Provider">
+          <span class="ai-badge-dot pulse"></span>
+          <span id="active-ai-badge-text">☁️ AKTIVE ENGINE: Google Gemini 2.5 Flash</span>
+        </div>
+
         <button id="engine-mode-btn" class="engine-mode-pill" title="Klicken zum Umschalten">
           <span id="engine-mode-icon">☁️</span>
           <span id="engine-mode-label">Gemini Cloud (Schule)</span>
@@ -372,7 +395,6 @@
               </div>
               <select id="quick-llm-provider-select" class="search-input" style="flex: 1; padding: 4px 8px; font-size: 12px; height: 32px;">
                 <option value="gemini">Google Gemini 2.5 Flash (Cloud API)</option>
-                <option value="copilot">GitHub Copilot / OpenAI (Cloud API)</option>
                 <option value="ollama">Ollama Lokal (Qwen 2.5 3B)</option>
               </select>
               <div id="quick-gemini-key-wrapper" style="flex: 1.5; display: flex; align-items: center; gap: 6px;">
@@ -574,7 +596,6 @@
           <label style="font-size: 12px; font-weight: 600; color: #fff;">Aktiver LLM-Modus:</label>
           <select id="settings-llm-mode" class="search-input" style="margin-top: 6px;">
             <option value="gemini">☁️ Google Gemini 2.5 Flash (Cloud API)</option>
-            <option value="copilot">⚡ GitHub Copilot / OpenAI (Cloud API)</option>
             <option value="ollama">🖥️ Ollama Local Bridge (Home / Offline)</option>
           </select>
         </div>
@@ -587,7 +608,7 @@
         <div>
           <label style="font-size: 12px; font-weight: 600; color: #fff;">Cloud API-Sicherheit (Render Secrets):</label>
           <div style="font-size: 11px; color: #34d399; margin-top: 6px; background: rgba(52, 211, 153, 0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(52, 211, 153, 0.25);">
-            ✔ <strong>Node.js Cloud-Proxy aktiv:</strong> <code>GEMINI_API_KEY</code> und <code>COPILOT_API_KEY</code> werden sicher auf dem Server verarbeitet. Keine sensiblen Schlüssel im Browser-Speicher.
+            ✔ <strong>Node.js Cloud-Proxy aktiv:</strong> <code>GEMINI_API_KEY</code> wird sicher auf dem Server verarbeitet. Keine sensiblen Schlüssel im Browser-Speicher.
           </div>
         </div>
 
