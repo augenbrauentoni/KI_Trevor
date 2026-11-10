@@ -26,7 +26,7 @@ import {
   getAgentCurrentActivity,
   getAgentLearnedInsights,
   getAllLearnedKnowledgeSummary
-} from '../04_KI_Engine_und_Bridges/idleTrainer.js';
+} from './idleTrainer.js';
 
 // Globaler Anwendungs-Status
 const state = {
@@ -49,10 +49,10 @@ const state = {
 };
 
 // =============================================================================
-// INITIALISIERUNG: SOFORTIGES SYNCHRONES RENDERN
+// INITIALISIERUNG: SICHERES SYNCHRONES RENDERN (OHNE BLOCKIERENDE INPUTS)
 // =============================================================================
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('[Trevor App] Initialisiere Studio-Shell (Phase 7 Modern Office)...');
+function bootTrevorApp() {
+  console.log('[Trevor App] Initialisiere Studio-Shell (Master-Fix V2.6)...');
 
   loadLocalSettings();
   loadSelectedProject();
@@ -77,7 +77,14 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (err) {
     console.warn('[Trevor App] Idle-Training Warnung:', err);
   }
-});
+}
+
+// Führt Initialisierung sofort aus, unabhängig von Event-Timing
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootTrevorApp);
+} else {
+  bootTrevorApp();
+}
 
 function loadLocalSettings() {
   try {

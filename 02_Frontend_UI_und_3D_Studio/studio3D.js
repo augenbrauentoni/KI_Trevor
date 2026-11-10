@@ -16,8 +16,12 @@
 
 import { STUDIO_HIERARCHY } from './hierarchyData.js';
 
+// Sicheres globales Three.js Handle (Verhindert doppelte Importe)
+const getTHREE = () => (typeof window !== 'undefined' ? window.THREE : null);
+
 let scene, camera, renderer, controls;
 let containerEl;
+let animationFrameId = null;
 let trevorGroup, trevorHead, trevorArcLight, trevorHands = [];
 let decisionTerminalScreen;
 const interactiveObjects = [];
@@ -114,6 +118,7 @@ function createFloatingLabelSprite(title, subtitle, microStatusText, colorHexStr
 
   drawLabelOnCanvas(ctx, title, subtitle, microStatusText, colorHexStr);
 
+  const THREE = getTHREE();
   const texture = new THREE.CanvasTexture(canvas);
   texture.needsUpdate = true;
 
@@ -244,16 +249,13 @@ export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorCli
   if (oldCanvas) oldCanvas.remove();
   containerEl.appendChild(renderer.domElement);
 
-  // 6. OrbitControls
-  if (window.THREE && window.THREE.OrbitControls) {
+  // 6. OrbitControls (einzig über verifizierten CDN-Import)
+  if (THREE_LIB && THREE_LIB.OrbitControls) {
+    controls = new THREE_LIB.OrbitControls(camera, renderer.domElement);
+  } else if (window.THREE && window.THREE.OrbitControls) {
     controls = new window.THREE.OrbitControls(camera, renderer.domElement);
   } else {
-    try {
-      const controlsMod = await import('three/addons/controls/OrbitControls.js');
-      controls = new controlsMod.OrbitControls(camera, renderer.domElement);
-    } catch {
-      console.warn('[Studio 3D] OrbitControls Fallback');
-    }
+    console.warn('[Studio 3D] OrbitControls nicht geladen.');
   }
 
   if (controls) {
@@ -289,9 +291,13 @@ export async function init3DStudio(hierarchyDataParam, onAgentClick, onTrevorCli
     new ResizeObserver(() => onWindowResize()).observe(containerEl);
   }
 
-  // 14. Render-Loop starten
+  // 14. Render-Loop starten (verhindert doppelt gestapelte Loops)
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
   animate();
-  console.log('[Studio 3D] Kompakter Open-Space Tech-Campus V2.5 erfolgreich gerendert!');
+  console.log('[Studio 3D] Kompakter Open-Space Tech-Campus V2.6 erfolgreich gerendert!');
 }
 
 /**
@@ -946,6 +952,8 @@ function setupCameraButtons() {
   if (btnZoomOut && controls) btnZoomOut.addEventListener('click', () => camera.position.multiplyScalar(1.15));
   if (btnReset) {
     btnReset.addEventListener('click', () => {
+      const THREE = getTHREE();
+      if (!THREE) return;
       targetCameraPos = new THREE.Vector3(0, 24, 25);
       targetLookAt = new THREE.Vector3(0, 1.2, 0);
     });
@@ -1017,7 +1025,7 @@ export function setStageIn3D(stageNum) {
 }
 
 function animate() {
-  requestAnimationFrame(animate);
+  animationFrameId = requestAnimationFrame(animate);
 
   const time = performance.now() * 0.001;
 

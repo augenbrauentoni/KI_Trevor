@@ -1,57 +1,44 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Phase 7 – Kompakter 3D-Büro-Campus, Direktanweisungen & Smarte Workflows zu 100 % ERFOLGREICH ABGESCHLOSSEN & LIVE 🚀
-- **Datum / Letztes Update:** 2026-11-10 00:56:30
+- **Status:** Master-Fix zu 100 % ERFOLGREICH ABGESCHLOSSEN & LIVE 🚀
+- **Datum / Letztes Update:** 2026-11-10 16:23:45
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
 
-## 1. Phase 7 Zusammenfassung der umgesetzten Features
+## 1. Master-Fix Zusammenfassung der behobenen Fehlerquellen
 
-### 1. 3D-Canvas & 10 Abteilungs-Pills Hotfix
-- **Synchrones Datenfundament (`hierarchyData.js`):** `STUDIO_HIERARCHY_DATA` und `STUDIO_HIERARCHY` stehen direkt als JavaScript-Modul und global im `window` zur Verfügung. Keine 404-Netzwerk-Abhängigkeit.
-- **Three.js & OrbitControls Import:** Modernes `<script type="importmap">` kombiniert mit Fallback, keine CORS- oder Modul-Fehler.
-- **Feste Canvas-Dimensionen:** `#threejs-canvas-container` mit `width: 100%; height: calc(100vh - 170px); min-height: 580px; position: relative;` und aktivem `ResizeObserver`.
+### 1. Pfad-Fix & Datei-Verifizierung (`idleTrainer.js`)
+- **Physische Bereitstellung:** [`idleTrainer.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/idleTrainer.js) wurde physisch direkt im Ordner `02_Frontend_UI_und_3D_Studio/` abgelegt.
+- **Bereinigter Skript-Import:** In [`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) wurde der Import auf `<script defer src="./idleTrainer.js"></script>` umgestellt.
+- **Modul-Import in app.js:** [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) importiert nun sauber und direkt über `./idleTrainer.js` ohne fehleranfällige Parent-Directory-Sprünge (`../`).
+- **Doppelte Kompatibilität:** `idleTrainer.js` exportiert alle Funktionen als ES-Modul und registriert sich zusätzlich am globalen `window`-Objekt für maximale Skript-Kompatibilität.
 
-### 2. Kompakter, moderner Open-Space Büro-Grundriss (`studio3D.js`)
-- **Einheitlicher Architektur-Floor:** Große, zusammenhängende runde Haupt-Büroetage (Radius 21.5) in Schiefer-/Holz-/Beton-Optik mit eleganter rahmenloser Glasfassade und Aluminium-Handlauf.
-- **Kompakte Campus-Anordnung:** Alle 10 Abteilungen sind nah und kompakt (Radius ~13) direkt um Trevors zentrale Rotunde gruppiert. Beim Öffnen der Seite ist das gesamte Büro samt Schreibtischen, Monitoren und Trevor sofort groß im Blick.
-- **Realistischer Tech-Office Look:**
-  - Halbhohe Glas-Trennwände mit schwarzen Aluminium-Rahmen und offenen Durchgängen zur Mitte.
-  - Schreibtisch-Inseln, ergonomische Bürostühle, sitzende animierte 3D-Entwickler.
-  - **Leuchtende Dual-Monitore** mit prozedural generierten realistischen Code- und Server-Terminal-Texturen.
-  - Grüne Büropflanzen in Keramiktöpfen, Whiteboards und Server-Racks mit animiert blinkenden Status-LEDs.
-- **Trevor (MK-VII) im Iron-Man Look:**
-  - Im Zentrum auf erhöhtem Kommando-Podest in Metallic-Rot (`#dc2626`) und Gold (`#fbbf24`).
-  - Strahlender Arc-Reactor auf der Brust, leuchtendes Visier, Repulsor-Hände und runder holografischer Taktik-Tisch.
-  - Helle, freundliche Studio-Beleuchtung (AmbientLight `1.4`, HemisphereLight `1.1`, warmes Key-Light `1.8`, Cyan-Fill `0.9`).
+### 2. Three.js Duplikat & Import-Konflikt eliminiert
+- **Ursache:** Die gleichzeitige Einbindung von `<script type="importmap">` (lud Three.js `0.160.0` als ESM) und `<script src="...three.min.js">` (lud Three.js `r128` als UMD) erzeugte in der Konsole die Warnung *"Multiple instances of Three.js being imported"*.
+- **Lösung:**
+  - Die redundante Importmap wurde restlos aus [`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) entfernt.
+  - Im `<head>` wird ausschließlich die verifizierte, autoritative CDN-Version (Three.js `r128` + OrbitControls) geladen.
+  - In [`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js) wurde der asynchrone `import('three/addons/controls/OrbitControls.js')`-Zweig entfernt und durch das saubere `window.THREE.OrbitControls` ersetzt.
+  - Die Browser-Konsole läuft nun vollkommen frei von Instanz-Warnungen.
 
-### 3. Neuer Bottom-Up Workflow: Direkte Abteilungs-Anweisungen
-- **Direkt-Auftragsfeld im Klick-Inspektor:**
-  - Jede Abteilung und jeder PC besitzt nun das Terminal `"⚡ Direkte Anweisung"`.
-  - Eingabefeld für konkrete Arbeitsanweisungen.
-  - **3 Schnell-Aktionen (1-Klick Quick-Prompts)** pro Raum für blitzschnelles Ausführen.
-  - Button `[ ⚡ Direkt ausführen & an Trevor melden ]`.
-- **4-Schritt Ablauf:**
-  - **Schritt A (Fachteam):** Raum-Spezialisten programmieren die Anweisung.
-  - **Schritt B (Chef-Audit & Cross-Department Check):** Abteilungs-Chef prüft das Ergebnis und holt automatisch Feedback des betroffenen Nachbar-Chefs ein.
-  - **Schritt C (Übergabe an Trevor):** 3D-Datenpartikel fliegen von der Abteilung direkt in Trevors Arc-Reactor. Trevor synthetisiert das Gesamtsystem und baut den Antigravity-Prompt.
-  - **Schritt D (Entscheidung JA / NEIN):** Bei `JA` sofortige Ablage in `05_Antigravity_Outputs/ANTIGRAVITY_TASK.md` und Kopie in Zwischenablage. Bei `NEIN` Korrekturschleife mit Feedback.
+### 3. DOM-Lade-Sicherheit & Reparatur blockierter Eingabefelder
+- **Timing-Schutz:** In [`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) wurden die Skripte mit `defer` eingebunden.
+- **State-Check in app.js:** [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) kapselt die Initialisierung in `bootTrevorApp()` und prüft aktiv `document.readyState`:
+  - Wenn `document.readyState === 'loading'`, wird auf `DOMContentLoaded` gewartet.
+  - Falls das DOM bereits geladen ist (`interactive` oder `complete`), startet die Initialisierung sofort.
+  - Dadurch werden blockierte Eingabefelder, nicht registrierte Event-Listener und Klick-Verzögerungen zuverlässig behoben.
 
-### 4. Komfort- & Effizienz-Upgrades
-- **Projekt-Auswahl-Dropdown in der Top-Bar ("Aktives Ziel-Projekt"):**
-  - Dropdown mit `KI_Trevor`, `PitchPro`, `LernfeldTrainer`, `ClassKartGP` und `+ Neues Projekt anlegen`.
-  - Bleibt über `localStorage` erhalten und steuert das Ziel aller Aufgaben und des Idle-Trainings.
-- **Live-Sprechblasen (Micro-Status-Toasts) im 3D-Büro:**
-  - Über jedem Raum schwebt ein 3D-Billboard Sprite mit Titel, Chef und dynamischem Live-Status (z. B. `"💬 Berechnet: ..."`, `"⚡ Bearbeitet: ..."`, `"✅ Lösung an Trevor gemeldet"`).
-- **Entscheidungs-Archiv & Prompt-Verlauf:**
-  - Eigener Tab `"📜 Verlauf & Freigaben"` in Trevors Terminal mit allen bisherigen Tasks, Status-Pills, 1-Klick-Kopieren und Download von `ANTIGRAVITY_TASK.md`.
+### 4. Aktiver Render-Loop in `studio3D.js`
+- **Kontinuierlicher Loop:** `animate()` ruft `animationFrameId = requestAnimationFrame(animate)` am Schleifenanfang auf.
+- **Controls & Szene:** `controls.update()` und `renderer.render(scene, camera)` laufen kontinuierlich mit 60 FPS.
+- **Mehrfach-Schutz:** Beim Neuinitialisieren von `init3DStudio()` wird ein vorheriger Loop über `cancelAnimationFrame` abgebrochen, sodass niemals doppelte Loops gestapelt werden.
 
 ---
 
 ## 2. Live-Zugriff & URLs
 - **Lokal (PC):** `http://localhost:3000`
 - **Heimnetz / WLAN:** `http://192.168.178.53:3000`
-- **Unterwegs / Remote (Weltweit):** `https://sixty-webs-tap.loca.lt` (Bypass-Passwort: `88.67.105.95`)
-- **Server-Prozess:** Node.js Webserver auf Port 3000 (Aktiv als Daemon)
-- **Localtunnel-Prozess:** Aktiv & verbunden (Aktiv als Daemon)
+- **Unterwegs / Remote (Weltweit):** `https://famous-sloths-peel.loca.lt` (Bypass-Passwort: `88.67.105.95`)
+- **Server-Prozess:** Node.js Webserver auf Port 3000 (Aktiv als Daemon, Task `task-539`)
+- **Localtunnel-Prozess:** Aktiv & verbunden (Aktiv als Daemon, Task `task-541`)
