@@ -1495,6 +1495,39 @@ export function setStageIn3D(stageNum) {
 }
 
 /**
+ * Aktualisiert den Live-Status eines Agenten in seinen 3D-Meshes und im UI-Info-Panel falls geöffnet
+ * @param {string} agentName - Der Name des Agenten (z. B. "Max", "Viktor", "Trevor")
+ * @param {string} statusMessage - Der aktuelle Status (z. B. "Analysiert ...", "Aufgabe abgeschlossen")
+ */
+export function updateAgentStatus(agentName, statusMessage) {
+  if (!agentName) return;
+
+  // 1. In allen passenden interactiveObjects das userData.currentTask aktualisieren
+  let foundCount = 0;
+  for (const obj of interactiveObjects) {
+    if (obj && obj.userData && obj.userData.name === agentName) {
+      obj.userData.currentTask = statusMessage;
+      foundCount++;
+    }
+  }
+
+  // 2. Falls das schwebende Agenten-Info-Panel offen ist und genau diesen Agenten anzeigt -> Text live aktualisieren
+  if (typeof document !== 'undefined') {
+    const panel = document.getElementById('agent-info-panel');
+    const nameEl = document.getElementById('agent-info-name');
+    const statusTextEl = document.getElementById('status-text');
+
+    if (panel && panel.style.display !== 'none' && nameEl && nameEl.innerText.trim().toLowerCase() === agentName.trim().toLowerCase()) {
+      if (statusTextEl) {
+        statusTextEl.innerText = statusMessage;
+      }
+    }
+  }
+
+  console.log(`[Studio3D] updateAgentStatus: "${agentName}" -> "${statusMessage}" (${foundCount} Meshes)`);
+}
+
+/**
  * Passt das Aussehen der 3D-Objekte abhängig vom Workflow-Status dynamisch an
  * @param {string|number} stageInput - 'idle', 'stage1', 'stage2', 'stage3', 'stage4', 'routing'
  * @param {string} [floor] - 'EG' | 'UG'
@@ -1860,6 +1893,7 @@ function onWindowResize() {
 if (typeof window !== 'undefined') {
   window.update3DStudioState = update3DStudioState;
   window.setStageIn3D = setStageIn3D;
+  window.updateAgentStatus = updateAgentStatus;
   window.triggerDataStreamToTrevor = triggerDataStreamToTrevor;
   window.updateRoomMicroStatus = updateRoomMicroStatus;
   window.switchFloor = switchFloor;

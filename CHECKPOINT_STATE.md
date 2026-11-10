@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** KI-Campus Erweiterung – Physisches Untergeschoss (UG auf y = -15), Gläserner Aufzug, 4 Non-Code/Hardware-Abteilungen & Intelligentes Pre-Routing zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
-- **Datum / Letztes Update:** 2026-11-10 19:05:00
+- **Status:** Interaktives Agenten-Panel mit Live-Status-Tracking und direkter Chat-Schnittstelle (Micro-Management) zu 100 % ERFOLGREICH IMPLEMENTIERT & VERIFIZIERT 🚀
+- **Datum / Letztes Update:** 2026-11-10 19:45:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -187,15 +187,43 @@ Vollständige architektonische und algorithmische Erweiterung des Multi-Agenten-
 
 ---
 
-## 9. Verifikation & Test-Ergebnisse
+## 10. Interaktives Agenten-Panel (Live-Status & Direkt-Beauftragung)
 
-- **Automatisierte Integrations-Suite (`test_ug_integration.mjs`):**
-  - **Hierarchie-Validierung:** Exakt 14 Abteilungen (10 EG, 4 UG), alle 4 UG-Abteilungen (11, 12, 13, 14) verfügen über korrekte Chef-Agenten (`floor: 'UG'`) und je 3 Spezialisten.
-  - **Pre-Routing Klassifikation:** Software-Prompts (z. B. React/Supabase) werden zu 100 % als `SOFTWARE_DEV` (EG) erkannt. Hardware-, Netzwerk-, Archiv- und Brainstorming-Prompts (z. B. ESP32/Schaltung/Server-Cluster) werden zu 100 % als `ALLGEMEIN_HARDWARE` (UG) erkannt.
-  - **Etagen-Isolation im Dispatcher:** Bei `ALLGEMEIN_HARDWARE` werden Aufgaben strikt und ausschließlich an Abteilungen 11–14 geroutet. Bei `SOFTWARE_DEV` ausschließlich an Abteilungen 1–10.
-  - **Code-RAG Bypass:** Token-Einsparung durch Überspringen des Datei-Einlesens bei Keller-Tasks erfolgreich verifiziert.
+Das schwebende 3D-Raycaster-Inspektions-Panel wurde um eine dynamische Live-Status-Verfolgung und eine direkte Chat-Schnittstelle zur Einzelführung von Agenten (Micro-Management) erweitert:
+
+1. **UI-Komponenten im Schwebenden Panel ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) & [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css)):**
+   - **Live-Status:** `<p id="agent-live-status">Status: <span id="status-text">Wartet auf Aufgaben</span></p>` mit leuchtendem Cyan-Text und Karmesinrot-Border.
+   - **Direktbefehl-Eingabe:** `#agent-direct-prompt` und Senden-Button `#btn-direct-task` mit Hover-, Disabled- und Fokus-Effekten.
+   - **Antwort-Container:** `#agent-direct-response` mit dunklem Glasmorphismus-Hintergrund, Cyan-Border und Scrollbar.
+
+2. **Live-Status-Tracking ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js) & [`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - **API `window.updateAgentStatus(agentName, statusMessage)`:**
+     - Durchsucht alle registrierten 3D-Meshes in `interactiveObjects` und setzt `mesh.userData.currentTask = statusMessage`.
+     - Prüft, ob das `#agent-info-panel` geöffnet ist und diesen Agenten anzeigt; aktualisiert in diesem Fall `#status-text` synchron in Echtzeit.
+   - **Workflow-Kopplung (Stufe 2 - Worker Execution):**
+     - Vor dem LLM-Aufruf des Fach-PCs wird `window.updateAgentStatus(pc.name, 'Analysiert ' + subTask.departmentName + '...')` getriggert.
+     - Nach Fertigstellung wird `window.updateAgentStatus(pc.name, 'Aufgabe abgeschlossen')` getriggert.
+
+3. **Direkt-Beauftragung / Micro-Management Chat ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Funktion `executeDirectAgentTask()` liest `#agent-direct-prompt`.
+   - Setzt Button auf `disabled = true` ("Verarbeite...") und Status auf "Arbeitet an Direktbefehl...".
+   - Ruft `queryLLM(systemPrompt, userPrompt, false)` direkt auf – **Trevor und die 4-Stufen-Orchestrierung werden vollständig umgangen**.
+   - System-Prompt formuliert die Persona basierend auf Name, Rolle und Abteilung aus den Metadaten des angeklickten 3D-Meshes.
+   - Rendert das Inferenz-Ergebnis formatiert in `#agent-direct-response` (`style.display = 'block'`), setzt Status zurück auf "Wartet auf Aufgaben" und reaktiviert den Button.
+   - Unterstützt sowohl Mausklick auf `#btn-direct-task` als auch `Enter`-Taste im Eingabefeld.
+
+---
+
+## 11. Verifikation & Test-Ergebnisse
+
+- **Automatisierte Integrations-Suite (`test_interactive_panel.mjs`):**
+   - `updateAgentStatus` aktualisiert verlässlich `userData.currentTask` auf den Ziel-Meshes.
+   - Geöffnetes `#agent-info-panel` aktualisiert `#status-text` synchron und isoliert gegen andere Agenten.
+   - `executeDirectAgentTask` umgeht den Orchestrator, sendet Anweisung direkt an `queryLLM` und rendert Antwort in `#agent-direct-response`.
+- **Automatisierte UG- & Pre-Routing Suite (`test_ug_integration.mjs`):**
+   - Exakt 14 Abteilungen (10 EG, 4 UG), Pre-Routing und Token-Ersparnis zu 100 % verifiziert.
 - **Three.js Syntax- & Modul-Integrität:**
-  - `node -c` auf allen 4 Frontend-Modulen (`hierarchyData.js`, `workflowOrchestrator.js`, `studio3D.js`, `app.js`) fehlerfrei abgeschlossen (0 Syntaxfehler).
+   - `node -c` auf allen Frontend-Modulen fehlerfrei abgeschlossen (0 Syntaxfehler).
 - **Server & Bridges:**
-  - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
-  - Lokale Bridge (Port 3001): `http://localhost:3001/api/status`, `/api/list-files`, `/api/read-files` & `/api/export-task` (online)
+   - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
+   - Lokale Bridge (Port 3001): `http://localhost:3001/api/status`, `/api/list-files`, `/api/read-files` & `/api/export-task` (online)

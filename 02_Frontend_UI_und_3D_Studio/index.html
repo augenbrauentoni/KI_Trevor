@@ -104,9 +104,22 @@
             <h3 id="agent-info-name" class="agent-info-name">Spezial-Agent</h3>
             <div id="agent-info-role" class="agent-info-role">Senior Software Architect</div>
             <div class="agent-info-divider"></div>
-            <div class="agent-info-status-label">AKTUELLE AUFGABE & STATUS:</div>
-            <div id="agent-info-status" class="agent-info-status">Bereit für Arbeitsanweisungen im Studio</div>
+            <p id="agent-live-status" class="agent-live-status">Status: <span id="status-text">Wartet auf Aufgaben</span></p>
+            <div id="agent-info-status" class="agent-info-status" style="display: none;">Bereit für Arbeitsanweisungen im Studio</div>
             <div id="agent-info-detail" class="agent-info-detail"></div>
+
+            <!-- Direkt-Beauftragung (Chat-Schnittstelle) -->
+            <div class="agent-direct-task-section">
+              <div class="agent-direct-task-header">
+                <span class="agent-direct-icon">⚡</span>
+                <span class="agent-direct-label">DIREKTBEFEHL (MICRO-MANAGEMENT)</span>
+              </div>
+              <div class="agent-direct-task-input-row">
+                <input type="text" id="agent-direct-prompt" placeholder="Direkte Anweisung..." autocomplete="off" />
+                <button id="btn-direct-task">Senden</button>
+              </div>
+              <div id="agent-direct-response" style="display:none;"></div>
+            </div>
           </div>
           <div class="agent-info-footer">
             <button id="agent-info-action-btn" class="agent-info-btn">

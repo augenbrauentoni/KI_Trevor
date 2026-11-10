@@ -352,6 +352,10 @@ Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. 
           `${pc.name} (${subTask.departmentName}) erarbeitet Modul...`
         );
 
+        if (typeof window !== 'undefined' && typeof window.updateAgentStatus === 'function') {
+          window.updateAgentStatus(pc.name, `Analysiert ${subTask.departmentName}...`);
+        }
+
         const systemPrompt = `Du bist ${pc.name}, Spezialist für "${pc.title}" in der Abteilung "${subTask.departmentName}".
 Aufgabe: ${pc.easy_explanation}.
 Erstelle eine konkrete technische Lösung mit relevanten Dateipfaden (z. B. 02_Frontend_UI_und_3D_Studio/..., 06_Deployment_und_Config/..., 01_Datenbank_Supabase/...).`;
@@ -359,6 +363,11 @@ Erstelle eine konkrete technische Lösung mit relevanten Dateipfaden (z. B. 02_F
         const userMsg = `AUFTRAG:\n"""\n${userPrompt}\n"""${ragContextSection}\n\nErstelle deine technische Detailausarbeitung:`;
 
         const output = await queryLLM(systemPrompt, userMsg, false);
+
+        if (typeof window !== 'undefined' && typeof window.updateAgentStatus === 'function') {
+          window.updateAgentStatus(pc.name, 'Aufgabe abgeschlossen');
+        }
+
         workerOutputs[pc.id] = {
           agentId: pc.id,
           agentName: pc.name,

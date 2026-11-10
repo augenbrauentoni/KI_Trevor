@@ -420,8 +420,15 @@ function switchInspectorTab(tabName) {
 // =============================================================================
 // SCHWEBENDES 3D-AGENTEN-INSPEKTIONS-PANEL (RAYCASTER OVERLAY)
 // =============================================================================
+let currentSelectedAgentData = null;
+
+export function getCurrentSelectedAgentData() {
+  return currentSelectedAgentData;
+}
+
 export function showAgentInfo(data) {
   if (!data) return;
+  currentSelectedAgentData = data;
 
   const panel = document.getElementById('agent-info-panel');
   if (!panel) return;
@@ -430,9 +437,19 @@ export function showAgentInfo(data) {
   const roleEl = document.getElementById('agent-info-role');
   const deptEl = document.getElementById('agent-info-dept');
   const statusEl = document.getElementById('agent-info-status');
+  const statusTextEl = document.getElementById('status-text');
   const detailEl = document.getElementById('agent-info-detail');
   const iconEl = document.getElementById('agent-info-icon');
   const actionBtn = document.getElementById('agent-info-action-btn');
+
+  // Input & Response im Direktbefehl-Bereich zurücksetzen
+  const directInput = document.getElementById('agent-direct-prompt');
+  const directResp = document.getElementById('agent-direct-response');
+  if (directInput) directInput.value = '';
+  if (directResp) {
+    directResp.innerText = '';
+    directResp.style.display = 'none';
+  }
 
   // 1. Icon & Abteilungs-Badge ermitteln
   let icon = '🤖';
@@ -493,6 +510,7 @@ export function showAgentInfo(data) {
   }
 
   if (statusEl) statusEl.innerText = statusText;
+  if (statusTextEl) statusTextEl.innerText = data.currentTask || statusText || 'Wartet auf Aufgaben';
   if (detailEl) detailEl.innerText = detailText;
 
   // 3. Action-Button für Vollbild-Inspektor / Terminal konfigurieren
@@ -512,6 +530,63 @@ export function showAgentInfo(data) {
 
   // 4. Panel sichtbar schalten
   panel.style.display = 'flex';
+}
+
+/**
+ * Führt einen direkten Befehl an den aktuell im 3D-Raycaster ausgewählten Agenten aus (Micro-Management)
+ * Umgeht Trevor und den mehrstufigen Orchestrator komplett.
+ */
+export async function executeDirectAgentTask() {
+  const btnDirect = document.getElementById('btn-direct-task');
+  const inputDirect = document.getElementById('agent-direct-prompt');
+  const respDirect = document.getElementById('agent-direct-response');
+  const statusTextEl = document.getElementById('status-text');
+
+  if (!inputDirect) return;
+  const prompt = inputDirect.value.trim();
+  if (!prompt) return;
+
+  if (btnDirect) {
+    btnDirect.disabled = true;
+    btnDirect.innerText = 'Verarbeite...';
+  }
+  if (statusTextEl) {
+    statusTextEl.innerText = 'Arbeitet an Direktbefehl...';
+  }
+  if (currentSelectedAgentData) {
+    currentSelectedAgentData.currentTask = 'Arbeitet an Direktbefehl...';
+  }
+
+  const agentName = currentSelectedAgentData?.name || 'Spezial-Agent';
+  const agentRole = currentSelectedAgentData?.role || 'Fach-Entwickler';
+  const agentDept = currentSelectedAgentData?.department || 'Studio';
+
+  const systemPrompt = `Du bist ${agentName}, ${agentRole} in der Abteilung "${agentDept}". Beantworte die folgende direkte Anweisung präzise, pragmatisch und lösungsorientiert. Antworte auf Deutsch.`;
+
+  try {
+    const answer = await queryLLM(systemPrompt, prompt, false);
+    if (respDirect) {
+      respDirect.innerText = typeof answer === 'string' ? answer : JSON.stringify(answer, null, 2);
+      respDirect.style.display = 'block';
+    }
+  } catch (err) {
+    console.error('[DirectAgentTask] Fehler bei Direktanweisung:', err);
+    if (respDirect) {
+      respDirect.innerText = `Fehler bei Direktbefehl: ${err.message}`;
+      respDirect.style.display = 'block';
+    }
+  } finally {
+    if (statusTextEl) {
+      statusTextEl.innerText = 'Wartet auf Aufgaben';
+    }
+    if (currentSelectedAgentData) {
+      currentSelectedAgentData.currentTask = 'Wartet auf Aufgaben';
+    }
+    if (btnDirect) {
+      btnDirect.disabled = false;
+      btnDirect.innerText = 'Senden';
+    }
+  }
 }
 
 // =============================================================================
@@ -1833,6 +1908,23 @@ function setupEventListeners() {
     });
   }
 
+  // Direkt-Beauftragung (Micro-Management Chat) im Agenten-Panel
+  const btnDirectTask = document.getElementById('btn-direct-task');
+  const directPromptInput = document.getElementById('agent-direct-prompt');
+
+  if (btnDirectTask && directPromptInput) {
+    btnDirectTask.addEventListener('click', () => {
+      executeDirectAgentTask();
+    });
+
+    directPromptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        executeDirectAgentTask();
+      }
+    });
+  }
+
   window.addEventListener('agentSelected', (event) => {
     if (event.detail && typeof showAgentInfo === 'function') {
       showAgentInfo(event.detail);
@@ -2088,6 +2180,8 @@ if (typeof window !== 'undefined') {
   window.renderInteractiveRoadmap = renderInteractiveRoadmap;
   window.exportSelectedStepsForAntigravity = exportSelectedStepsForAntigravity;
   window.showAgentInfo = showAgentInfo;
+  window.executeDirectAgentTask = executeDirectAgentTask;
+  window.getCurrentSelectedAgentData = getCurrentSelectedAgentData;
   window.loadRAGFiles = loadRAGFiles;
   window.renderRAGFileTags = renderRAGFileTags;
   window.updateRAGSelectedCount = updateRAGSelectedCount;
