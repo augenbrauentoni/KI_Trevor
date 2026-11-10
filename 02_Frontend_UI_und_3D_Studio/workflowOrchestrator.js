@@ -49,8 +49,29 @@ Beantworte die folgende Frage des Nutzers präzise, professionell, klar struktur
 
       const directAnswer = await queryLLM(qPrompt, userPrompt, false);
 
-      if (typeof window !== 'undefined' && typeof window.showQAPanel === 'function') {
-        window.showQAPanel(userPrompt, directAnswer);
+      if (typeof window !== 'undefined') {
+        if (typeof window.showQAPanel === 'function') {
+          window.showQAPanel(userPrompt, directAnswer);
+        }
+        if (typeof window.playNotificationSound === 'function') {
+          window.playNotificationSound('QUESTION');
+        }
+        if (typeof window.showActionToast === 'function') {
+          window.showActionToast('Rückfrage von Trevor', 'Auftrag wartet auf deine Antwort', 'QUESTION');
+        }
+        if (typeof window.addActionCenterItem === 'function') {
+          window.addActionCenterItem({
+            id: 'act_qa_' + Date.now(),
+            type: 'CLARIFICATION_NEEDED',
+            title: 'Rückfrage von Trevor',
+            message: 'Auftrag wartet auf deine Antwort'
+          });
+        }
+        const actionBadge = document.getElementById('action-center-badge');
+        if (actionBadge) {
+          actionBadge.classList.add('pulse-flash');
+          setTimeout(() => actionBadge.classList.remove('pulse-flash'), 5000);
+        }
       }
       onStatusUpdate('Frage beantwortet', 'Trevor', 'Direkt-Antwort im Q&A-Panel bereitgestellt.');
 
@@ -485,6 +506,28 @@ Deine Kernaufgabe in Stufe 3 ist ein unbestechliches Qualitäts- und Logikaudit:
         reportText: auditedOutput,
         logicVerified: true
       };
+
+      if (typeof window !== 'undefined') {
+        if (typeof window.playNotificationSound === 'function') {
+          window.playNotificationSound('SUCCESS');
+        }
+        if (typeof window.showActionToast === 'function') {
+          window.showActionToast('Ergebnis bereit', 'Abteilung hat die Arbeit abgeschlossen', 'SUCCESS');
+        }
+        if (typeof window.addActionCenterItem === 'function') {
+          window.addActionCenterItem({
+            id: `act_dept_${chef.id}_${Date.now()}`,
+            type: 'APPROVAL_NEEDED',
+            title: `Ergebnis bereit: ${subTask.departmentName}`,
+            message: `${chef.name} hat den Logik-Audit abgeschlossen.`
+          });
+        }
+        const actionBadge = document.getElementById('action-center-badge');
+        if (actionBadge) {
+          actionBadge.classList.add('pulse-flash');
+          setTimeout(() => actionBadge.classList.remove('pulse-flash'), 5000);
+        }
+      }
     }
 
     return departmentReports;

@@ -43,6 +43,7 @@ const state = {
   currentInspectedAgent: null,
   taskQueue: [],
   currentQAContext: { question: '', answer: '' },
+  actionCenterItems: [],
   settings: {
     llm_mode: 'gemini',
     gemini_model: 'gemini-2.5-flash',
@@ -62,11 +63,13 @@ function bootTrevorApp() {
   loadLocalSettings();
   loadSelectedProject();
   loadTaskQueue();
+  setupAudioSystem();
 
   // 1. Sofortiges Rendern der 10 Pills & des 2D-Grids
   renderDepartmentPills();
   renderWorkstationsGrid();
   renderTaskQueueUI();
+  renderActionCenterUI();
   setupEventListeners();
   checkExistingCheckpoint();
   updateUIThemeSettings();
@@ -965,6 +968,16 @@ async function dispatchNewTask() {
     document.getElementById('code-preview-content').innerText = state.activeTask.antigravity_prompt;
     renderInteractiveRoadmap(state.activeTask.checkpoint_data.structured_steps);
 
+    // Audio-Feedback & Toast für fertiges Ergebnis
+    playNotificationSound('SUCCESS');
+    showActionToast('Ergebnis bereit', 'Abteilung hat die Arbeit abgeschlossen', 'SUCCESS');
+    addActionCenterItem({
+      id: `act_${state.activeTask.id}_final`,
+      type: 'APPROVAL_NEEDED',
+      title: 'Ergebnis bereit zur Abstimmung',
+      message: `${(state.activeTask.checkpoint_data.structured_steps || []).length} Maßnahmen freigabebereit.`
+    });
+
   } catch (err) {
     console.warn('[Trevor App] Fehler bei executeFullWorkflow, starte Simulation als Fallback:', err);
     await runLiveWorkflowSimulation(state.activeTask);
@@ -1559,6 +1572,7 @@ export function returnToHub() {
   const overlaysToHide = [
     'qa-panel',
     'task-queue-panel',
+    'user-action-center',
     'agent-info-panel',
     'modal-trevor-terminal',
     'modal-chef-reports',
@@ -1621,6 +1635,9 @@ export function showQAPanel(question, answer) {
   if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
     window.update3DStudioState('stage1', 'EG');
   }
+
+  playNotificationSound('QUESTION');
+  showActionToast('Rückfrage von Trevor', 'Auftrag wartet auf deine Antwort im Q&A-Modus', 'QUESTION');
 }
 
 /**
@@ -1803,6 +1820,422 @@ export function renderTaskQueueUI() {
       else if (action === 'down') moveTaskQueueDown(idx);
       else if (action === 'delete') removeFromTaskQueue(idx);
     });
+  });
+}
+
+// =============================================================================
+// WEB AUDIO SYNTHESIZER & ACTION-CENTER SOUND-MODUL (KEINE EXTERNEN MP3s)
+// =============================================================================
+
+if (typeof window !== 'undefined') {
+  window.trevorAudio = window.trevorAudio || {
+    enabled: true,
+    ctx: null
+  };
+}
+
+/**
+ * Initialisiert den nativen AudioContext unter Einhaltung moderner Autoplay-Richtlinien
+ */
+export function initAudioContext() {
+  if (typeof window === 'undefined') return null;
+  if (!window.trevorAudio) {
+    window.trevorAudio = { enabled: true, ctx: null };
+  }
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+
+  if (!window.trevorAudio.ctx) {
+    try {
+      window.trevorAudio.ctx = new AudioContextClass();
+    } catch (err) {
+      console.warn('[Trevor Audio] Konnte AudioContext nicht erstellen:', err);
+      return null;
+    }
+  }
+
+  if (window.trevorAudio.ctx && window.trevorAudio.ctx.state === 'suspended') {
+    window.trevorAudio.ctx.resume().catch(() => {});
+  }
+
+  return window.trevorAudio.ctx;
+}
+
+/**
+ * Spielt ein präzises, synthetisiertes Audio-Feedback ab
+ * @param {'QUESTION'|'SUCCESS'|'ABORT'|'CLARIFICATION_NEEDED'|'APPROVAL_NEEDED'|'ERROR'} type 
+ */
+export function playNotificationSound(type = 'QUESTION') {
+  if (typeof window === 'undefined') return;
+  if (!window.trevorAudio || !window.trevorAudio.enabled) return;
+
+  const ctx = initAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    const t = (type || '').toUpperCase();
+
+    if (t === 'QUESTION' || t === 'CLARIFICATION_NEEDED') {
+      // Typ 1 ('QUESTION' – Rückfrage von Trevor):
+      // Kurzer aufsteigender Doppel-Ton (sine-Welle von 520 Hz auf 680 Hz, Gesamtdauer ca. 180 ms, sanftes Fade-out über GainNode)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.setValueAtTime(680, now + 0.08);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.setValueAtTime(0.08, now + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.18);
+    } else if (t === 'SUCCESS' || t === 'APPROVAL_NEEDED') {
+      // Typ 2 ('SUCCESS' – Ergebnis fertig zur Abstimmung):
+      // Harmonischer Zwei-Ton-Akkord/Chime (triangle-Welle 587 Hz (D5) gefolgt von 880 Hz (A5), Gesamtdauer ca. 250 ms, dezent gain = 0.08)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(587.33, now);
+      gain1.gain.setValueAtTime(0.08, now);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.22);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(880, now + 0.06);
+      gain2.gain.setValueAtTime(0.0001, now);
+      gain2.gain.setValueAtTime(0.08, now + 0.06);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.06);
+      osc2.stop(now + 0.25);
+    } else if (t === 'ABORT' || t === 'ERROR') {
+      // Typ 3 ('ABORT' – Abbruch/Fehler):
+      // Kurzer tiefer Ton (220 Hz, 120 ms)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    }
+  } catch (err) {
+    console.warn('[Trevor Audio] Sound-Wiedergabe fehlgeschlagen:', err);
+  }
+}
+
+/**
+ * Richtet das Audio-System und den Sound-Toggle Button in der Kopfzeile ein
+ */
+function setupAudioSystem() {
+  const savedSound = localStorage.getItem('trevor_sound_enabled');
+  if (savedSound !== null) {
+    window.trevorAudio.enabled = (savedSound === 'true');
+  } else {
+    window.trevorAudio.enabled = true;
+  }
+
+  const soundBtn = document.getElementById('btn-toggle-sound');
+  const updateSoundBtnUI = () => {
+    if (!soundBtn) return;
+    if (window.trevorAudio.enabled) {
+      soundBtn.innerText = '🔊 Sound: AN';
+      soundBtn.classList.remove('muted');
+      soundBtn.title = 'Sound ist AN – Klicken zum Stummschalten';
+    } else {
+      soundBtn.innerText = '🔇 Sound: AUS';
+      soundBtn.classList.add('muted');
+      soundBtn.title = 'Sound ist AUS – Klicken zum Aktivieren';
+    }
+  };
+
+  updateSoundBtnUI();
+
+  if (soundBtn) {
+    soundBtn.addEventListener('click', () => {
+      initAudioContext();
+      window.trevorAudio.enabled = !window.trevorAudio.enabled;
+      localStorage.setItem('trevor_sound_enabled', window.trevorAudio.enabled ? 'true' : 'false');
+      updateSoundBtnUI();
+      if (window.trevorAudio.enabled) {
+        playNotificationSound('SUCCESS');
+      }
+    });
+  }
+
+  // Globaler Autoplay-Freischalt-Listener für die erste Benutzerinteraktion
+  const unlockListener = () => {
+    initAudioContext();
+    document.removeEventListener('click', unlockListener);
+    document.removeEventListener('keydown', unlockListener);
+    document.removeEventListener('touchstart', unlockListener);
+  };
+  document.addEventListener('click', unlockListener, { passive: true });
+  document.addEventListener('keydown', unlockListener, { passive: true });
+  document.addEventListener('touchstart', unlockListener, { passive: true });
+}
+
+// =============================================================================
+// VISUELLE TOAST-BENACHRICHTIGUNGEN (Z-INDEX: 9500)
+// =============================================================================
+
+/**
+ * Zeigt eine visuelle Toast-Benachrichtigung an (automatisches Ausblenden nach 6s, klickbar)
+ * @param {string} title - Titel der Benachrichtigung
+ * @param {string} message - Detailtext
+ * @param {'QUESTION'|'SUCCESS'|'ABORT'|'CLARIFICATION_NEEDED'|'APPROVAL_NEEDED'} type
+ * @param {string|null} actionId - Optionale ID des korrespondierenden Action-Items
+ */
+export function showActionToast(title, message, type = 'QUESTION', actionId = null) {
+  if (typeof document === 'undefined') return;
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const t = (type || '').toUpperCase();
+  const isQuestion = t === 'QUESTION' || t === 'CLARIFICATION_NEEDED';
+  const isSuccess = t === 'SUCCESS' || t === 'APPROVAL_NEEDED';
+
+  const toast = document.createElement('div');
+  const typeClass = isQuestion ? 'toast-question' : (isSuccess ? 'toast-success' : 'toast-abort');
+  toast.className = `action-toast ${typeClass}`;
+  toast.setAttribute('role', 'alert');
+
+  const icon = isQuestion ? '❓' : (isSuccess ? '⚡' : '⚠️');
+
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <div class="toast-content">
+      <span class="toast-title">${escapeHtml(title)}</span>
+      <span class="toast-message">${escapeHtml(message)}</span>
+    </div>
+    <button class="toast-close-btn" title="Schließen">✕</button>
+  `;
+
+  let dismissTimer = null;
+  const startTimer = () => {
+    dismissTimer = setTimeout(() => {
+      dismissToast();
+    }, 6000);
+  };
+
+  const dismissToast = () => {
+    if (dismissTimer) clearTimeout(dismissTimer);
+    toast.classList.add('fade-out');
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
+  };
+
+  // Klick auf den Toast öffnet sofort das #user-action-center & fokussiert das Item
+  toast.addEventListener('click', (e) => {
+    if (e.target.closest('.toast-close-btn')) {
+      e.stopPropagation();
+      dismissToast();
+      return;
+    }
+    dismissToast();
+    openActionCenter(actionId);
+  });
+
+  const closeBtn = toast.querySelector('.toast-close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dismissToast();
+    });
+  }
+
+  toast.addEventListener('mouseenter', () => {
+    if (dismissTimer) clearTimeout(dismissTimer);
+  });
+  toast.addEventListener('mouseleave', () => {
+    startTimer();
+  });
+
+  container.appendChild(toast);
+  startTimer();
+}
+
+// =============================================================================
+// USER ACTION-CENTER VERWALTUNG (RÜCKFRAGEN & FREIGABEN)
+// =============================================================================
+
+/**
+ * Öffnet das User Action-Center und fokussiert optional ein bestimmtes Item
+ */
+export function openActionCenter(targetId = null) {
+  const panel = document.getElementById('user-action-center');
+  if (!panel) return;
+  panel.style.display = 'flex';
+
+  renderActionCenterUI();
+
+  if (targetId) {
+    setTimeout(() => {
+      const targetCard = document.getElementById(`action-card-${targetId}`);
+      if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        targetCard.classList.add('highlight-focus');
+        setTimeout(() => targetCard.classList.remove('highlight-focus'), 2000);
+      }
+    }, 120);
+  }
+}
+
+/**
+ * Schließt das User Action-Center
+ */
+export function closeActionCenter() {
+  const panel = document.getElementById('user-action-center');
+  if (panel) panel.style.display = 'none';
+}
+
+/**
+ * Fügt ein Action-Item ins Action-Center ein, spielt Sound & zeigt Toast
+ */
+export function addActionCenterItem(item) {
+  const id = item.id || `act_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+  const fullItem = {
+    id,
+    type: item.type || 'APPROVAL_NEEDED',
+    title: item.title || 'Aktion erforderlich',
+    message: item.message || '',
+    timestamp: Date.now(),
+    data: item.data || {}
+  };
+
+  state.actionCenterItems.unshift(fullItem);
+  updateActionCenterBadges();
+  renderActionCenterUI();
+
+  // Akustisches Feedback
+  playNotificationSound(fullItem.type);
+
+  // Visuelle Toast-Notification
+  showActionToast(fullItem.title, fullItem.message, fullItem.type, fullItem.id);
+
+  // Zähler-Badge am Action-Center-Button animieren
+  const btnBadge = document.getElementById('action-center-badge');
+  if (btnBadge) {
+    btnBadge.classList.add('pulse-flash');
+    setTimeout(() => {
+      btnBadge.classList.remove('pulse-flash');
+    }, 5000);
+  }
+
+  return id;
+}
+
+/**
+ * Entfernt ein Action-Item aus dem Action-Center
+ */
+export function removeActionCenterItem(id) {
+  state.actionCenterItems = state.actionCenterItems.filter(item => item.id !== id);
+  updateActionCenterBadges();
+  renderActionCenterUI();
+}
+
+/**
+ * Aktualisiert die Zähler-Badges des Action-Centers
+ */
+function updateActionCenterBadges() {
+  const count = state.actionCenterItems.length;
+  const btnBadge = document.getElementById('action-center-badge');
+  const headerBadge = document.getElementById('action-center-header-badge');
+  if (btnBadge) {
+    btnBadge.innerText = count.toString();
+    btnBadge.style.display = count > 0 ? 'inline-block' : 'none';
+  }
+  if (headerBadge) {
+    headerBadge.innerText = `${count} offen`;
+  }
+}
+
+/**
+ * Rendert die Liste der Action-Items im Panel
+ */
+export function renderActionCenterUI() {
+  const empty = document.getElementById('action-center-empty');
+  const list = document.getElementById('action-center-list');
+  if (!empty || !list) return;
+
+  if (state.actionCenterItems.length === 0) {
+    empty.style.display = 'flex';
+    list.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  list.style.display = 'flex';
+  list.innerHTML = '';
+
+  state.actionCenterItems.forEach(item => {
+    const isClarification = item.type === 'CLARIFICATION_NEEDED' || item.type === 'QUESTION';
+    const card = document.createElement('div');
+    card.id = `action-card-${item.id}`;
+    card.className = `action-item-card ${isClarification ? 'type-clarification' : 'type-approval'}`;
+
+    const tagClass = isClarification ? 'tag-clarification' : 'tag-approval';
+    const tagText = isClarification ? '❓ RÜCKFRAGE' : '✔ FREIGABE BEREIT';
+    const btnText = isClarification ? '💬 Ansehen / Antworten' : '📋 Zur Checkliste';
+
+    card.innerHTML = `
+      <div class="action-item-header">
+        <span class="action-item-tag ${tagClass}">${tagText}</span>
+        <span style="font-size: 10px; color: var(--text-dim);">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div class="action-item-title">${escapeHtml(item.title)}</div>
+      <div class="action-item-msg">${escapeHtml(item.message)}</div>
+      <div class="action-item-actions">
+        <button class="history-btn btn-action-dismiss" title="Erledigt / Entfernen">✕</button>
+        <button class="btn-action-act">${btnText}</button>
+      </div>
+    `;
+
+    card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeActionCenterItem(item.id);
+    });
+
+    card.querySelector('.btn-action-act').addEventListener('click', () => {
+      closeActionCenter();
+      if (isClarification) {
+        const qaPanel = document.getElementById('qa-panel');
+        if (qaPanel && qaPanel.style.display !== 'none') {
+          qaPanel.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          const input = document.getElementById('task-prompt-input');
+          if (input) {
+            input.focus();
+            input.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      } else {
+        const decSection = document.getElementById('section-decision');
+        if (decSection) {
+          decSection.style.display = 'flex';
+          decSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    });
+
+    list.appendChild(card);
   });
 }
 
@@ -2762,6 +3195,26 @@ function setupEventListeners() {
       requestQAExplanation();
     });
   }
+
+  // User Action-Center: Event-Listener
+  const btnOpenActionCenter = document.getElementById('btn-open-action-center');
+  if (btnOpenActionCenter) {
+    btnOpenActionCenter.addEventListener('click', () => {
+      const panel = document.getElementById('user-action-center');
+      if (panel && panel.style.display === 'flex') {
+        closeActionCenter();
+      } else {
+        openActionCenter();
+      }
+    });
+  }
+
+  const actionCenterCloseBtn = document.getElementById('action-center-close-btn');
+  if (actionCenterCloseBtn) {
+    actionCenterCloseBtn.addEventListener('click', () => {
+      closeActionCenter();
+    });
+  }
 }
 
 function saveSettings() {
@@ -2831,6 +3284,17 @@ if (typeof window !== 'undefined') {
   window.runQueueTask = runQueueTask;
   window.renderTaskQueueUI = renderTaskQueueUI;
   window.taskQueue = state.taskQueue;
+  window.trevorAudio = window.trevorAudio;
+  window.initAudioContext = initAudioContext;
+  window.playNotificationSound = playNotificationSound;
+  window.setupAudioSystem = setupAudioSystem;
+  window.showActionToast = showActionToast;
+  window.openActionCenter = openActionCenter;
+  window.closeActionCenter = closeActionCenter;
+  window.addActionCenterItem = addActionCenterItem;
+  window.removeActionCenterItem = removeActionCenterItem;
+  window.renderActionCenterUI = renderActionCenterUI;
+  window.actionCenterItems = state.actionCenterItems;
   if (!Array.isArray(window.selectedContextFiles)) {
     window.selectedContextFiles = [];
   }

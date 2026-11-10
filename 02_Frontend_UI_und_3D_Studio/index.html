@@ -67,6 +67,15 @@
           <span id="active-ai-badge-text">☁️ AKTIVE ENGINE: Google Gemini 2.5 Flash</span>
         </div>
 
+        <!-- Mute-Toggle für Web-Audio Synthesizer -->
+        <button id="btn-toggle-sound" class="btn-sound-toggle" title="Sound an/aus">🔊 Sound: AN</button>
+
+        <!-- User Action-Center Button mit Zähler-Badge -->
+        <button id="btn-open-action-center" class="ctrl-btn action-center-toggle-btn" title="User Action-Center öffnen">
+          <span>⚡ Action-Center</span>
+          <span id="action-center-badge" class="action-center-badge">0</span>
+        </button>
+
         <button id="engine-mode-btn" class="engine-mode-pill" title="Klicken zum Umschalten">
           <span id="engine-mode-icon">☁️</span>
           <span id="engine-mode-label">Gemini Cloud (Schule)</span>
@@ -92,6 +101,11 @@
       <!-- Dynamisch befüllt -->
     </nav>
   </header>
+
+  <!-- =========================================================================
+       TOAST-CONTAINER FÜR BENACHRICHTIGUNGEN (Z-INDEX: 9500)
+       ========================================================================= -->
+  <div id="toast-container" class="toast-container"></div>
 
   <!-- =========================================================================
        2. HAUPTBEREICH: SPLIT-LAYOUT (75% STUDIO / 25% SIDEBAR)
@@ -702,6 +716,36 @@
       <div class="terminal-footer" style="padding: 10px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
         <button class="btn-back-to-hub">🎯 Zurück zur Zentrale</button>
       </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       9. USER ACTION-CENTER PANEL (RÜCKFRAGEN & ERGEBNIS-FREIGABEN)
+       ========================================================================= -->
+  <div id="user-action-center" class="user-action-center-panel" style="display: none;">
+    <div class="action-center-header">
+      <div class="action-center-title">
+        <span class="action-center-icon">⚡</span>
+        <span>USER ACTION-CENTER</span>
+        <span id="action-center-header-badge" class="action-center-header-badge">0 offen</span>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="btn-back-to-hub" title="Zurück zur Zentrale">Zurück zur Zentrale</button>
+        <button id="action-center-close-btn" class="ctrl-btn panel-close-btn" title="Schließen">✕</button>
+      </div>
+    </div>
+    <div class="action-center-body">
+      <div id="action-center-empty" class="action-center-empty">
+        <span style="font-size: 28px;">✨</span>
+        <p style="font-weight: 700; color: #f8fafc; margin: 4px 0;">Keine offenen Aktionen</p>
+        <p style="font-size: 11px; color: var(--text-dim); margin: 0;">Trevor benachrichtigt dich automatisch, sobald eine Rückfrage oder ein fertiges Ergebnis deine Entscheidung benötigt.</p>
+      </div>
+      <div id="action-center-list" class="action-center-list" style="display: none;">
+        <!-- Dynamische Action-Cards (CLARIFICATION_NEEDED / APPROVAL_NEEDED) -->
+      </div>
+    </div>
+    <div class="action-center-footer">
+      <button class="btn-back-to-hub" style="width: 100%;">🎯 Zurück zur Zentrale</button>
     </div>
   </div>
 

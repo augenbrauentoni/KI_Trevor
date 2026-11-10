@@ -382,12 +382,44 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
 
 ---
 
-## 20. Verifikation & Test-Ergebnisse
+## 20. Web Audio Synthesizer, Toast-Notifications & User Action-Center
 
-- **Automatisierte Integrations-Suite:**
-   - Status 200 bei `GET /api/status` mit `status: online` und bereinigtem Payload ohne Copilot.
-   - `index.html` und `styles.css` Verifikation: `#login-screen`, `#login-pin-input`, `#btn-login-submit`, `#active-ai-badge`, `.badge-gemini`, `.badge-ollama`, `z-index: 9999` erfolgreich verifiziert.
-   - Vollständige Absenz von `copilot` in `index.html`, `app.js`, `llmEngine.js` und `server.js`.
-   - `POST /api/cloud-llm` schützt Keys und wirft 500 mit korrekter Fehlermeldung, wenn `GEMINI_API_KEY` nicht konfiguriert ist.
+1. **Web Audio Synthesizer ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Globales Sound-Modul `window.trevorAudio = { enabled: true, ctx: null }` unter vollständigem Verzicht auf externe MP3-Dateien.
+   - Autoplay-Absicherung: `AudioContext.resume()` wird spätestens bei der ersten Benutzerinteraktion (z. B. PIN-Eingabe, Task-Absendung, Sound-Toggle) aktiviert.
+   - Funktion `window.playNotificationSound(type)`:
+     - **Typ 1 (`'QUESTION'` / `'CLARIFICATION_NEEDED'`):** Aufsteigender Doppel-Ton (`sine`-Welle von 520 Hz auf 680 Hz, 180 ms Dauer, sanfter Exponential-Decay über `GainNode`).
+     - **Typ 2 (`'SUCCESS'` / `'APPROVAL_NEEDED'`):** Harmonischer Zwei-Ton-Chime (`triangle`-Welle D5 587 Hz gefolgt von A5 880 Hz, 250 ms Gesamtdauer, `gain = 0.08`).
+     - **Typ 3 (`'ABORT'` / `'ERROR'`):** Kurzer tiefer Ton (`sawtooth`, 220 Hz, 120 ms).
+
+2. **Mute-Toggle in der Kopfzeile ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html), [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css), [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Kompakter Toggle-Button `#btn-toggle-sound` neben `#active-ai-badge`.
+   - Schaltet zwischen `🔊 Sound: AN` und `🔇 Sound: AUS` um.
+   - Persistierung der Benutzerauswahl in `localStorage ('trevor_sound_enabled')`.
+
+3. **Visuelle Toast-Benachrichtigungen & User Action-Center ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html), [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css), [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Fest positionierter Container `#toast-container` oben rechts (`z-index: 9500`).
+   - Funktion `window.showActionToast(title, message, type, actionId)`:
+     - Dark-Slate-Karte mit Neon-Rand: Bernstein/Gelb bei Rückfragen (`CLARIFICATION_NEEDED`), Smaragd/Cyan bei fertigen Ergebnissen (`APPROVAL_NEEDED`).
+     - Automatischer 6-Sekunden-Timer mit sanfter Fade-Out-Animation (`toastFadeOut`).
+     - Klick auf den Toast öffnet sofort das Panel `#user-action-center` und fokussiert/markiert das entsprechende Action-Item.
+   - **User Action-Center (`#user-action-center`):**
+     - Slide-Out-Panel für alle anstehenden Entscheidungen (`state.actionCenterItems`).
+     - Header-Button `#btn-open-action-center` mit dynamischem Zähler-Badge `#action-center-badge`.
+     - Bei neuem Item pulsiert das Badge über `@keyframes badgePulseFlash` aufmerksamkeitsstark.
+
+4. **Trigger-Verknüpfung im [`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js):**
+   - Bei Trevors Rückfrage im Q&A-Modus -> Auslösung von `playNotificationSound('QUESTION')`, `showActionToast('Rückfrage von Trevor', ...)` und Action-Center-Eintrag.
+   - Bei Abschluss eines Abteilungs-Audits in Stufe 3 oder finaler Synthese in Stufe 4 -> Auslösung von `playNotificationSound('SUCCESS')`, `showActionToast('Ergebnis bereit', ...)` und Action-Center-Eintrag.
+
+---
+
+## 21. Verifikation & Test-Ergebnisse
+
+- **Automatisierte Audio- & Toast-Suite (`test_audio_toasts.mjs`):**
+   - 22 von 22 Tests bestanden (100 % Erfolgsquote).
+   - Validierung aller HTML-Elemente (`#btn-toggle-sound`, `#btn-open-action-center`, `#action-center-badge`, `#toast-container`, `#user-action-center`).
+   - Validierung der CSS-Regeln (`z-index: 9500`, `@keyframes badgePulseFlash`, `.toast-question`, `.toast-success`).
+   - Validierung von `window.trevorAudio`, `playNotificationSound`, `showActionToast`, `openActionCenter`, `localStorage`-Persistierung und `returnToHub`-Isolation.
 - **Server-Status:**
    - Root Node.js Web Service aktiv auf Port 3000 (`http://localhost:3000`).
