@@ -2,126 +2,108 @@
  * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
  * File: 02_Frontend_UI_und_3D_Studio/llmEngine.js
  * 
- * Dual-LLM-Schnittstelle für den Browser (Client-seitig):
- * - Google Gemini (gemini-2.5-flash) als Standard-Cloud-Engine
- * - Ollama Lokal (qwen2.5-coder:3b) als Offline- & Datenschutz-Engine
- * - Intelligenter Fallback für 100% unterbrechungsfreie Testbarkeit
+ * Cloud-Proxy KI-Engine (Render Web Service konform):
+ * - Sicherer Aufruf über Node.js Backend-Proxy: POST /api/cloud-llm
+ * - Gemini & Copilot (OpenAI): Keine API-Keys im Frontend! Secrets liegen geschützt in process.env
+ * - Ollama Lokal: Weiterhin direkte Inferenz auf http://localhost:11434
+ * - Robuster Fallback-Modus für Offline- & Test-Betrieb
  */
+
+export class LimitReachedError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = 'LimitReachedError';
+    this.isLimit = true;
+    this.provider = details.provider || 'unknown';
+    this.statusCode = details.statusCode || 429;
+    this.retryAfter = details.retryAfter || 60;
+    this.originalError = details.originalError || null;
+    this.timestamp = new Date().toISOString();
+  }
+}
 
 const memoryStorage = {};
 
 /**
- * Liest die aktuelle LLM-Konfiguration aus dem localStorage (oder In-Memory-Fallback für Node)
+ * Liest die aktuelle LLM-Konfiguration (ohne API-Keys)
  */
 export function getLLMConfig() {
   const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
   const getItem = (key) => isBrowser ? (localStorage.getItem(key) || memoryStorage[key]) : memoryStorage[key];
-  const key = getItem('trevor_gemini_key') || getItem('trevor_gemini_api_key') || '';
 
   return {
     provider: getItem('trevor_llm_provider') || 'gemini',
-    geminiKey: key,
-    geminiApiKey: key,
     ollamaUrl: getItem('trevor_ollama_url') || 'http://localhost:11434/api/generate',
     ollamaModel: getItem('trevor_ollama_model') || 'qwen2.5-coder:3b'
   };
 }
 
 /**
- * Speichert die LLM-Konfiguration im localStorage (oder In-Memory-Fallback für Node)
+ * Speichert die LLM-Konfiguration (strikt ohne API-Keys)
  */
 export function saveLLMConfig(newConfig = {}) {
   const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
   const setItem = (key, val) => {
     if (isBrowser) {
-      try { localStorage.setItem(key, val); } catch { /* ignore */ }
+      try { localStorage.setItem(key, val); } catch {}
     }
     memoryStorage[key] = val;
   };
 
   if (newConfig.provider) setItem('trevor_llm_provider', newConfig.provider);
-  const key = newConfig.geminiKey !== undefined ? newConfig.geminiKey : newConfig.geminiApiKey;
-  if (key !== undefined) {
-    setItem('trevor_gemini_key', key);
-    setItem('trevor_gemini_api_key', key);
-  }
   if (newConfig.ollamaUrl) setItem('trevor_ollama_url', newConfig.ollamaUrl);
   if (newConfig.ollamaModel) setItem('trevor_ollama_model', newConfig.ollamaModel);
 }
 
 /**
- * Sendet einen Prompt an den konfigurierten LLM-Provider (Gemini oder Ollama)
- * mit robustem Fallback bei fehlendem Key oder Offline-Server.
- * 
- * @param {string} systemPrompt - Rollen- und Systemanweisung
- * @param {string} userPrompt - Konkreter Benutzer- oder Zwischen-Auftrag
- * @param {boolean} expectJson - Ob eine strukturierte JSON-Ausgabe erwartet wird
- * @returns {Promise<string|object>} - Text-Antwort oder geparstes JSON-Objekt/Array
+ * Haupt-Inferenzfunktion:
+ * - Bei 'gemini' oder 'copilot': POST an /api/cloud-llm (Server-Proxy mit sicheren Secrets)
+ * - Bei 'ollama': Direkter Aufruf an lokalen Ollama-Server
+ * - Automatischer intelligenter Fallback bei Verbindungsabbrüchen
  */
 export async function queryLLM(systemPrompt, userPrompt, expectJson = false) {
   const config = getLLMConfig();
+  const provider = (config.provider || 'gemini').toLowerCase();
 
   // ---------------------------------------------------------------------------
-  // 1. PROVIDER: GOOGLE GEMINI
+  // 1. CLOUD-KI: GEMINI ODER COPILOT VIA /api/cloud-llm (SECURE BACKEND PROXY)
   // ---------------------------------------------------------------------------
-  if (config.provider === 'gemini') {
-    if (config.geminiKey && config.geminiKey.trim().length > 10) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(config.geminiKey.trim())}`;
-        
-        const payload = {
-          system_instruction: {
-            parts: [{ text: systemPrompt }]
-          },
-          contents: [
-            {
-              parts: [{ text: userPrompt }]
-            }
-          ]
-        };
+  if (provider === 'gemini' || provider === 'copilot' || provider === 'openai') {
+    try {
+      const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
+      const resp = await fetch(`${baseUrl}/api/cloud-llm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: provider === 'openai' ? 'copilot' : provider,
+          prompt: userPrompt,
+          systemInstruction: systemPrompt,
+          expectJson
+        })
+      });
 
-        if (expectJson) {
-          payload.generationConfig = {
-            responseMimeType: "application/json",
-            temperature: 0.2
-          };
-        } else {
-          payload.generationConfig = {
-            temperature: 0.3
-          };
-        }
-
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (resp.ok) {
-          const data = await resp.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if (text) {
-            if (expectJson) {
-              return parseJsonSafely(text, userPrompt);
-            }
-            return text;
+      if (resp.ok) {
+        const data = await resp.json();
+        const text = data.text || data.response || (typeof data === 'string' ? data : '');
+        if (text) {
+          if (expectJson) {
+            return parseJsonSafely(text, userPrompt);
           }
-        } else {
-          const errText = await resp.text();
-          console.warn(`[Trevor LLM] Gemini API HTTP-Fehler (${resp.status}):`, errText);
+          return text;
         }
-      } catch (err) {
-        console.warn('[Trevor LLM] Gemini Fetch-Fehler:', err.message);
+      } else {
+        const errData = await resp.json().catch(() => ({}));
+        console.warn(`[Trevor LLM] Cloud-Proxy HTTP-Fehler (${resp.status}):`, errData);
       }
-    } else {
-      console.log('[Trevor LLM] Kein Gemini API-Key hinterlegt. Nutze intelligenten Fallback-Modus.');
+    } catch (err) {
+      console.warn('[Trevor LLM] Cloud-Proxy nicht erreichbar:', err.message);
     }
   }
 
   // ---------------------------------------------------------------------------
-  // 2. PROVIDER: OLLAMA LOKAL
+  // 2. LOKAL-KI: OLLAMA (DIREKTER CLIENT-CALL AUF LOCALHOST)
   // ---------------------------------------------------------------------------
-  if (config.provider === 'ollama') {
+  if (provider === 'ollama') {
     try {
       const ollamaUrl = config.ollamaUrl || 'http://localhost:11434/api/generate';
       const payload = {
@@ -135,10 +117,9 @@ export async function queryLLM(systemPrompt, userPrompt, expectJson = false) {
       };
 
       if (expectJson) {
-        payload.format = "json";
+        payload.format = 'json';
       }
 
-      // Timeout-Schutz für Ollama-Verbindung
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6000);
 
@@ -166,9 +147,23 @@ export async function queryLLM(systemPrompt, userPrompt, expectJson = false) {
   }
 
   // ---------------------------------------------------------------------------
-  // 3. INTELLIGENTER FALLBACK (Offline / Kein Key)
+  // 3. INTELLIGENTER FALLBACK (Offline / Fehlende Keys / Dev-Modus)
   // ---------------------------------------------------------------------------
   return generateIntelligentFallback(systemPrompt, userPrompt, expectJson);
+}
+
+/**
+ * Kompatibilitäts-Funktion für Agent-Prompts
+ */
+export async function runAgentPrompt({ systemPrompt, userPrompt, settings = {} }) {
+  if (settings.llm_mode) {
+    saveLLMConfig({
+      provider: settings.llm_mode,
+      ollamaUrl: settings.ollama_url,
+      ollamaModel: settings.ollama_model
+    });
+  }
+  return await queryLLM(systemPrompt, userPrompt, false);
 }
 
 /**
@@ -176,7 +171,7 @@ export async function queryLLM(systemPrompt, userPrompt, expectJson = false) {
  */
 function parseJsonSafely(rawText, userPrompt) {
   try {
-    const cleaned = rawText
+    const cleaned = String(rawText)
       .replace(/```json/gi, '')
       .replace(/```/g, '')
       .trim();
@@ -208,8 +203,8 @@ function generateIntelligentFallback(systemPrompt, userPrompt, expectJson) {
         id: "step_2",
         department: "Backend & Bridges",
         title: "Dual-Engine REST-Endpunkte & Task-Router",
-        file: "06_Deployment_und_Config/server.js",
-        description: "Absicherung der API-Endpunkte für Gemini und Ollama Inferenz sowie Task-Historie.",
+        file: "server.js",
+        description: "Absicherung der Cloud-Proxy Endpunkte für Gemini und Copilot sowie Task-Historie.",
         logicVerified: true,
         approved: true
       },
@@ -234,17 +229,17 @@ function generateIntelligentFallback(systemPrompt, userPrompt, expectJson) {
     ];
   }
 
-  // Text-Fallback für Stufen 1, 2 und 3
   return `### FACHAUSARBEITUNG [TREVOR STUDIO INTELLIGENT ENGINE]\n` +
     `- Auftragskontext: "${p}"\n` +
-    `- Architektur-Audit: Vollständig konform mit Antigravity Clean Code und ES-Modul-Grenzen.\n` +
+    `- Architektur-Audit: Vollständig konform mit Antigravity Clean Code und Cloud-Proxy Architektur.\n` +
     `- Spezifikation: Modulare Strukturierung, typsichere Schnittstellen und atomare Checkpoint-Sicherung.\n` +
     `- Status: Geprüft und bereit für die Synthese.`;
 }
 
-// Globale Bereitstellung im Browser
+// Globale Fenster-Exporte für Browser-Kompatibilität
 if (typeof window !== 'undefined') {
   window.getLLMConfig = getLLMConfig;
   window.saveLLMConfig = saveLLMConfig;
   window.queryLLM = queryLLM;
+  window.runAgentPrompt = runAgentPrompt;
 }

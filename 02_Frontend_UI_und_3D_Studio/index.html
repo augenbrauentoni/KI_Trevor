@@ -372,11 +372,12 @@
               </div>
               <select id="quick-llm-provider-select" class="search-input" style="flex: 1; padding: 4px 8px; font-size: 12px; height: 32px;">
                 <option value="gemini">Google Gemini 2.5 Flash (Cloud API)</option>
+                <option value="copilot">GitHub Copilot / OpenAI (Cloud API)</option>
                 <option value="ollama">Ollama Lokal (Qwen 2.5 3B)</option>
               </select>
               <div id="quick-gemini-key-wrapper" style="flex: 1.5; display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 11px; color: var(--text-dim); white-space: nowrap;">🔑 Gemini Key:</span>
-                <input type="password" id="quick-gemini-key-input" class="search-input" placeholder="API-Key hier einfügen (wird lokal im Browser gesichert)..." style="flex: 1; padding: 4px 8px; font-size: 12px; height: 32px;">
+                <span style="font-size: 11px; color: var(--arc-cyan); font-weight: 700; white-space: nowrap;">🔒 Cloud-Security:</span>
+                <span id="quick-cloud-key-status" style="font-size: 11px; color: #34d399; font-weight: 600; white-space: nowrap;">Backend Secrets (process.env) aktiv</span>
               </div>
             </div>
 
@@ -572,7 +573,8 @@
         <div>
           <label style="font-size: 12px; font-weight: 600; color: #fff;">Aktiver LLM-Modus:</label>
           <select id="settings-llm-mode" class="search-input" style="margin-top: 6px;">
-            <option value="gemini">☁️ Gemini Cloud API (Schule / Mobil)</option>
+            <option value="gemini">☁️ Google Gemini 2.5 Flash (Cloud API)</option>
+            <option value="copilot">⚡ GitHub Copilot / OpenAI (Cloud API)</option>
             <option value="ollama">🖥️ Ollama Local Bridge (Home / Offline)</option>
           </select>
         </div>
@@ -583,8 +585,10 @@
         </div>
 
         <div>
-          <label style="font-size: 12px; font-weight: 600; color: #fff;">Gemini API-Key (optional, überschreibt .env):</label>
-          <input type="password" id="settings-gemini-key" class="search-input" placeholder="AIzaSy..." style="margin-top: 6px;">
+          <label style="font-size: 12px; font-weight: 600; color: #fff;">Cloud API-Sicherheit (Render Secrets):</label>
+          <div style="font-size: 11px; color: #34d399; margin-top: 6px; background: rgba(52, 211, 153, 0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(52, 211, 153, 0.25);">
+            ✔ <strong>Node.js Cloud-Proxy aktiv:</strong> <code>GEMINI_API_KEY</code> und <code>COPILOT_API_KEY</code> werden sicher auf dem Server verarbeitet. Keine sensiblen Schlüssel im Browser-Speicher.
+          </div>
         </div>
 
         <div>

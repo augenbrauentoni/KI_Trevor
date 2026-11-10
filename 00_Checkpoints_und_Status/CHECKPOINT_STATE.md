@@ -328,15 +328,44 @@ Erweiterung der Web-App um eine interaktive Auftragsliste (Queue), einen Frage-A
 
 ---
 
-## 17. Verifikation & Test-Ergebnisse
+## 18. Cloud Proxy Server für Secure API Keys (Render Web Service Umstellung)
 
-- **Automatisierte Integrations-Suite (`test_queue_qa_navigation.mjs`):**
-   - Dynamische Dateinamen-Generierung mit ersten 3 Wörtern + Timestamp zu 100 % verifiziert.
-   - Pre-Routing für Wissensfragen ("Was ist...", "Erkläre mir...") vs. Software- vs. Hardware-Aufträge verifiziert.
-   - Live-Export über Bridge (Port 3001) mit dynamischen Dateinamen verifiziert.
-   - Directory Traversal Schutz (`../../../../windows/system32/evil.exe` -> `evil.md` in `05_Antigravity_Outputs`) erfolgreich verifiziert (14 von 14 Tests bestanden).
-- **Three.js & JavaScript Syntax- & Modul-Integrität:**
-   - `node -c` auf `localBridgeServer.js`, `server.js`, `workflowOrchestrator.js` und `app.js` fehlerfrei abgeschlossen (0 Syntaxfehler).
-- **Server & Bridges:**
-   - Web-Server (Port 3000): `http://localhost:3000/api/status` (online, Version 2.5.0)
-   - Lokale Bridge (Port 3001): `http://localhost:3001/api/status`, `/api/list-files`, `/api/read-files` & `/api/export-task` (online)
+Vollständige Umstellung der System-Architektur von einer rein statischen Seite auf einen vollwertigen Node.js Web Service für Render und Container-Deployments:
+
+1. **Root `package.json` & Node.js ESM-Dependencies ([`package.json`](file:///C:/Users/User/Desktop/KI_Trevor/package.json)):**
+   - `"type": "module"` für nativen ES-Modul-Betrieb.
+   - Abhängigkeiten `"express"` (v5) und `"cors"` hinzugefügt und installiert.
+   - Start-Skript: `"start": "node server.js"`.
+
+2. **Cloud Backend & Sichere API-Key Secrets ([`server.js`](file:///C:/Users/User/Desktop/KI_Trevor/server.js)):**
+   - Express Web Service stellt das Frontend `02_Frontend_UI_und_3D_Studio` statisch bereit.
+   - Neuer Sicherheits-Endpunkt **`POST /api/cloud-llm`**:
+     - Nimmt `{ provider, prompt, systemInstruction, model, expectJson }` entgegen.
+     - **Gemini**: Sendet Inferenz-Request an Google API unter strikter Nutzung von `process.env.GEMINI_API_KEY`.
+     - **Copilot**: Sendet Inferenz-Request an OpenAI/Azure API unter strikter Nutzung von `process.env.COPILOT_API_KEY`.
+     - Kein API-Key verlässt je das Backend oder gelangt in den Browser.
+   - Integrierte Endpunkte für Code-RAG (`/api/list-files`, `/api/read-files`) und Task-Export (`/api/export-task`) mit Directory-Traversal-Schutz.
+
+3. **Frontend-Anpassung ohne Client-Keys ([`04_KI_Engine_und_Bridges/llmEngine.js`](file:///C:/Users/User/Desktop/KI_Trevor/04_KI_Engine_und_Bridges/llmEngine.js) & [`02_Frontend_UI_und_3D_Studio/llmEngine.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/llmEngine.js)):**
+   - Sämtliche `localStorage`-Logik für API-Keys (`trevor_gemini_key`, `trevor_gemini_api_key`) wurde rückstandslos entfernt.
+   - `queryLLM`:
+     - Bei `gemini` oder `copilot`: Sendet standardmäßig `fetch('/api/cloud-llm', { method: 'POST', body: ... })`.
+     - Bei `ollama`: Inferenz läuft weiterhin direkt client-seitig auf `http://localhost:11434`.
+
+4. **UI-Sicherheit & Provider-Wahl ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) & [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Schnellauswahl für Provider erweitert: Google Gemini, GitHub Copilot und Ollama Lokal.
+   - Passwortfelder für API-Keys durch Sicherheits-Hinweis *"🔒 Cloud-Security: Backend Secrets (process.env) aktiv"* ersetzt.
+
+---
+
+## 19. Verifikation & Test-Ergebnisse
+
+- **Automatisierte Cloud-Proxy Suite (`test_cloud_proxy_architecture.mjs`):**
+   - 27 von 27 Tests bestanden (100 % Erfolgsquote).
+   - `package.json` Validierung (type, start, express, cors).
+   - Statische Auslieferung von `index.html` und Modulen über Express.
+   - Schutz & 500-Status bei fehlenden Secrets (`missingKey: true`).
+   - 400-Status bei ungültigen Anfragen und unbekannten Providern.
+   - RAG- und Export-Endpunkte voll funktionsfähig.
+- **Server-Status:**
+   - Root Node.js Web Service aktiv auf Port 3000 (`http://localhost:3000/api/status`).

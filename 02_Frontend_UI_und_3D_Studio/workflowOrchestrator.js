@@ -372,11 +372,21 @@ Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. 
     if (!filePaths || filePaths.length === 0) return [];
 
     try {
-      const resp = await fetch('http://localhost:3001/api/read-files', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: filePaths })
-      });
+      let resp;
+      try {
+        resp = await fetch('/api/read-files', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: filePaths })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      } catch {
+        resp = await fetch('http://localhost:3001/api/read-files', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: filePaths })
+        });
+      }
 
       if (!resp.ok) {
         throw new Error(`HTTP ${resp.status}`);

@@ -46,7 +46,7 @@ const state = {
   settings: {
     llm_mode: 'gemini',
     gemini_model: 'gemini-2.5-flash',
-    gemini_api_key: '',
+    copilot_model: 'gpt-4o-mini',
     ollama_url: 'http://localhost:11434',
     ollama_model: 'llama3',
     quiet_view: false
@@ -113,7 +113,6 @@ function loadLocalSettings() {
   try {
     const llmCfg = getLLMConfig();
     if (llmCfg.provider) state.settings.llm_mode = llmCfg.provider;
-    if (llmCfg.geminiApiKey) state.settings.gemini_api_key = llmCfg.geminiApiKey;
     if (llmCfg.geminiModel) state.settings.gemini_model = llmCfg.geminiModel;
     if (llmCfg.ollamaUrl) state.settings.ollama_url = llmCfg.ollamaUrl;
     if (llmCfg.ollamaModel) state.settings.ollama_model = llmCfg.ollamaModel;
@@ -609,7 +608,13 @@ export async function loadRAGFiles() {
   container.innerHTML = '<div class="rag-loading-placeholder">Lade Sandbox-Dateien...</div>';
 
   try {
-    const res = await fetch('http://localhost:3001/api/list-files');
+    let res;
+    try {
+      res = await fetch('/api/list-files');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      res = await fetch('http://localhost:3001/api/list-files');
+    }
     if (!res.ok) {
       throw new Error(`Server antwortete mit HTTP-Status ${res.status}`);
     }
@@ -1410,13 +1415,21 @@ export async function exportTaskToLocalDisk(taskMarkdown, customFilename) {
   const filename = customFilename || generateDynamicTaskFilename(state.activeTask?.user_prompt);
 
   try {
-    const resp = await fetch('http://localhost:3001/api/export-task', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ content, filename })
-    });
+    let resp;
+    try {
+      resp = await fetch('/api/export-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, filename })
+      });
+      if (!resp.ok) throw new Error(`HTTP Status ${resp.status}`);
+    } catch {
+      resp = await fetch('http://localhost:3001/api/export-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, filename })
+      });
+    }
 
     if (!resp.ok) {
       throw new Error(`HTTP Status ${resp.status}`);
@@ -2489,31 +2502,18 @@ function setupEventListeners() {
     });
   }
 
-  // Kompakte Dual-LLM-Leiste initialisieren & synchronisieren
+  // Kompakte Cloud-LLM-Leiste initialisieren & synchronisieren
   const quickProviderSelect = document.getElementById('quick-llm-provider-select');
-  const quickKeyInput = document.getElementById('quick-gemini-key-input');
-  const quickKeyWrapper = document.getElementById('quick-gemini-key-wrapper');
-
-  if (quickProviderSelect && quickKeyInput && quickKeyWrapper) {
+  if (quickProviderSelect) {
     const initialCfg = getLLMConfig();
     quickProviderSelect.value = initialCfg.provider || 'gemini';
-    quickKeyInput.value = initialCfg.geminiApiKey || '';
-    quickKeyWrapper.style.display = (quickProviderSelect.value === 'gemini') ? 'flex' : 'none';
 
     quickProviderSelect.addEventListener('change', (e) => {
       const newProvider = e.target.value;
-      quickKeyWrapper.style.display = (newProvider === 'gemini') ? 'flex' : 'none';
       saveLLMConfig({ provider: newProvider });
       state.settings.llm_mode = newProvider;
       saveSettings();
       updateUIThemeSettings();
-    });
-
-    quickKeyInput.addEventListener('input', (e) => {
-      const val = e.target.value.trim();
-      saveLLMConfig({ geminiApiKey: val });
-      state.settings.gemini_api_key = val;
-      saveSettings();
     });
   }
 
@@ -2554,7 +2554,6 @@ function setupEventListeners() {
   openSettingsBtn.addEventListener('click', () => {
     document.getElementById('settings-llm-mode').value = state.settings.llm_mode;
     document.getElementById('settings-gemini-model').value = state.settings.gemini_model;
-    document.getElementById('settings-gemini-key').value = state.settings.gemini_api_key || '';
     document.getElementById('settings-ollama-url').value = state.settings.ollama_url;
     document.getElementById('settings-ollama-model').value = state.settings.ollama_model;
     settingsModal.classList.add('open');
@@ -2563,15 +2562,12 @@ function setupEventListeners() {
   document.getElementById('btn-save-settings').addEventListener('click', () => {
     state.settings.llm_mode = document.getElementById('settings-llm-mode').value;
     state.settings.gemini_model = document.getElementById('settings-gemini-model').value;
-    state.settings.gemini_api_key = document.getElementById('settings-gemini-key').value;
     state.settings.ollama_url = document.getElementById('settings-ollama-url').value;
     state.settings.ollama_model = document.getElementById('settings-ollama-model').value;
 
     saveSettings();
     saveLLMConfig({
       provider: state.settings.llm_mode,
-      geminiApiKey: state.settings.gemini_api_key,
-      geminiModel: state.settings.gemini_model,
       ollamaUrl: state.settings.ollama_url,
       ollamaModel: state.settings.ollama_model
     });
@@ -2707,15 +2703,16 @@ function updateUIThemeSettings() {
   if (state.settings.llm_mode === 'ollama') {
     if (icon) icon.innerText = '🖥️';
     if (label) label.innerText = `Ollama Lokal (${state.settings.ollama_model})`;
+  } else if (state.settings.llm_mode === 'copilot') {
+    if (icon) icon.innerText = '⚡';
+    if (label) label.innerText = `Copilot Cloud (${state.settings.copilot_model || 'gpt-4o-mini'})`;
   } else {
     if (icon) icon.innerText = '☁️';
     if (label) label.innerText = `Gemini Cloud (${state.settings.gemini_model})`;
   }
 
   const quickProviderSelect = document.getElementById('quick-llm-provider-select');
-  const quickKeyWrapper = document.getElementById('quick-gemini-key-wrapper');
   if (quickProviderSelect) quickProviderSelect.value = state.settings.llm_mode || 'gemini';
-  if (quickKeyWrapper) quickKeyWrapper.style.display = (state.settings.llm_mode === 'gemini') ? 'flex' : 'none';
 }
 
 function escapeHtml(str) {
