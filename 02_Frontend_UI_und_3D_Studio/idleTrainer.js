@@ -1,6 +1,6 @@
 /**
  * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
- * File: 02_Frontend_UI_und_3D_Studio/idleTrainer.js
+ * File: 04_KI_Engine_und_Bridges/idleTrainer.js
  * 
  * Autonomer Leerlauf-Trainings-Modus (Idle Training):
  * Wenn kein aktiver Kunden-Auftrag läuft, trainieren die 10 Abteilungen
@@ -14,6 +14,8 @@
  * im Live-Klick-Inspektor sowie für neue Antigravity-Aufträge bereit.
  */
 
+// Autonomer Leerlauf-Trainings-Modus (Idle Training):
+// Wenn kein aktiver Kunden-Auftrag läuft, trainieren die 10 Abteilungen
 export const TRAINING_PROJECTS = [
   {
     id: "proj_ki_trevor",
@@ -98,15 +100,20 @@ function generateInsightForAgent(agent, department, project) {
 export function executeTrainingStep(departments) {
   if (!departments || departments.length === 0) return null;
 
+  // Wähle zufälligen Raum
   const dept = departments[Math.floor(Math.random() * departments.length)];
+  // Wähle zufälligen PC oder den Chef
   const allUnits = [...dept.specialist_pcs, dept.chef_agent];
   const agent = allUnits[Math.floor(Math.random() * allUnits.length)];
+  // Wähle Trainingsprojekt
   const project = TRAINING_PROJECTS[Math.floor(Math.random() * TRAINING_PROJECTS.length)];
 
   const data = generateInsightForAgent(agent, dept, project);
 
+  // Aktualisiere Live-Aktivität
   currentAgentActivities[agent.id] = data;
 
+  // Speichere in learnedInsightsMemory
   if (!learnedInsightsMemory[agent.id]) {
     learnedInsightsMemory[agent.id] = [];
   }
@@ -117,10 +124,12 @@ export function executeTrainingStep(departments) {
     timestamp: data.timestamp
   });
 
+  // Maximal 15 Erkenntnisse pro Agent behalten
   if (learnedInsightsMemory[agent.id].length > 15) {
     learnedInsightsMemory[agent.id].pop();
   }
 
+  // Persistieren
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem('trevor_learned_insights', JSON.stringify(learnedInsightsMemory));
@@ -143,6 +152,7 @@ export function startIdleTraining(departments, intervalMs = 6000) {
   isTrainingActive = true;
   console.log('[Trevor Trainer] Autonomes Leerlauf-Training gestartet (Trainiert an 4 bestehenden Projekten).');
 
+  // Sofort einen Schritt machen
   executeTrainingStep(departments);
 
   trainingTimer = setInterval(() => {
@@ -194,15 +204,4 @@ export function getAllLearnedKnowledgeSummary() {
     }
   }
   return summary.slice(0, 10).join('\n');
-}
-
-// Globaler Window-Fallback für nicht-modulare Skript-Aufrufe
-if (typeof window !== 'undefined') {
-  window.TRAINING_PROJECTS = TRAINING_PROJECTS;
-  window.executeTrainingStep = executeTrainingStep;
-  window.startIdleTraining = startIdleTraining;
-  window.stopIdleTraining = stopIdleTraining;
-  window.getAgentCurrentActivity = getAgentCurrentActivity;
-  window.getAgentLearnedInsights = getAgentLearnedInsights;
-  window.getAllLearnedKnowledgeSummary = getAllLearnedKnowledgeSummary;
 }
