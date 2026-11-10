@@ -445,6 +445,7 @@ body {
 }
 
 .status-dot.ready { background: #64748b; }
+.status-dot.busy { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse-dot 1.0s infinite; }
 .status-dot.training { background: var(--arc-cyan); box-shadow: 0 0 8px var(--arc-cyan); animation: pulse-dot 1.8s infinite; }
 .status-dot.working { background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan); animation: pulse-dot 1.0s infinite; }
 .status-dot.auditing { background: var(--accent-amber); box-shadow: 0 0 8px var(--accent-amber); animation: pulse-dot 1.0s infinite; }
@@ -2298,6 +2299,64 @@ body {
   background: rgba(56, 189, 248, 0.15);
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+.task-queue-status-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.task-queue-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  line-height: 1.2;
+}
+
+.task-queue-badge.badge-analyzing {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.task-queue-badge.badge-working {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.task-queue-badge.badge-busy {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.task-queue-badge.badge-done {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.live-activity-monitor {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  letter-spacing: 0.3px;
 }
 
 .task-queue-ctrl-row {

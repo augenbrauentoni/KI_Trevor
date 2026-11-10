@@ -12,10 +12,173 @@
 import { queryLLM } from './llmEngine.js';
 import { STUDIO_HIERARCHY } from './hierarchyData.js';
 
+/**
+ * Ermittelt per Keyword-Matching die passende Primär-Abteilung
+ */
+export function detectPrimaryDepartment(text) {
+  const p = (text || '').toLowerCase();
+  if (p.includes('3d') || p.includes('ui') || p.includes('frontend') || p.includes('css') || p.includes('html') || p.includes('canvas') || p.includes('button') || p.includes('webgl') || p.includes('design') || p.includes('layout')) {
+    return 'EG_FRONTEND';
+  }
+  if (p.includes('architektur') || p.includes('system') || p.includes('struktur') || p.includes('konzept') || p.includes('blueprint')) {
+    return 'EG_ARCHITEKTUR';
+  }
+  if (p.includes('hardware') || p.includes('esp32') || p.includes('arduino') || p.includes('sensor') || p.includes('schaltung') || p.includes('löten') || p.includes('werkstatt') || p.includes('elektronik') || p.includes('microcontroller')) {
+    return 'UG_WERKSTATT';
+  }
+  if (p.includes('serverraum') || p.includes('netzwerk') || p.includes('router') || p.includes('switch') || p.includes('vpn') || p.includes('rack') || p.includes('fisi') || p.includes('firewall') || p.includes('infrastruktur')) {
+    return 'UG_SERVER';
+  }
+  if (p.includes('archiv') || p.includes('recherche') || p.includes('text') || p.includes('artikel') || p.includes('wissen') || p.includes('doku') || p.includes('brainstorm')) {
+    return 'UG_ARCHIV';
+  }
+  if (p.includes('lounge') || p.includes('gaming') || p.includes('alltag') || p.includes('pause') || p.includes('termin')) {
+    return 'UG_LOUNGE';
+  }
+  if (p.includes('datenbank') || p.includes('db') || p.includes('sql') || p.includes('postgres') || p.includes('supabase') || p.includes('rls') || p.includes('tabelle')) {
+    return 'EG_DATENBANK';
+  }
+  if (p.includes('test') || p.includes('qa') || p.includes('qualität') || p.includes('bug') || p.includes('prüf')) {
+    return 'EG_TESTING';
+  }
+  if (p.includes('security') || p.includes('sicherheit') || p.includes('auth') || p.includes('token') || p.includes('passwort') || p.includes('login')) {
+    return 'EG_SECURITY';
+  }
+  if (p.includes('devops') || p.includes('docker') || p.includes('deployment') || p.includes('ci') || p.includes('cd') || p.includes('render') || p.includes('deploy')) {
+    return 'EG_DEVOPS';
+  }
+  // Standard-Fallback
+  return 'EG_BACKEND';
+}
+
+/**
+ * Sicheres JSON-Extrahieren mit Fallback-Garantie:
+ * Verhindert, dass Aufträge verschluckt oder als bloßer Text abgebrochen werden.
+ */
+export function safeParseTrevorJSON(rawText, originalPrompt) {
+  if (!rawText || typeof rawText !== 'string') {
+    const primaryDept = detectPrimaryDepartment(originalPrompt);
+    return {
+      needsClarification: false,
+      summary: `Auftrag: ${originalPrompt || 'Neuer Auftrag'}`,
+      executionMode: 'FULL_DEPARTMENT',
+      primaryDepartment: primaryDept,
+      targetFloor: primaryDept.startsWith('UG') ? 'UG' : 'EG'
+    };
+  }
+
+  // 1. Markdown-Backticks entfernen
+  const cleaned = rawText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+
+  // 2. Per RegEx /\{[\s\S]*\}/ nach JSON-Objekt suchen
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      const parsed = JSON.parse(match[0]);
+      if (parsed && typeof parsed === 'object') {
+        const primaryDept = parsed.primaryDepartment || detectPrimaryDepartment(originalPrompt + ' ' + rawText);
+        const targetFloor = parsed.targetFloor || (String(primaryDept).startsWith('UG') ? 'UG' : 'EG');
+        return {
+          needsClarification: parsed.needsClarification === true,
+          clarificationQuestion: parsed.clarificationQuestion || parsed.question || '',
+          summary: parsed.summary || parsed.description || rawText.slice(0, 300),
+          executionMode: parsed.executionMode || 'FULL_DEPARTMENT',
+          primaryDepartment: primaryDept,
+          targetFloor
+        };
+      }
+    } catch (err) {
+      console.warn('[safeParseTrevorJSON] Parsing-Warnung:', err.message);
+    }
+  }
+
+  // 3. Fallback-Garantie: Falls KI reinen Text geliefert hat
+  const primaryDept = detectPrimaryDepartment(originalPrompt + ' ' + rawText);
+  return {
+    needsClarification: false,
+    summary: rawText.trim() || `Auftrag: ${originalPrompt}`,
+    executionMode: 'FULL_DEPARTMENT',
+    primaryDepartment: primaryDept,
+    targetFloor: primaryDept.startsWith('UG') ? 'UG' : 'EG'
+  };
+}
+
+/**
+ * Ermittelt das Abteilungs-Objekt aus STUDIO_HIERARCHY anhand von Code oder ID
+ */
+export function getDepartmentByCodeOrId(deptCodeOrId, departments) {
+  if (!departments || departments.length === 0) return null;
+
+  if (typeof deptCodeOrId === 'number' || /^\d+$/.test(String(deptCodeOrId))) {
+    const numId = parseInt(deptCodeOrId, 10);
+    const found = departments.find(d => d.id === numId);
+    if (found) return found;
+  }
+
+  const code = String(deptCodeOrId || '').toUpperCase().trim();
+  const map = {
+    'EG_FRONTEND': 3,
+    'EG_UI': 3,
+    'EG_3D': 4,
+    'EG_BACKEND': 5,
+    'EG_SERVER': 5,
+    'EG_DATENBANK': 6,
+    'EG_DB': 6,
+    'EG_API': 7,
+    'EG_QA': 8,
+    'EG_TESTING': 8,
+    'EG_SECURITY': 9,
+    'EG_SEC': 9,
+    'EG_DEVOPS': 10,
+    'EG_PLANUNG': 1,
+    'EG_ARCHITEKTUR': 2,
+    'UG_ARCHIV': 11,
+    'UG_SERVER': 12,
+    'UG_SERVERRAUM': 12,
+    'UG_WERKSTATT': 13,
+    'UG_LOUNGE': 14
+  };
+
+  const targetId = map[code];
+  if (targetId) {
+    const found = departments.find(d => d.id === targetId);
+    if (found) return found;
+  }
+
+  const byName = departments.find(d => 
+    (d.code && d.code.toUpperCase() === code) ||
+    (d.name && d.name.toUpperCase().includes(code))
+  );
+  if (byName) return byName;
+
+  // Standard: Abteilung 5 (Backend) oder 3 (Frontend)
+  return departments.find(d => d.id === 5) || departments[0];
+}
+
 export class WorkflowOrchestrator {
   constructor(options = {}) {
     this.options = options;
     this.hierarchy = STUDIO_HIERARCHY;
+    this.busyDepartments = new Set();
+  }
+
+  isDepartmentBusy(deptId) {
+    if (typeof window !== 'undefined' && typeof window.isDepartmentBusy === 'function') {
+      return window.isDepartmentBusy(deptId);
+    }
+    return this.busyDepartments.has(Number(deptId));
+  }
+
+  setDepartmentBusy(deptId, isBusy) {
+    const id = Number(deptId);
+    if (isBusy) {
+      this.busyDepartments.add(id);
+    } else {
+      this.busyDepartments.delete(id);
+    }
+    if (typeof window !== 'undefined' && typeof window.setDepartmentStatus === 'function') {
+      window.setDepartmentStatus(id, isBusy ? 'BUSY' : 'IDLE');
+    }
   }
 
   /**
@@ -26,204 +189,274 @@ export class WorkflowOrchestrator {
    */
   async executeFullWorkflow(userPrompt, onStatusUpdate = () => {}) {
     console.log(`\n======================================================`);
-    console.log(`[WorkflowOrchestrator] Starte 4-Stufen Workflow: "${userPrompt.slice(0, 60)}..."`);
+    console.log(`[WorkflowOrchestrator] Starte Workflow: "${userPrompt.slice(0, 60)}..."`);
     console.log(`======================================================\n`);
 
-    // -------------------------------------------------------------------------
-    // PRE-ROUTING: LLM-KLASSIFIZIERUNG (SOFTWARE vs. HARDWARE_ALLGEMEIN vs. QUESTION)
-    // -------------------------------------------------------------------------
-    const routing = await this.classifyTaskType(userPrompt);
-    const target_floor = routing.target_floor || routing.floor || 'EG';
-    console.log(`[Pre-Routing] Kategorie: ${routing.category} -> Ziel-Etage: ${target_floor}`);
+    onStatusUpdate('1/4: Trevor analysiert...', 'Trevor', 'Pre-Check und Routing für den Kundenauftrag...');
 
-    // Bei QUESTION: Task-Zerlegung überspringen und Direkt-Antwort im Q&A-Panel anzeigen
-    if (routing.category === 'QUESTION') {
-      console.log(`[WorkflowOrchestrator] Q&A-Modus erkannt. Überspringe 4-Stufen Zerlegung, generiere Direkt-Antwort.`);
-      onStatusUpdate('Frage-Modus', 'Trevor', 'Beantworte direkte Frage im Q&A-Modus...');
-      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
-        window.update3DStudioState('stage1', 'EG');
-      }
+    // 1. PRE-CHECK VIA TREVOR MIT safeParseTrevorJSON
+    const preCheckSystemPrompt = `Du bist Trevor, Studio-Director von "Trevor AI Software Studio".
+Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, trocken-britisch, extrem höflich ('Sir').
+Deine Aufgabe in Stufe 1 ist die Analyse des Kundenauftrags.
 
-      const qPrompt = `Du bist Trevor, Studio-Director und KI-Chef-Architekt von "Trevor AI Software Studio". 
-Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-britisch, extrem höflich und souverän (nutze gelegentlich 'Sir'). Halte gesprochene Statusmeldungen und Rückfragen prägnant. Beantworte die folgende Frage des Nutzers klar strukturiert auf Deutsch.`;
+ENTSCHEIDE:
+1. Ist der Auftrag völlig unklar oder fehlt eine unverzichtbare Angabe?
+   -> "needsClarification": true, "clarificationQuestion": "Deine prägnante Rückfrage an Sir"
+2. Kann der Auftrag umgesetzt werden (Normalfall für jede Bau-, Programmier-, Refaktorisierungs- oder Analyse-Aufgabe)?
+   -> "needsClarification": false, "summary": "Kurze prägnante Zusammenfassung", "primaryDepartment": "EG_FRONTEND" oder "EG_BACKEND" oder "EG_ARCHITEKTUR" oder "UG_SERVER" oder "UG_WERKSTATT" oder "EG_DATENBANK", "targetFloor": "EG" oder "UG"
 
-      const directAnswer = await queryLLM(qPrompt, userPrompt, false);
+Antworte zwingend als valides JSON:
+{
+  "needsClarification": false,
+  "clarificationQuestion": "",
+  "summary": "...",
+  "executionMode": "FULL_DEPARTMENT",
+  "primaryDepartment": "EG_BACKEND",
+  "targetFloor": "EG"
+}`;
+
+    let preCheckResult;
+    try {
+      const rawResp = await queryLLM(preCheckSystemPrompt, `KUNDENAUFTRAG:\n"""\n${userPrompt}\n"""`, true);
+      preCheckResult = safeParseTrevorJSON(rawResp, userPrompt);
+    } catch (llmErr) {
+      console.warn('[WorkflowOrchestrator] LLM Pre-Check Fehler, nutze Fallback-Garantie:', llmErr.message);
+      preCheckResult = safeParseTrevorJSON(null, userPrompt);
+    }
+
+    console.log('[WorkflowOrchestrator] Pre-Check Ergebnis:', preCheckResult);
+
+    // 2. FALL A: RÜCKFRAGE ERFORDERLICH
+    if (preCheckResult.needsClarification === true && preCheckResult.clarificationQuestion) {
+      console.log(`[WorkflowOrchestrator] Rückfrage erforderlich: "${preCheckResult.clarificationQuestion}"`);
+      const qText = preCheckResult.clarificationQuestion;
 
       if (typeof window !== 'undefined') {
-        if (typeof window.showQAPanel === 'function') {
-          window.showQAPanel(userPrompt, directAnswer);
-        }
-        if (typeof window.speakAsJarvis === 'function') {
-          window.speakAsJarvis(directAnswer);
+        if (typeof window.addActionCenterItem === 'function') {
+          window.addActionCenterItem({
+            id: 'act_clarify_' + Date.now(),
+            type: 'CLARIFICATION_NEEDED',
+            title: 'Rückfrage von Trevor',
+            message: qText
+          });
         }
         if (typeof window.playNotificationSound === 'function') {
           window.playNotificationSound('QUESTION');
         }
         if (typeof window.showActionToast === 'function') {
-          window.showActionToast('Rückfrage von Trevor', 'Auftrag wartet auf deine Antwort', 'QUESTION');
+          window.showActionToast('Rückfrage von Trevor', qText, 'QUESTION');
         }
-        if (typeof window.addActionCenterItem === 'function') {
-          window.addActionCenterItem({
-            id: 'act_qa_' + Date.now(),
-            type: 'CLARIFICATION_NEEDED',
-            title: 'Rückfrage von Trevor',
-            message: 'Auftrag wartet auf deine Antwort'
-          });
+        if (typeof window.speakAsJarvis === 'function') {
+          window.speakAsJarvis(qText);
         }
-        const actionBadge = document.getElementById('action-center-badge');
-        if (actionBadge) {
-          actionBadge.classList.add('pulse-flash');
-          setTimeout(() => actionBadge.classList.remove('pulse-flash'), 5000);
+        if (typeof window.updateActiveQueueItemStatus === 'function') {
+          window.updateActiveQueueItemStatus('Wartet auf Nutzer-Antwort');
         }
       }
-      onStatusUpdate('Frage beantwortet', 'Trevor', 'Direkt-Antwort im Q&A-Panel bereitgestellt.');
+
+      onStatusUpdate('Wartet auf Nutzer-Antwort', 'Trevor', qText);
 
       return {
-        isQuestion: true,
-        type: 'question',
-        category: 'QUESTION',
-        question: userPrompt,
-        answer: directAnswer,
-        summary: directAnswer,
+        needsClarification: true,
+        question: qText,
+        summary: preCheckResult.summary,
         steps: [],
-        rawReports: {},
-        departmentReports: {}
+        departmentReports: {},
+        rawReports: {}
       };
     }
 
-    // Triggere beim Etagen-Wechsel ein Event: onStatusUpdate('routing', 'Fahre ins ' + target_floor)
-    onStatusUpdate('routing', 'Fahre ins ' + target_floor);
+    // 3. FALL B: ZWINGENDER ÜBERGANG ZU STUFE 2 (dispatchTaskToDepartment)
+    const taskObject = {
+      title: userPrompt.length > 50 ? userPrompt.slice(0, 50) + '...' : userPrompt,
+      userPrompt,
+      prompt: userPrompt,
+      summary: preCheckResult.summary,
+      primaryDepartment: preCheckResult.primaryDepartment,
+      targetFloor: preCheckResult.targetFloor || (preCheckResult.primaryDepartment.startsWith('UG') ? 'UG' : 'EG')
+    };
 
-    // 3D-Bühne sofort über Ziel-Etage informieren (Kamera-Fahrt UG/EG)
-    if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
-      window.update3DStudioState('routing', target_floor);
-    }
+    return await this.dispatchTaskToDepartment(taskObject, onStatusUpdate);
+  }
 
-    // -------------------------------------------------------------------------
-    // STUFE 1: TREVOR (CEO & DISPATCHER)
-    // -------------------------------------------------------------------------
-    onStatusUpdate(
-      'Stufe 1/4: Trevor (CEO & Dispatcher)',
-      'Trevor',
-      target_floor === 'UG'
-        ? `HARDWARE_ALLGEMEIN erkannt -> Verteilt Aufgaben an das Untergeschoss (UG: Archiv, Serverraum, Werkstatt, Lounge)...`
-        : `SOFTWARE erkannt -> Verteilt Aufgaben an den Software-Campus (EG)...`
-    );
+  /**
+   * Zwingender Übergang zu Stufe 2: Weist den Task der Ziel-Abteilung zu
+   * und führt die Stufen 2, 3 und 4 sequentiell mit Live-Status aus.
+   */
+  async dispatchTaskToDepartment(taskObject, onStatusUpdate = () => {}) {
+    const userPrompt = taskObject.userPrompt || taskObject.prompt || taskObject.summary;
+    const dept = getDepartmentByCodeOrId(taskObject.primaryDepartment, this.hierarchy.departments);
+    const targetFloor = dept.floor || taskObject.targetFloor || 'EG';
 
-    const subTasks = await this.dispatchTask(userPrompt, routing);
-    console.log(`[Stufe 1] Auftrag in ${subTasks.length} Abteilungs-Tasks (${target_floor}) zerlegt.`);
-
-    // -------------------------------------------------------------------------
-    // CODE-RAG: KONTEXT-ABRUF AUS DATEIEN (NUR BEI target_floor === 'EG')
-    // -------------------------------------------------------------------------
-    let codeContext = '';
-    if (target_floor === 'EG') {
-      try {
-        let candidateFiles = [];
-        let isManualSelection = false;
-
-        // Priorität 1: Manuelle Dateiauswahl des Nutzers im UI (window.selectedContextFiles)
-        if (typeof window !== 'undefined' && Array.isArray(window.selectedContextFiles) && window.selectedContextFiles.length > 0) {
-          candidateFiles = [...window.selectedContextFiles];
-          isManualSelection = true;
-          console.log(`[WorkflowOrchestrator] Code-RAG: Verwende ${candidateFiles.length} manuell ausgewählte Kontext-Dateien aus window.selectedContextFiles (Regex-Fallback übersprungen).`);
-        } else {
-          // Priorität 2: Automatische Regex-Erkennung aus Prompt & Dispatcher-Antwort
-          candidateFiles = this.extractCandidateFilePaths(subTasks.rawAnalysis || '', userPrompt);
-        }
-
-        if (candidateFiles.length > 0) {
-          onStatusUpdate(
-            'Stufe 1/4: Code-RAG (Kontext-Abruf)',
-            'Trevor',
-            isManualSelection
-              ? `Lese Quellcode von ${candidateFiles.length} manuell gewählten Kontext-Dateien (Sandbox) via Bridge (Port 3001)...`
-              : `Lese Quellcode von ${candidateFiles.length} identifizierten Projektdateien via Bridge (Port 3001)...`
-          );
-
-          const fetchedFiles = await this.fetchFilesContext(candidateFiles);
-          if (fetchedFiles && fetchedFiles.length > 0) {
-            codeContext = fetchedFiles.map(f => {
-              const snippet = f.content.length > 6000 
-                ? `${f.content.slice(0, 6000)}\n// ... [weiterer Code gekürzt für Prompt-Kontext]` 
-                : f.content;
-              return `### DATEI: ${f.path}\n\`\`\`\n${snippet}\n\`\`\``;
-            }).join('\n\n');
-
-            console.log(`[WorkflowOrchestrator] Code-RAG: ${fetchedFiles.length} Dateien erfolgreich für Fach-Agenten geladen.`);
-          }
-        }
-      } catch (ragErr) {
-        console.warn('[WorkflowOrchestrator] Code-RAG nicht verfügbar (Bridge offline?):', ragErr.message);
-        codeContext = '';
+    // 1. Prüfen, ob Ziel-Abteilung BUSY ist
+    const isBusy = this.isDepartmentBusy(dept.id);
+    if (isBusy) {
+      console.warn(`[WorkflowOrchestrator] Abteilung ${dept.name} ist BUSY. Task verbleibt in Warteschlange.`);
+      const busyMsg = 'In Warteschlange (Abteilung ausgelastet)';
+      onStatusUpdate(busyMsg, dept.name, `Abteilung ${dept.name} ist aktuell belegt.`);
+      if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
+        window.updateActiveQueueItemStatus(busyMsg);
       }
-    } else {
-      console.log('[WorkflowOrchestrator] Code-RAG für UG / HARDWARE_ALLGEMEIN komplett übersprungen (Token-Ersparnis).');
+      return {
+        isQueued: true,
+        status: busyMsg,
+        department: dept,
+        taskObject
+      };
     }
 
-    // -------------------------------------------------------------------------
-    // CLOUD-GEDÄCHTNIS: SUPABASE RAG-ABRUF FÜR LANGZEIT-KONTEXT
-    // -------------------------------------------------------------------------
-    let cloudMemoryContext = '';
+    // 2. Abteilung auf BUSY setzen
+    this.setDepartmentBusy(dept.id, true);
+
     try {
-      const memoryHits = await this.searchCloudMemory(userPrompt);
-      if (memoryHits && memoryHits.length > 0) {
-        onStatusUpdate(
-          'Stufe 1/4: Cloud-Gedächtnis (RAG)',
-          'Trevor',
-          `${memoryHits.length} bewährte Lösungsmuster aus dem Supabase-Gedächtnis geladen...`
-        );
-        cloudMemoryContext = memoryHits.map(m => {
-          const codeSnippet = m.reusable_code_snippet ? `\nCode-Snippet:\n\`\`\`\n${m.reusable_code_snippet}\n\`\`\`` : '';
-          return `### [Gedächtnis / ${m.department || 'ALLGEMEIN'}] ${m.topic}\n- Problem: ${m.problem_statement}\n- Lösungsmuster: ${m.solution_pattern}${codeSnippet}`;
-        }).join('\n\n');
-        console.log(`[WorkflowOrchestrator] Cloud-Gedächtnis: ${memoryHits.length} Einträge für Fach-Agenten geladen.`);
+      // 3. Status auf 2/4 setzen (UI-Monitor & Queue)
+      const stage2Status = `2/4: [${dept.name}] – Fach-Agenten erarbeiten Lösung...`;
+      onStatusUpdate(stage2Status, dept.name, `Fach-Agenten von ${dept.name} erarbeiten Lösung...`);
+      if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
+        window.updateActiveQueueItemStatus(stage2Status);
       }
-    } catch (memErr) {
-      console.warn('[WorkflowOrchestrator] Cloud-Gedächtnis RAG Abruf übersprungen:', memErr.message);
+
+      // 4. 3D-Bühne & Kamera informieren
+      if (typeof window !== 'undefined') {
+        if (typeof window.update3DStudioState === 'function') {
+          window.update3DStudioState('stage2', targetFloor);
+        }
+        if (typeof window.setStageIn3D === 'function') {
+          window.setStageIn3D(2);
+        }
+        // Aktive Agenten im 3D-Campus auf "working" animieren (Badges & Datenpakete)
+        dept.specialist_pcs.forEach(pc => {
+          if (typeof window.updateAgentStatus === 'function') {
+            window.updateAgentStatus(pc.id, 'working', 'Bearbeitet: ' + (taskObject.title || taskObject.summary.slice(0, 30)));
+          }
+        });
+      }
+
+      // 5. Code-RAG Kontext abrufen (bei EG)
+      let codeContext = '';
+      if (targetFloor === 'EG') {
+        try {
+          let candidateFiles = [];
+          if (typeof window !== 'undefined' && Array.isArray(window.selectedContextFiles) && window.selectedContextFiles.length > 0) {
+            candidateFiles = [...window.selectedContextFiles];
+          } else {
+            candidateFiles = this.extractCandidateFilePaths(taskObject.summary || '', userPrompt);
+          }
+          if (candidateFiles.length > 0) {
+            const fetched = await this.fetchFilesContext(candidateFiles);
+            if (fetched && fetched.length > 0) {
+              codeContext = fetched.map(f => `### DATEI: ${f.path}\n\`\`\`\n${f.content.slice(0, 5000)}\n\`\`\``).join('\n\n');
+            }
+          }
+        } catch (ragErr) {
+          console.warn('[WorkflowOrchestrator] Code-RAG Fehler:', ragErr.message);
+        }
+      }
+
+      // 6. Cloud-Memory RAG abrufen
+      let cloudMemoryContext = '';
+      try {
+        const hits = await this.searchCloudMemory(userPrompt);
+        if (hits && hits.length > 0) {
+          cloudMemoryContext = hits.map(m => `### [Gedächtnis / ${m.department}] ${m.topic}\n- Problem: ${m.problem_statement}\n- Lösungsmuster: ${m.solution_pattern}`).join('\n\n');
+        }
+      } catch (memErr) {
+        console.warn('[WorkflowOrchestrator] Cloud-Memory Fehler:', memErr.message);
+      }
+
+      // 7. SubTasks für Fach-Agenten definieren
+      const subTasks = [
+        {
+          departmentId: dept.id,
+          departmentName: dept.name,
+          leadAgent: dept.chef_agent,
+          workerAgents: dept.specialist_pcs,
+          mission: `Fach-Ausarbeitung in Abteilung ${dept.name} zum Auftrag: "${taskObject.summary}"`
+        }
+      ];
+
+      // Echter LLM-Call für die Fach-Agenten
+      const workerOutputs = await this.executeWorkerTasks(subTasks, userPrompt, onStatusUpdate, codeContext, cloudMemoryContext);
+      console.log(`[Stufe 2] Fach-Ausarbeitungen für ${dept.name} abgeschlossen.`);
+
+      // 8. STUFE 3: ABTEILUNGSLEITER AUDIT
+      const stage3Status = `3/4: [${dept.name}] – Abteilungsleiter prüft & konsolidiert...`;
+      onStatusUpdate(stage3Status, dept.chef_agent.name, `${dept.chef_agent.name} prüft Schnittstellen & Logik...`);
+      if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
+        window.updateActiveQueueItemStatus(stage3Status);
+      }
+
+      if (typeof window !== 'undefined') {
+        if (typeof window.update3DStudioState === 'function') {
+          window.update3DStudioState('stage3', targetFloor);
+        }
+        if (typeof window.setStageIn3D === 'function') {
+          window.setStageIn3D(3);
+        }
+        if (typeof window.updateAgentStatus === 'function') {
+          window.updateAgentStatus(dept.chef_agent.id, 'auditing', 'Prüft & konsolidiert Bericht...');
+        }
+        if (typeof window.triggerDataStreamToTrevor === 'function') {
+          window.triggerDataStreamToTrevor(dept.id);
+        }
+      }
+
+      // Echter LLM-Call für den Abteilungsleiter
+      const departmentReports = await this.aggregateDepartmentResults(subTasks, workerOutputs, userPrompt, onStatusUpdate);
+      console.log(`[Stufe 3] Abteilungsleiter-Audit für ${dept.name} abgeschlossen.`);
+
+      // 9. STUFE 4: TREVOR SYNTHESE & FREIGABE
+      const stage4Status = `4/4: Bereit zur Freigabe im Action-Center`;
+      onStatusUpdate(stage4Status, 'Trevor', 'Trevor synthetisiert die Maßnahmen zur finalen Freigabe...');
+      if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
+        window.updateActiveQueueItemStatus(stage4Status);
+      }
+
+      if (typeof window !== 'undefined') {
+        if (typeof window.update3DStudioState === 'function') {
+          window.update3DStudioState('stage4', targetFloor);
+        }
+        if (typeof window.setStageIn3D === 'function') {
+          window.setStageIn3D(4);
+        }
+      }
+
+      const finalPlan = await this.synthesizeFinalPlan(userPrompt, departmentReports);
+
+      // 10. Übergabe an das Action-Center & Sounds
+      if (typeof window !== 'undefined') {
+        if (typeof window.addActionCenterItem === 'function') {
+          window.addActionCenterItem({
+            id: 'act_approval_' + Date.now(),
+            type: 'APPROVAL_NEEDED',
+            title: `Freigabe: ${taskObject.title || taskObject.summary.slice(0, 45)}`,
+            message: `${dept.chef_agent.name} (${dept.name}) hat die Ausarbeitung abgeschlossen (${finalPlan.steps.length} Maßnahmen).`
+          });
+        }
+        if (typeof window.playNotificationSound === 'function') {
+          window.playNotificationSound('SUCCESS');
+        }
+        if (typeof window.showActionToast === 'function') {
+          window.showActionToast('Ergebnis bereit', `Abteilung ${dept.name} hat die Ausarbeitung abgeschlossen.`, 'SUCCESS');
+        }
+        if (typeof window.speakAsJarvis === 'function') {
+          window.speakAsJarvis(`Abteilung ${dept.name} hat die Arbeiten abgeschlossen, Sir. Die Maßnahmen liegen im Action-Center bereit.`);
+        }
+      }
+
+      return {
+        summary: taskObject.summary,
+        steps: finalPlan.steps,
+        departmentReports,
+        rawReports: workerOutputs,
+        primaryDepartment: dept.name,
+        targetFloor
+      };
+
+    } finally {
+      // 11. Abteilung wieder freigeben für nachfolgende Queue-Einträge
+      this.setDepartmentBusy(dept.id, false);
     }
-
-    // -------------------------------------------------------------------------
-    // STUFE 2: FACH-AGENTEN (WORKER EXECUTION) MIT CODE-RAG INJEKTION
-    // -------------------------------------------------------------------------
-    onStatusUpdate(
-      'Stufe 2/4: Fach-Agenten (Worker Execution)',
-      'Spezial-PCs',
-      'Fach-Agenten erarbeiten konkrete technische Lösungen und Dateipfade...'
-    );
-
-    const workerOutputs = await this.executeWorkerTasks(subTasks, userPrompt, onStatusUpdate, codeContext, cloudMemoryContext);
-    console.log(`[Stufe 2] ${Object.keys(workerOutputs).length} Fach-Ausarbeitungen erstellt.`);
-
-    // -------------------------------------------------------------------------
-    // STUFE 3: ABTEILUNGSLEITER (LEAD AUDIT & LOGIKPRÜFUNG)
-    // -------------------------------------------------------------------------
-    onStatusUpdate(
-      'Stufe 3/4: Abteilungsleiter (Lead Audit)',
-      'Chef-Agenten',
-      'Abteilungsleiter prüfen auf Logikfehler, ES-Modul-Grenzen und Abhängigkeiten...'
-    );
-
-    const departmentReports = await this.aggregateDepartmentResults(subTasks, workerOutputs, userPrompt, onStatusUpdate);
-    console.log(`[Stufe 3] ${Object.keys(departmentReports).length} geprüfte Abteilungsberichte erstellt.`);
-
-    // -------------------------------------------------------------------------
-    // STUFE 4: TREVOR (SYNTHESE & STRUKTURIERTE CHECKLISTE)
-    // -------------------------------------------------------------------------
-    onStatusUpdate(
-      'Stufe 4/4: Trevor (Synthese & Checkliste)',
-      'Trevor',
-      'Trevor synthetisiert alle Berichte und generiert die interaktive Checkliste...'
-    );
-
-    const finalPlan = await this.synthesizeFinalPlan(userPrompt, departmentReports);
-    console.log(`[Stufe 4] Finale Checkliste mit ${finalPlan.steps.length} Schritten fertiggestellt.`);
-
-    if (typeof window !== 'undefined' && typeof window.speakAsJarvis === 'function') {
-      window.speakAsJarvis(`Die Ausarbeitung ist abgeschlossen, Sir. ${finalPlan.steps.length} Maßnahmen stehen zur Freigabe im Terminal bereit.`);
-    }
-
-    return finalPlan;
   }
 
   /**
@@ -581,10 +814,12 @@ Deine Kernaufgabe in Stufe 3 ist ein unbestechliches Qualitäts- und Logikaudit:
             message: `${chef.name} hat den Logik-Audit abgeschlossen.`
           });
         }
-        const actionBadge = document.getElementById('action-center-badge');
-        if (actionBadge) {
-          actionBadge.classList.add('pulse-flash');
-          setTimeout(() => actionBadge.classList.remove('pulse-flash'), 5000);
+        if (typeof document !== 'undefined') {
+          const actionBadge = document.getElementById('action-center-badge');
+          if (actionBadge) {
+            actionBadge.classList.add('pulse-flash');
+            setTimeout(() => actionBadge.classList.remove('pulse-flash'), 5000);
+          }
         }
       }
     }
@@ -719,4 +954,7 @@ export const orchestrator = new WorkflowOrchestrator();
 if (typeof window !== 'undefined') {
   window.WorkflowOrchestrator = WorkflowOrchestrator;
   window.trevorOrchestrator = orchestrator;
+  window.safeParseTrevorJSON = safeParseTrevorJSON;
+  window.detectPrimaryDepartment = detectPrimaryDepartment;
+  window.getDepartmentByCodeOrId = getDepartmentByCodeOrId;
 }

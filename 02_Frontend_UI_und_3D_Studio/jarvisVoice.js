@@ -358,6 +358,43 @@ function updateMicButtonUI(active) {
   }
 }
 
+/**
+ * J.A.R.V.I.S. Start-Begrüßung beim Betreten des Studios (einmalig pro Session)
+ */
+export function playJarvisWelcomeGreeting() {
+  if (typeof window === 'undefined') return;
+  if (window.hasGreetedUser === true) return;
+  window.hasGreetedUser = true;
+
+  // 1. AudioContext initialisieren / fortsetzen
+  try {
+    if (typeof window.initAudioContext === 'function') {
+      window.initAudioContext();
+    }
+  } catch (err) {
+    console.warn('[J.A.R.V.I.S.] AudioContext Initialisierung Warnung:', err);
+  }
+
+  const welcomeText = 'Hallo Sir, was wollen wir heute bearbeiten?';
+
+  // 2. Sprachausgabe im J.A.R.V.I.S.-Stil
+  try {
+    speakAsJarvis(welcomeText);
+  } catch (err) {
+    console.warn('[J.A.R.V.I.S.] Begrüßung Sprachausgabe Fehler:', err);
+  }
+
+  // 3. Status-Banner & Toast im UI aktualisieren
+  try {
+    if (typeof window.updateCheckpointBadge === 'function') {
+      window.updateCheckpointBadge(`🗣️ J.A.R.V.I.S.: "${welcomeText}"`, true);
+    }
+    if (typeof window.showActionToast === 'function') {
+      window.showActionToast('J.A.R.V.I.S. bereit', welcomeText, 'QUESTION');
+    }
+  } catch {}
+}
+
 // Global an window binden
 if (typeof window !== 'undefined') {
   window.speakAsJarvis = speakAsJarvis;
@@ -366,4 +403,5 @@ if (typeof window !== 'undefined') {
   window.toggleJarvisVoiceEnabled = toggleJarvisVoiceEnabled;
   window.cleanTextForJarvisSpeech = cleanTextForJarvisSpeech;
   window.selectBestJarvisVoice = selectBestJarvisVoice;
+  window.playJarvisWelcomeGreeting = playJarvisWelcomeGreeting;
 }

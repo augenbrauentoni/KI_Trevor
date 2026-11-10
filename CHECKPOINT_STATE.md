@@ -506,4 +506,41 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
    - RLS-Policies `"Public access trevor_memory"` für autorisierten und anonymen Zugriff.
    - Initiale Seed-Datensätze für Best-Practice Architekturen hinterlegt.
 
+---
+
+## 24. Workflow-Execution Fix (Stufe 1 -> Stufe 2), Live-Status & J.A.R.V.I.S. Start-Begrüßung
+
+1. **J.A.R.V.I.S. Start-Begrüßung ([`jarvisVoice.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/jarvisVoice.js) & [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Exportierte Funktion `playJarvisWelcomeGreeting()`:
+     - Schutz vor Mehrfachausführung via Session-Flag `window.hasGreetedUser = true`.
+     - Reaktivierung des `AudioContext` unter Berücksichtigung moderner Browser-Autoplay-Richtlinien (`window.initAudioContext()`).
+     - Sprachausgabe via J.A.R.V.I.S.-Stimme: *"Hallo Sir, was wollen wir heute bearbeiten?"*.
+     - Synchrones Update des oberen Status-Banners (`window.updateCheckpointBadge`) und Action-Toasts (`window.showActionToast`).
+   - Einbindung in `setupLoginScreen()`: Wird sofort ausgelöst, wenn der Nutzer die PIN `2026` eingibt, oder per One-Time-User-Gesture-Listener (`click`, `keydown`), falls die Session bereits entsperrt war.
+
+2. **Robuster Pre-Check & Fallback-Garantie ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Funktion `safeParseTrevorJSON(rawText, originalPrompt)`:
+     - Bereinigt Markdown-Code-Fences (````json ... ````).
+     - Parst JSON-Objekte per Regex (`/\{[\s\S]*\}/`).
+     - **Fallback-Garantie:** Verhindert das Verschlucken von Aufträgen. Falls das Modell reinen Text statt JSON liefert, wird automatisch ein valides Fallback-Objekt mit `needsClarification: false`, `executionMode: 'FULL_DEPARTMENT'`, Keyword-basierter Abteilungs-Zuordnung (`detectPrimaryDepartment`) und Ziel-Etage (`targetFloor: 'EG'|'UG'`) generiert.
+   - **Garantierter Übergang zu Stufe 2:**
+     - Bei `needsClarification === true`: Trevor stellt gezielte Rückfrage ins Action-Center mit Sound `'QUESTION'` und Queue-Status `"Wartet auf Nutzer-Antwort"`.
+     - Bei `needsClarification === false`: Aufruf von `dispatchTaskToDepartment(taskObject)` erfolgt unverzüglich und ohne Unterbrechung.
+
+3. **Sichtbare Warteschlange & Abteilungs-Workload-Handling ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) & [`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Sofortiger Queue-Eintrag beim Klick auf "Senden": Auftrag erscheint mit Status `"1/4: Trevor analysiert..."` in `#task-queue-list`.
+   - Abteilungs-Statusverwaltung:
+     - `isDepartmentBusy(deptId)` und `setDepartmentStatus(deptId, status)` verwalten aktive Fachbereiche im State (`state.busyDepartments`) und aktualisieren die Farb-Dots (`.status-dot.busy` rot vs. `.status-dot.ready`).
+     - Falls Zielabteilung `BUSY`: Task bleibt in der Queue mit Status `"In Warteschlange (Abteilung ausgelastet)"` und Steuerungsbuttons `[▲] [▼] [✖]`.
+     - Falls `IDLE`: Abteilung wird auf `BUSY` gesetzt, Monitor und Queue springen auf `"2/4: [Abteilungsname] – Fach-Agenten erarbeiten Lösung..."`.
+   - Neuer `#live-activity-monitor` im `#section-task-progress` für kontinuierliche Rückmeldung der Workflow-Stufen.
+   - Status-Badges in der Queue mit adaptiven Farbstilen (`badge-analyzing`, `badge-working`, `badge-busy`, `badge-done`).
+   - Bei Abschluss: Trevor setzt Status `"4/4: Bereit zur Freigabe im Action-Center"`, übergibt Karte an `#user-action-center`, spielt Erfolgs-Sound und gibt die Abteilung wieder frei (`IDLE`).
+
+4. **3D Agenten-Animation & Bildschirme ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - `updateAgentStatus(agentIdOrName, statusOrState, message)` unterstützt IDs und Namen:
+     - Schaltet Monitore der Fach-PCs auf leuchtendes Grün (`0x00ff88`) mit hoher Emissive-Intensität (2.4).
+     - Animiert Tastatur-Tippbewegungen der Spezialisten-Arme (`avatarArms.position.y = 0.05`).
+     - Überträgt Live-Status in die 3D-UserData (`userData.currentTask`) sowie ins schwebende Info-Panel.
+
 

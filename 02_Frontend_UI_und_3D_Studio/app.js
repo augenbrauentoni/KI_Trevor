@@ -37,7 +37,8 @@ import {
   stopJarvisSpeech,
   toggleVoiceRecognition,
   toggleJarvisVoiceEnabled,
-  updateVoiceToggleButtonUI
+  updateVoiceToggleButtonUI,
+  playJarvisWelcomeGreeting
 } from './jarvisVoice.js';
 
 // Globaler Anwendungs-Status
@@ -51,6 +52,7 @@ const state = {
   agentLogs: {},
   currentInspectedAgent: null,
   taskQueue: [],
+  busyDepartments: new Set(),
   currentQAContext: { question: '', answer: '' },
   actionCenterItems: [],
   settings: {
@@ -155,6 +157,49 @@ function loadSelectedProject() {
 }
 
 // =============================================================================
+// ABTEILUNGS-STATUS & BUSY-MANAGEMENT
+// =============================================================================
+export function isDepartmentBusy(deptId) {
+  return state.busyDepartments ? state.busyDepartments.has(Number(deptId)) : false;
+}
+
+export function setDepartmentStatus(deptId, status) {
+  const id = Number(deptId);
+  if (!state.busyDepartments) state.busyDepartments = new Set();
+  if (status === 'BUSY') {
+    state.busyDepartments.add(id);
+  } else {
+    state.busyDepartments.delete(id);
+  }
+  if (typeof window !== 'undefined') {
+    window.departmentStatus = window.departmentStatus || {};
+    window.departmentStatus[id] = status;
+  }
+  const dot = document.getElementById(`dot-dept-${id}`);
+  if (dot) {
+    if (status === 'BUSY') {
+      dot.className = 'status-dot busy';
+      dot.title = 'Abteilung arbeitet an Auftrag (BUSY)';
+    } else {
+      dot.className = 'status-dot ready';
+      dot.title = 'Bereit für Aufträge (IDLE)';
+    }
+  }
+}
+
+export function updateActiveQueueItemStatus(statusText) {
+  if (state.taskQueue && state.taskQueue.length > 0) {
+    state.taskQueue[0].status = statusText;
+    renderTaskQueueUI();
+    try {
+      localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    } catch { /* ignore */ }
+  }
+  const monitor = document.getElementById('live-activity-monitor');
+  if (monitor) monitor.innerText = statusText;
+}
+
+// =============================================================================
 // RENDERING: TOP BAR & ABTEILUNGS-PILLS
 // =============================================================================
 function renderDepartmentPills() {
@@ -171,9 +216,11 @@ function renderDepartmentPills() {
   state.hierarchy.departments.forEach(dept => {
     const isActive = state.selectedDeptFilter === String(dept.id);
     const floorTag = dept.floor === 'UG' ? '<span style="font-size: 9px; opacity: 0.85; margin-left: 4px; color: #c084fc;">[UG]</span>' : '';
+    const isBusy = isDepartmentBusy(dept.id);
+    const dotClass = isBusy ? 'status-dot busy' : 'status-dot ready';
     html += `
       <button class="dept-pill-btn ${isActive ? 'active' : ''}" data-dept-id="${dept.id}" title="${dept.floor === 'UG' ? 'Untergeschoss (Keller)' : 'Erdgeschoss (Software-Campus)'}">
-        <span class="status-dot ready" id="dot-dept-${dept.id}"></span> ${dept.name} ${floorTag}
+        <span class="${dotClass}" id="dot-dept-${dept.id}"></span> ${dept.name} ${floorTag}
       </button>
     `;
   });
@@ -877,6 +924,27 @@ async function dispatchNewTask() {
 
   stopIdleTraining();
 
+  // 1. Sofort in Task-Queue einreihen mit Status "1/4: Trevor analysiert..."
+  const queueId = 'queue_' + Date.now();
+  const queueItem = {
+    id: queueId,
+    text: userPrompt,
+    title: userPrompt.length > 50 ? userPrompt.slice(0, 50) + '...' : userPrompt,
+    status: '1/4: Trevor analysiert...',
+    createdAt: new Date().toLocaleTimeString()
+  };
+  state.taskQueue.unshift(queueItem);
+  if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
+  try {
+    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+  } catch {}
+  renderTaskQueueUI();
+
+  const monitorEl = document.getElementById('live-activity-monitor');
+  if (monitorEl) {
+    monitorEl.innerText = '1/4: Trevor analysiert...';
+  }
+
   document.getElementById('section-task-input').style.display = 'none';
   document.getElementById('section-task-progress').style.display = 'flex';
   document.getElementById('section-decision').style.display = 'none';
@@ -906,6 +974,17 @@ async function dispatchNewTask() {
 
   try {
     const finalResult = await orchestrator.executeFullWorkflow(userPrompt, (stageName, agentName, message) => {
+      // Live-Update in Warteschlange & Activity Monitor
+      queueItem.status = stageName;
+      renderTaskQueueUI();
+      try {
+        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+      } catch {}
+
+      if (monitorEl) {
+        monitorEl.innerText = `${stageName} ${agentName ? `[${agentName}]` : ''} ${message || ''}`.trim();
+      }
+
       if (stageName === 'routing') {
         if (statusLabel) statusLabel.innerText = 'Pre-Routing';
         if (activeAgentLabel) activeAgentLabel.innerText = agentName || message;
@@ -947,6 +1026,14 @@ async function dispatchNewTask() {
     // Q&A-Modus: Bei direkter Frage wurde Antwort bereits in showQAPanel angezeigt
     if (finalResult && finalResult.isQuestion) {
       console.log('[Trevor App] Q&A-Workflow erfolgreich abgeschlossen (Direkt-Antwort angezeigt).');
+      queueItem.status = '4/4: Im Q&A-Modus beantwortet';
+      renderTaskQueueUI();
+      try {
+        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+      } catch {}
+      if (monitorEl) {
+        monitorEl.innerText = '4/4: Im Q&A-Modus beantwortet';
+      }
       const progressSection = document.getElementById('section-task-progress');
       if (progressSection) progressSection.style.display = 'none';
       const promptSection = document.getElementById('section-task-input');
@@ -982,6 +1069,15 @@ async function dispatchNewTask() {
     saveLocalCheckpoint();
     updateCheckpointBadge('Entscheidung erforderlich (JA / NEIN)', false);
 
+    queueItem.status = '4/4: Bereit zur Freigabe im Action-Center';
+    renderTaskQueueUI();
+    try {
+      localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    } catch {}
+    if (monitorEl) {
+      monitorEl.innerText = '4/4: Bereit zur Freigabe im Action-Center';
+    }
+
     document.getElementById('section-task-progress').style.display = 'none';
     document.getElementById('section-decision').style.display = 'flex';
 
@@ -1001,7 +1097,13 @@ async function dispatchNewTask() {
 
   } catch (err) {
     console.warn('[Trevor App] Fehler bei executeFullWorkflow, starte Simulation als Fallback:', err);
+    queueItem.status = 'Fallback-Simulation aktiv...';
+    renderTaskQueueUI();
+    if (monitorEl) monitorEl.innerText = 'Fallback-Simulation aktiv...';
     await runLiveWorkflowSimulation(state.activeTask);
+    queueItem.status = '4/4: Bereit zur Freigabe im Action-Center';
+    renderTaskQueueUI();
+    if (monitorEl) monitorEl.innerText = '4/4: Bereit zur Freigabe im Action-Center';
   }
 }
 
@@ -1744,6 +1846,8 @@ export function addToTaskQueue(promptText) {
   const newItem = {
     id: 'queue_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
     text,
+    title: text.length > 50 ? text.slice(0, 50) + '...' : text,
+    status: 'In Warteschlange eingereiht',
     createdAt: new Date().toLocaleTimeString()
   };
 
@@ -1801,6 +1905,15 @@ export async function runQueueTask(index) {
   await dispatchNewTask();
 }
 
+function getStatusBadgeClass(status) {
+  if (!status) return 'badge-analyzing';
+  const s = status.toLowerCase();
+  if (s.includes('ausgelastet') || s.includes('busy')) return 'badge-busy';
+  if (s.includes('2/4') || s.includes('3/4') || s.includes('erarbeiten') || s.includes('prüft')) return 'badge-working';
+  if (s.includes('4/4') || s.includes('bereit') || s.includes('abgeschlossen') || s.includes('erledigt') || s.includes('erfolg')) return 'badge-done';
+  return 'badge-analyzing';
+}
+
 export function renderTaskQueueUI() {
   const listEl = document.getElementById('task-queue-list');
   const countBadge = document.getElementById('queue-count-badge');
@@ -1812,6 +1925,11 @@ export function renderTaskQueueUI() {
   if (countBadge) {
     countBadge.innerText = `${count} ${count === 1 ? 'wartender Auftrag' : 'wartende Aufträge'}`;
   }
+
+  const topBadge = document.getElementById('queue-badge-count');
+  if (topBadge) topBadge.innerText = count;
+  const sidebarBadge = document.getElementById('sidebar-queue-count');
+  if (sidebarBadge) sidebarBadge.innerText = count;
 
   if (emptyPlaceholder) {
     emptyPlaceholder.style.display = count === 0 ? 'block' : 'none';
@@ -1834,11 +1952,17 @@ export function renderTaskQueueUI() {
         <span class="task-queue-item-num">#${idx + 1}</span>
         <span class="task-queue-item-text" title="${escapeHtml(item.text)}">${escapeHtml(item.text)}</span>
       </div>
-      <div class="task-queue-btn-group">
-        <button class="btn-queue-ctrl btn-queue-run" data-action="run" data-index="${idx}" title="Diesen Auftrag sofort ausführen">▶ Start</button>
-        <button class="btn-queue-ctrl btn-queue-up" data-action="up" data-index="${idx}" title="Nach oben verschieben" ${idx === 0 ? 'disabled' : ''}>▲</button>
-        <button class="btn-queue-ctrl btn-queue-down" data-action="down" data-index="${idx}" title="Nach unten verschieben" ${idx === count - 1 ? 'disabled' : ''}>▼</button>
-        <button class="btn-queue-ctrl btn-queue-delete" data-action="delete" data-index="${idx}" title="Löschen">✕</button>
+      <div class="task-queue-status-line">
+        <span class="task-queue-badge ${getStatusBadgeClass(item.status)}">${escapeHtml(item.status || 'Wartet in Warteschlange...')}</span>
+      </div>
+      <div class="task-queue-ctrl-row">
+        <span style="font-size: 10px; color: var(--text-dim);">${item.createdAt || ''}</span>
+        <div class="task-queue-btn-group">
+          <button class="btn-queue-ctrl btn-queue-run" data-action="run" data-index="${idx}" title="Diesen Auftrag sofort ausführen">▶ Start</button>
+          <button class="btn-queue-ctrl btn-queue-up" data-action="up" data-index="${idx}" title="Nach oben verschieben" ${idx === 0 ? 'disabled' : ''}>▲</button>
+          <button class="btn-queue-ctrl btn-queue-down" data-action="down" data-index="${idx}" title="Nach unten verschieben" ${idx === count - 1 ? 'disabled' : ''}>▼</button>
+          <button class="btn-queue-ctrl btn-queue-delete" data-action="delete" data-index="${idx}" title="Löschen">✕</button>
+        </div>
       </div>
     </li>
   `).join('');
@@ -2762,6 +2886,23 @@ function setupLoginScreen() {
   try {
     if (sessionStorage.getItem('trevor_studio_unlocked') === 'true') {
       loginOverlay.style.display = 'none';
+
+      // Falls bereits freigeschaltet, J.A.R.V.I.S. Begrüßung beim ersten Klick/Tastendruck starten
+      const onFirstUserGesture = () => {
+        try {
+          if (typeof playJarvisWelcomeGreeting === 'function') {
+            playJarvisWelcomeGreeting();
+          } else if (typeof window !== 'undefined' && typeof window.playJarvisWelcomeGreeting === 'function') {
+            window.playJarvisWelcomeGreeting();
+          }
+        } catch (e) {
+          console.warn('[Trevor App] Fehler bei Start-Begrüßung:', e);
+        }
+        document.removeEventListener('click', onFirstUserGesture);
+        document.removeEventListener('keydown', onFirstUserGesture);
+      };
+      document.addEventListener('click', onFirstUserGesture, { once: true });
+      document.addEventListener('keydown', onFirstUserGesture, { once: true });
       return;
     }
   } catch (err) {
@@ -2780,6 +2921,17 @@ function setupLoginScreen() {
       }
       loginOverlay.style.display = 'none';
       if (errorMsg) errorMsg.style.display = 'none';
+
+      // J.A.R.V.I.S. Start-Begrüßung direkt beim korrekten PIN-Entsperren ausführen
+      try {
+        if (typeof playJarvisWelcomeGreeting === 'function') {
+          playJarvisWelcomeGreeting();
+        } else if (typeof window !== 'undefined' && typeof window.playJarvisWelcomeGreeting === 'function') {
+          window.playJarvisWelcomeGreeting();
+        }
+      } catch (e) {
+        console.warn('[Trevor App] Fehler bei Start-Begrüßung nach Unlock:', e);
+      }
     } else {
       if (errorMsg) {
         errorMsg.style.display = 'block';
@@ -3329,6 +3481,11 @@ if (typeof window !== 'undefined') {
   window.runQueueTask = runQueueTask;
   window.renderTaskQueueUI = renderTaskQueueUI;
   window.taskQueue = state.taskQueue;
+  window.isDepartmentBusy = isDepartmentBusy;
+  window.setDepartmentStatus = setDepartmentStatus;
+  window.updateActiveQueueItemStatus = updateActiveQueueItemStatus;
+  window.updateCheckpointBadge = updateCheckpointBadge;
+  window.playJarvisWelcomeGreeting = playJarvisWelcomeGreeting;
   window.trevorAudio = window.trevorAudio;
   window.initAudioContext = initAudioContext;
   window.playNotificationSound = playNotificationSound;

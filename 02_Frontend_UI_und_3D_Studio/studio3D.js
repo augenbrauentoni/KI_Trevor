@@ -1170,7 +1170,7 @@ function setupChefStation(THREE_LIB, podGroup, dept) {
   });
   chefGroup.add(avatar);
 
-  chefMeshMap[chef.id] = { screen, avatarArms: avatar.userData.arms };
+  chefMeshMap[chef.id] = { screen, avatarArms: avatar.userData.arms, name: chef.name };
   allChefScreenMeshes.push({
     mesh: screen,
     chefId: chef.id,
@@ -1260,7 +1260,8 @@ function setupSpecialistPcWorkstations(THREE_LIB, podGroup, dept) {
     pcMeshMap[pc.id] = {
       screenLeft,
       screenRight,
-      avatarArms: avatar.userData.arms
+      avatarArms: avatar.userData.arms,
+      name: pc.name
     };
     allPcScreenMeshes.push(screenLeft);
     allPcScreenMeshes.push(screenRight);
@@ -1487,9 +1488,10 @@ export function updateAgentStatusIn3D(agentId, type, status) {
   if (type === 'pc' && pcMeshMap[agentId]) {
     const { screenLeft, screenRight, avatarArms } = pcMeshMap[agentId];
     if (status === 'working') {
-      screenLeft.material.emissive.setHex(0x06b6d4);
+      // Grünes Aufleuchten der Bildschirme & tippen der Arme
+      screenLeft.material.emissive.setHex(0x00ff88);
       screenLeft.material.emissiveIntensity = 2.4;
-      screenRight.material.emissive.setHex(0x06b6d4);
+      screenRight.material.emissive.setHex(0x00ff88);
       screenRight.material.emissiveIntensity = 2.4;
       if (avatarArms) avatarArms.position.y = 0.05;
     } else if (status === 'done') {
@@ -1504,10 +1506,11 @@ export function updateAgentStatusIn3D(agentId, type, status) {
       screenRight.material.emissiveIntensity = 0.5;
     }
   } else if (type === 'chef' && chefMeshMap[agentId]) {
-    const { screen } = chefMeshMap[agentId];
-    if (status === 'auditing') {
+    const { screen, avatarArms } = chefMeshMap[agentId];
+    if (status === 'auditing' || status === 'working') {
       screen.material.emissive.setHex(0xf59e0b);
       screen.material.emissiveIntensity = 2.6;
+      if (avatarArms) avatarArms.position.y = 0.05;
     } else if (status === 'done') {
       screen.material.emissive.setHex(0x10b981);
       screen.material.emissiveIntensity = 1.2;
@@ -1523,36 +1526,84 @@ export function setStageIn3D(stageNum) {
 }
 
 /**
- * Aktualisiert den Live-Status eines Agenten in seinen 3D-Meshes und im UI-Info-Panel falls geöffnet
- * @param {string} agentName - Der Name des Agenten (z. B. "Max", "Viktor", "Trevor")
- * @param {string} statusMessage - Der aktuelle Status (z. B. "Analysiert ...", "Aufgabe abgeschlossen")
+ * Aktualisiert den Live-Status eines Agenten in seinen 3D-Meshes und im UI-Info-Panel falls geöffnet.
+ * Unterstützt Aufrufe mit:
+ * - (agentName, statusMessage)
+ * - (agentId, statusOrState, message)
+ * 
+ * @param {string|number} agentIdOrName - ID oder Name des Agenten (z. B. 101, "Max", "Viktor", "Trevor")
+ * @param {string} [statusOrState] - 'working', 'auditing', 'done', 'idle' oder direkt Statusnachricht
+ * @param {string} [message] - Optionale detaillierte Statusnachricht
  */
-export function updateAgentStatus(agentName, statusMessage) {
-  if (!agentName) return;
+export function updateAgentStatus(agentIdOrName, statusOrState, message) {
+  if (agentIdOrName === undefined || agentIdOrName === null) return;
+
+  let stateType = null;
+  let statusMessage = '';
+
+  if (message !== undefined) {
+    stateType = statusOrState;
+    statusMessage = message;
+  } else if (typeof statusOrState === 'string' && ['working', 'auditing', 'done', 'idle'].includes(statusOrState.toLowerCase())) {
+    stateType = statusOrState.toLowerCase();
+    statusMessage = statusOrState;
+  } else {
+    statusMessage = statusOrState || '';
+  }
 
   // 1. In allen passenden interactiveObjects das userData.currentTask aktualisieren
   let foundCount = 0;
   for (const obj of interactiveObjects) {
-    if (obj && obj.userData && obj.userData.name === agentName) {
-      obj.userData.currentTask = statusMessage;
+    if (!obj || !obj.userData) continue;
+    const match = obj.userData.id === agentIdOrName || 
+                  String(obj.userData.id) === String(agentIdOrName) ||
+                  (obj.userData.name && obj.userData.name.toLowerCase() === String(agentIdOrName).toLowerCase());
+    if (match) {
+      if (statusMessage) obj.userData.currentTask = statusMessage;
       foundCount++;
     }
   }
 
-  // 2. Falls das schwebende Agenten-Info-Panel offen ist und genau diesen Agenten anzeigt -> Text live aktualisieren
+  // 2. 3D Meshes aktualisieren (PC / Chef)
+  const idStr = String(agentIdOrName);
+  if (pcMeshMap[agentIdOrName] || pcMeshMap[idStr]) {
+    updateAgentStatusIn3D(pcMeshMap[agentIdOrName] ? agentIdOrName : idStr, 'pc', stateType || 'working');
+  } else if (chefMeshMap[agentIdOrName] || chefMeshMap[idStr]) {
+    updateAgentStatusIn3D(chefMeshMap[agentIdOrName] ? agentIdOrName : idStr, 'chef', stateType || 'auditing');
+  } else {
+    // Check ob agentIdOrName einem Namen entspricht
+    for (const [id, pc] of Object.entries(pcMeshMap)) {
+      if (pc.name && pc.name.toLowerCase() === String(agentIdOrName).toLowerCase()) {
+        updateAgentStatusIn3D(id, 'pc', stateType || 'working');
+        break;
+      }
+    }
+    for (const [id, chef] of Object.entries(chefMeshMap)) {
+      if (chef.name && chef.name.toLowerCase() === String(agentIdOrName).toLowerCase()) {
+        updateAgentStatusIn3D(id, 'chef', stateType || 'auditing');
+        break;
+      }
+    }
+  }
+
+  // 3. Falls das schwebende Agenten-Info-Panel offen ist und genau diesen Agenten anzeigt -> Text live aktualisieren
   if (typeof document !== 'undefined') {
     const panel = document.getElementById('agent-info-panel');
     const nameEl = document.getElementById('agent-info-name');
     const statusTextEl = document.getElementById('status-text');
 
-    if (panel && panel.style.display !== 'none' && nameEl && nameEl.innerText.trim().toLowerCase() === agentName.trim().toLowerCase()) {
-      if (statusTextEl) {
-        statusTextEl.innerText = statusMessage;
+    if (panel && panel.style.display !== 'none' && nameEl) {
+      const currentPanelName = nameEl.innerText.trim().toLowerCase();
+      if (currentPanelName === String(agentIdOrName).trim().toLowerCase() ||
+          (pcMeshMap[agentIdOrName] && pcMeshMap[agentIdOrName].name && pcMeshMap[agentIdOrName].name.toLowerCase() === currentPanelName)) {
+        if (statusTextEl && statusMessage) {
+          statusTextEl.innerText = statusMessage;
+        }
       }
     }
   }
 
-  console.log(`[Studio3D] updateAgentStatus: "${agentName}" -> "${statusMessage}" (${foundCount} Meshes)`);
+  console.log(`[Studio3D] updateAgentStatus: "${agentIdOrName}" (${stateType || 'status'}) -> "${statusMessage}" (${foundCount} Meshes)`);
 }
 
 /**
