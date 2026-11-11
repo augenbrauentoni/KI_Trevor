@@ -2110,3 +2110,65 @@ body.slate-hud-body, body {
   50% { transform: scale(1.25); opacity: 1.0; }
   100% { transform: scale(0.9); opacity: 0.7; }
 }
+
+/* =============================================================================
+   V12.0 HIGH-END SLATE ARENA & GLASSMORPHISM UI DESIGN
+   ============================================================================= */
+
+/* Slate Glassmorphism Panels & Cards */
+.action-item-card,
+.sidebar-drawer,
+.hud-panel,
+.task-queue-panel,
+.user-action-center,
+.qa-panel,
+.agent-info-panel,
+.modal-content {
+  background: rgba(13, 19, 31, 0.78) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(0, 240, 255, 0.18) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.05) !important;
+}
+
+/* Unified Decision [Ja] Buttons (High-Tech Blue with Neon Border) */
+.btn-action-decision-yes,
+.btn-decision-yes,
+.qa-btn-yes {
+  background: #2563EB !important;
+  border: 1px solid #60A5FA !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.4) !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-action-decision-yes:hover,
+.btn-decision-yes:hover,
+.qa-btn-yes:hover {
+  background: #1D4ED8 !important;
+  border-color: #93C5FD !important;
+  box-shadow: 0 0 16px rgba(96, 165, 250, 0.6) !important;
+  transform: translateY(-1px);
+}
+
+/* Unified Decision [Nein] Buttons (Dark Red Slate with Red Neon Border) */
+.btn-action-decision-no,
+.btn-decision-no,
+.qa-btn-no {
+  background: rgba(127, 29, 29, 0.4) !important;
+  border: 1px solid #EF4444 !important;
+  color: #F87171 !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-action-decision-no:hover,
+.btn-decision-no:hover,
+.qa-btn-no:hover {
+  background: rgba(185, 28, 28, 0.6) !important;
+  border-color: #F87171 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4) !important;
+  transform: translateY(-1px);
+}
+

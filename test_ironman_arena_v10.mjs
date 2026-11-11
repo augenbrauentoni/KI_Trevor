@@ -47,7 +47,7 @@ console.log('  -> OK: Alle 33 Agenten besitzen Namen, Rollen und individuelle id
 console.log('Test 2: Prüfe index.html auf Cache-Busting ?v=10.0 & #agent-hover-speech-bubble...');
 const indexHtml = fs.readFileSync(path.join(__dirname, '02_Frontend_UI_und_3D_Studio/index.html'), 'utf-8');
 
-assert.ok(indexHtml.includes('?v=11.0') || indexHtml.includes('?v=10.0'), 'index.html muss Cache-Busting ?v=11.0 oder ?v=10.0 enthalten');
+assert.ok(indexHtml.includes('?v=12.0') || indexHtml.includes('?v=11.0') || indexHtml.includes('?v=10.0'), 'index.html muss Cache-Busting enthalten');
 assert.ok(indexHtml.includes('id="agent-hover-speech-bubble"'), 'index.html muss #agent-hover-speech-bubble enthalten');
 assert.ok(indexHtml.includes('id="bubble-agent-name"'), 'index.html muss #bubble-agent-name enthalten');
 assert.ok(indexHtml.includes('id="bubble-dept-badge"'), 'index.html muss #bubble-dept-badge enthalten');
@@ -175,7 +175,7 @@ global.window = {
       constructor() { this.emissive = new MockColor(); }
       clone() { const m = new this.constructor(); m.emissive = this.emissive.clone(); return m; }
     },
-    MeshBasicMaterial: class { constructor() { this.color = new MockColor(); } },
+    MeshBasicMaterial: class { constructor() { this.color = new MockColor(); } clone() { return new this.constructor(); } },
     MeshPhysicalMaterial: class {},
     PointsMaterial: class {},
     Points: class extends MockObject3D {},

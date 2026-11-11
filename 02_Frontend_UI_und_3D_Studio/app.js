@@ -4333,6 +4333,51 @@ function setupEventListeners() {
     });
   });
 
+  // 3D-Kamera Steuerung (Zentrale, EG Galerie, UG Arena)
+  const btnCtrlHub = document.getElementById('ctrl-hub');
+  if (btnCtrlHub) {
+    btnCtrlHub.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof window.flyCameraTo === 'function') {
+        const THREE = window.THREE;
+        if (THREE) window.flyCameraTo(new THREE.Vector3(0, 14, 21), new THREE.Vector3(0, 1.5, 0));
+      } else if (typeof window.reset3DCamera === 'function') {
+        window.reset3DCamera();
+      }
+      returnToHub();
+    });
+  }
+  const btnCtrlEg = document.getElementById('ctrl-floor-eg');
+  if (btnCtrlEg) {
+    btnCtrlEg.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof window.flyCameraTo === 'function') {
+        const THREE = window.THREE;
+        if (THREE) window.flyCameraTo(new THREE.Vector3(0, 18, 15), new THREE.Vector3(0, 1.2, 0));
+      } else if (typeof window.switchFloor === 'function') {
+        window.switchFloor('EG');
+      }
+      btnCtrlEg.classList.add('active');
+      const btnUg = document.getElementById('ctrl-floor-ug');
+      if (btnUg) btnUg.classList.remove('active');
+    });
+  }
+  const btnCtrlUg = document.getElementById('ctrl-floor-ug');
+  if (btnCtrlUg) {
+    btnCtrlUg.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof window.flyCameraTo === 'function') {
+        const THREE = window.THREE;
+        if (THREE) window.flyCameraTo(new THREE.Vector3(0, 7, 10), new THREE.Vector3(0, 0.8, 0));
+      } else if (typeof window.switchFloor === 'function') {
+        window.switchFloor('UG');
+      }
+      btnCtrlUg.classList.add('active');
+      const btnEg = document.getElementById('ctrl-floor-eg');
+      if (btnEg) btnEg.classList.remove('active');
+    });
+  }
+
   // Task-Queue: Event-Listener
   const btnEnqueueTask = document.getElementById('btn-enqueue-task');
   if (btnEnqueueTask) {

@@ -10,11 +10,11 @@ const appCode = fs.readFileSync('02_Frontend_UI_und_3D_Studio/app.js', 'utf8');
 const styleCss = fs.readFileSync('02_Frontend_UI_und_3D_Studio/style.css', 'utf8');
 const stylesCss = fs.readFileSync('02_Frontend_UI_und_3D_Studio/styles.css', 'utf8');
 
-// Test 1: Cache-Busting v=11.0
-assert(html.includes('href="./styles.css?v=11.0"'), 'styles.css must be ?v=11.0');
-assert(html.includes('href="./style.css?v=11.0"'), 'style.css must be ?v=11.0');
-assert(html.includes('src="./app.js?v=11.0"'), 'app.js must be ?v=11.0');
-console.log('✔ Test 1: Cache-Busting v=11.0 verified in index.html');
+// Test 1: Cache-Busting v=12.0 or v=11.0
+assert(html.includes('href="./styles.css?v=12.0"') || html.includes('href="./styles.css?v=11.0"'), 'styles.css must be ?v=12.0 or ?v=11.0');
+assert(html.includes('href="./style.css?v=12.0"') || html.includes('href="./style.css?v=11.0"'), 'style.css must be ?v=12.0 or ?v=11.0');
+assert(html.includes('src="./app.js?v=12.0"') || html.includes('src="./app.js?v=11.0"'), 'app.js must be ?v=12.0 or ?v=11.0');
+console.log('✔ Test 1: Cache-Busting verified in index.html');
 
 // Test 2: CSS rules for Code-QA and Seal Box
 [styleCss, stylesCss].forEach((css, i) => {
