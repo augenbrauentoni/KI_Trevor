@@ -12,7 +12,7 @@
  * - Entscheidungs-Archiv & Prompt-Verlauf Tab in Trevors Terminal
  */
 
-import { STUDIO_HIERARCHY } from './hierarchyData.js';
+import { STUDIO_HIERARCHY, TREVOR_AGENT_ROSTER, AGENT_ROSTER_BY_ID } from './hierarchyData.js';
 import {
   init3DStudio,
   updateAgentStatusIn3D,
@@ -506,6 +506,29 @@ export function getCurrentSelectedAgentData() {
 
 export function showAgentInfo(data) {
   if (!data) return;
+
+  if (typeof data === 'string') {
+    const found = (typeof window !== 'undefined' && window.AGENT_ROSTER_BY_ID && window.AGENT_ROSTER_BY_ID[data]) ||
+                  AGENT_ROSTER_BY_ID[data] ||
+                  TREVOR_AGENT_ROSTER.find(a => a.id === data || a.name.toLowerCase() === data.toLowerCase());
+    if (found) {
+      data = {
+        type: (found.id === 'ag_01') ? 'trevor' : (found.isLead ? 'chef' : 'pc'),
+        agentId: found.id,
+        chefId: found.isLead ? found.id : undefined,
+        pcId: !found.isLead ? found.id : undefined,
+        name: found.name,
+        role: found.role || found.title,
+        department: found.deptName || found.department,
+        deptCode: found.deptCode,
+        status: found.status || 'Bereit',
+        easy_explanation: found.easy_explanation || found.focus
+      };
+    } else {
+      data = { name: data, type: 'pc', status: 'Bereit' };
+    }
+  }
+
   currentSelectedAgentData = data;
 
   const panel = document.getElementById('agent-info-panel');
@@ -3510,70 +3533,121 @@ export function toggleDrawer(drawerId, triggerBtn = null) {
 
 export function renderDrawerAgentsList(filterText = '') {
   const container = document.getElementById('drawer-agents-list');
-  if (!container || !state.hierarchy || !state.hierarchy.departments) return;
+  if (!container) return;
+
+  const roster = (typeof window !== 'undefined' && Array.isArray(window.TREVOR_AGENT_ROSTER))
+    ? window.TREVOR_AGENT_ROSTER
+    : TREVOR_AGENT_ROSTER;
 
   const query = (filterText || '').toLowerCase().trim();
-  const depts = state.hierarchy.departments.filter(d => {
+
+  // 33 Agenten filtern
+  const filteredRoster = roster.filter(agent => {
     if (!query) return true;
-    if (d.name && d.name.toLowerCase().includes(query)) return true;
-    if (d.code && d.code.toLowerCase().includes(query)) return true;
-    if (d.chef_agent && d.chef_agent.name && d.chef_agent.name.toLowerCase().includes(query)) return true;
-    if (d.specialist_pcs && d.specialist_pcs.some(p => (p.name && p.name.toLowerCase().includes(query)) || (p.role && p.role.toLowerCase().includes(query)))) return true;
-    return false;
+    return (
+      (agent.name && agent.name.toLowerCase().includes(query)) ||
+      (agent.role && agent.role.toLowerCase().includes(query)) ||
+      (agent.title && agent.title.toLowerCase().includes(query)) ||
+      (agent.department && agent.department.toLowerCase().includes(query)) ||
+      (agent.deptCode && agent.deptCode.toLowerCase().includes(query)) ||
+      (agent.deptName && agent.deptName.toLowerCase().includes(query)) ||
+      (agent.focus && agent.focus.toLowerCase().includes(query)) ||
+      (agent.easy_explanation && agent.easy_explanation.toLowerCase().includes(query))
+    );
   });
 
-  if (depts.length === 0) {
-    container.innerHTML = `<div class="memory-empty-hint">Keine Abteilungen für "${escapeHtml(filterText)}" gefunden.</div>`;
+  if (filteredRoster.length === 0) {
+    container.innerHTML = `<div class="memory-empty-hint">Keine Agenten für "${escapeHtml(filterText)}" gefunden.</div>`;
     return;
   }
 
-  container.innerHTML = depts.map(d => {
-    const isUg = (d.id >= 11 || (d.code && d.code.startsWith('UG')));
+  // Gruppierung nach 1 Zentrale + 4 Fachabteilungen
+  const groups = [
+    { code: 'CENTER_CORE', name: '👑 ZENTRALE (Holo-Kern)', color: '#00F0FF', deptId: 1, floor: 'EG', agents: [] },
+    { code: 'EG_ARCHITEKTUR', name: '📐 ABTEILUNG 1: ARCHITEKTUR & PLANUNG', color: '#3B82F6', deptId: 2, floor: 'EG', agents: [] },
+    { code: 'EG_FRONTEND', name: '🎨 ABTEILUNG 2: FRONTEND, 3D & UI/UX', color: '#00F0FF', deptId: 3, floor: 'EG', agents: [] },
+    { code: 'EG_BACKEND', name: '⚙️ ABTEILUNG 3: BACKEND & ALGORITHMEN', color: '#10B981', deptId: 5, floor: 'EG', agents: [] },
+    { code: 'UG_SERVER', name: '🛡️ ABTEILUNG 4: SYSTEMINTEGRATION & SERVER', color: '#F59E0B', deptId: 12, floor: 'UG', agents: [] }
+  ];
+
+  filteredRoster.forEach(agent => {
+    let grp = groups.find(g => g.code === agent.deptCode || g.code === agent.department);
+    if (!grp) {
+      if (agent.department === 'ZENTRALE' || agent.id === 'ag_01') grp = groups[0];
+      else if (agent.department.includes('ARCH')) grp = groups[1];
+      else if (agent.department.includes('FRONT')) grp = groups[2];
+      else if (agent.department.includes('BACK')) grp = groups[3];
+      else grp = groups[4];
+    }
+    grp.agents.push(agent);
+  });
+
+  container.innerHTML = groups.filter(g => g.agents.length > 0).map(group => {
+    const isUg = group.floor === 'UG';
     const floorLabel = isUg ? 'UG ARENA' : 'EG GALERIE';
     const floorClass = isUg ? 'floor-ug' : 'floor-eg';
 
     return `
-      <div class="drawer-dept-card" data-dept-id="${d.id}">
+      <div class="drawer-dept-card" data-dept-id="${group.deptId}" style="border-left: 3px solid ${group.color}; margin-bottom: 12px;">
         <div class="drawer-dept-header">
-          <span class="drawer-dept-title">${escapeHtml(d.name)}</span>
-          <span class="drawer-dept-floor ${floorClass}">${floorLabel}</span>
+          <span class="drawer-dept-title" style="color: ${group.color}; font-size: 11px;">${escapeHtml(group.name)}</span>
+          <span class="drawer-dept-floor ${floorClass}">${floorLabel} (${group.agents.length})</span>
         </div>
-        <div class="drawer-dept-chef">
-          <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-          <span>${escapeHtml(d.chef_agent ? d.chef_agent.name : 'Abteilungsleiter')}</span>
-        </div>
-        <div class="drawer-dept-pcs">
-          ${(d.specialist_pcs || []).map(pc => `
-            <span class="drawer-pc-pill" data-agent-id="${pc.id}" title="${escapeHtml(pc.role || pc.name)}">${escapeHtml(pc.name)}</span>
-          `).join('')}
-        </div>
-        <div class="drawer-dept-actions">
-          <button class="btn-focus-dept" data-dept-id="${d.id}">3D Fokus</button>
-          <button class="btn-inspect-dept" data-agent-id="${d.chef_agent ? d.chef_agent.id : d.id}">Inspektor</button>
+        <div class="drawer-agent-cards-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+          ${group.agents.map(agent => {
+            const isLead = agent.isLead;
+            const leadBadge = isLead ? `<span style="background: rgba(245, 158, 11, 0.2); border: 1px solid #F59E0B; color: #F59E0B; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: bold; margin-left: 6px;">[LEAD]</span>` : '';
+            const statusStr = agent.status || 'Bereit';
+            const statusDotClass = (statusStr === 'Bereit' || statusStr === 'ready') ? 'status-dot ready' : 'status-dot busy';
+
+            return `
+              <div class="drawer-single-agent-row" data-agent-id="${agent.id}" style="display: flex; align-items: center; justify-content: space-between; background: rgba(14, 23, 38, 0.55); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.06); gap: 8px; cursor: pointer; transition: background 0.15s ease;">
+                <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                  <span class="${statusDotClass}" style="flex-shrink: 0;"></span>
+                  <div style="display: flex; flex-direction: column; min-width: 0;">
+                    <div style="display: flex; align-items: center;">
+                      <span style="font-weight: 700; color: #FFFFFF; font-size: 12px; white-space: nowrap;">${escapeHtml(agent.name)}</span>
+                      ${leadBadge}
+                    </div>
+                    <span style="font-size: 10px; color: #94A3B8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(agent.role || '')}">${escapeHtml(agent.role || '')}</span>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                  <button class="btn-focus-agent" data-agent-id="${agent.id}" title="Fokussiert die 3D-Kamera direkt auf den Arbeitsplatz von ${escapeHtml(agent.name)}" style="background: rgba(0, 240, 255, 0.15); border: 1px solid rgba(0, 240, 255, 0.4); color: #00F0FF; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">3D Fokus</button>
+                  <button class="btn-inspect-agent" data-agent-id="${agent.id}" title="Inspektor öffnen" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #E2E8F0; padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;">Info</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
       </div>
     `;
   }).join('');
 
-  container.querySelectorAll('.btn-focus-dept').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const deptId = parseInt(btn.dataset.deptId, 10);
-      if (typeof window !== 'undefined' && typeof window.focusDepartmentIn3D === 'function') {
-        window.focusDepartmentIn3D(deptId);
+  // Event Listeners für 3D-Fokus Buttons
+  container.querySelectorAll('.btn-focus-agent').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const agentId = btn.dataset.agentId;
+      if (typeof window !== 'undefined' && typeof window.focusAgentIn3D === 'function') {
+        window.focusAgentIn3D(agentId);
       }
     });
   });
 
-  container.querySelectorAll('.btn-inspect-dept').forEach(btn => {
-    btn.addEventListener('click', () => {
+  // Event Listeners für Inspektor Buttons
+  container.querySelectorAll('.btn-inspect-agent').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const agentId = btn.dataset.agentId;
       showAgentInfo(agentId);
     });
   });
 
-  container.querySelectorAll('.drawer-pc-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      const agentId = pill.dataset.agentId;
+  // Klick auf die gesamte Zeile fokussiert die 3D-Kamera & öffnet Info
+  container.querySelectorAll('.drawer-single-agent-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const agentId = row.dataset.agentId;
       if (typeof window !== 'undefined' && typeof window.focusAgentIn3D === 'function') {
         window.focusAgentIn3D(agentId);
       }
@@ -4404,6 +4478,8 @@ if (typeof window !== 'undefined') {
   window.closeAllDrawers = closeAllDrawers;
   window.toggleDrawer = toggleDrawer;
   window.renderDrawerAgentsList = renderDrawerAgentsList;
+  window.TREVOR_AGENT_ROSTER = TREVOR_AGENT_ROSTER;
+  window.AGENT_ROSTER_BY_ID = AGENT_ROSTER_BY_ID;
   window.handleUserDecision = handleUserDecision;
   window.copyTextToClipboard = copyTextToClipboard;
   if (!Array.isArray(window.selectedContextFiles)) {

@@ -728,3 +728,75 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
    - `test_workflow_execution_fix.mjs`: 5 von 5 Tests erfolgreich.
    - Syntax-Checks (`node -c`) für `studio3D.js`, `app.js` und `server.js` fehlerfrei validiert.
    - Cache-Busting Parameter auf `?v=6.0` aktualisiert.
+
+
+## 29. Wiederherstellung aller 33 Agenten mit festen Spezialgebieten, sinnvollen Namen & Abteilungs-Sortierung (v7.0)
+
+1. **Zentrale Agenten-Datenbank (`window.TREVOR_AGENT_ROSTER`, [`hierarchyData.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/hierarchyData.js)):**
+   - Vollständige Wiederherstellung aller 33 Agenten (`ag_01` bis `ag_33`) mit echten Namen, Fachgebieten und Abteilungs-Zuordnung:
+     - **ZENTRALE (`CENTER_CORE`, Position am Holo-Kern):**
+       - `ag_01`: **Trevor** – *Studio Director* (Gesamtleitung, Pre-Check & Koordination) `[LEAD]`
+     - **ABTEILUNG 1: `EG_ARCHITEKTUR` (Sektor Nord-West auf der EG-Terrasse):**
+       - `ag_02`: **Marcus** – *Abteilungsleiter Architektur* (Systemdesign & Gesamtkonzept) `[LEAD]`
+       - `ag_03`: **Elena** – *Requirements Engineer* (Anforderungsanalyse & Spezifikation)
+       - `ag_04`: **Viktor** – *Data Modeler* (Datenbank-Schemata & Datenflüsse)
+       - `ag_05`: **Svenja** – *BWL & Projekt-Analystin* (Kalkulation, Netzplan & Wirtschaftlichkeit)
+       - `ag_06`: **Lukas** – *Tech-Stack Strategist* (Architektur-Entscheidungen & Schnittstellen)
+       - `ag_07`: **Nadia** – *Prompt Architect* (Erstellung präziser Antigravity-System-Prompts)
+       - `ag_08`: **Henrik** – *Impact & Risk Auditor* (Folgenabschätzung für Ja/Nein-Fragen)
+       - `ag_09`: **Clara** – *Documentation Lead* (Zusammenfassungen, Lernhilfen & Doku)
+     - **ABTEILUNG 2: `EG_FRONTEND` (Sektor Nord-Ost auf der EG-Terrasse):**
+       - `ag_10`: **Daria** – *Abteilungsleiterin Frontend* (UI/UX-Leitung & Design-System) `[LEAD]`
+       - `ag_11`: **Liam** – *Three.js & WebGL Engineer* (3D-Geometrie, Kamera & Beleuchtung)
+       - `ag_12`: **Maya** – *CSS & Slate-UI Specialist* (Glassmorphismus, Farben & Layouts)
+       - `ag_13`: **Noah** – *DOM & HUD Controller* (Interaktive Fenster, Queue-UI & Events)
+       - `ag_14`: **Zoe** – *60FPS Animation Specialist* (Flüssige Bewegungen & Partikeleffekte)
+       - `ag_15`: **Finn** – *Audio & Voice Integrator* (Synthesizer-Sounds & J.A.R.V.I.S.-Sprach-UI)
+       - `ag_16`: **Lea** – *Icon & Tooltip Designerin* (Vektor-Symbole, Sub-Menüs & Hover-Badges)
+       - `ag_17`: **Ben** – *Usability & UX Tester* (Ergonomie & Sichtbarkeits-Prüfung)
+     - **ABTEILUNG 3: `EG_BACKEND` (Sektor Süd auf der EG-Terrasse):**
+       - `ag_18`: **David** – *Abteilungsleiter Backend* (Server-Logik & Code-Konsolidierung) `[LEAD]`
+       - `ag_19`: **Sarah** – *Node.js & API Engineer* (Express-Server, Proxy & Endpunkte)
+       - `ag_20`: **Malik** – *Supabase & Memory Specialist* (Cloud-Gedächtnis & Datenbanken)
+       - `ag_21`: **Jonas** – *Python & Algorithm Dev* (Python-Programme, Sortierung & Mathe-Logik)
+       - `ag_22`: **Kiara** – *Dual-LLM Specialist* (Ollama Qwen 2.5 & Gemini Cloud-Steuerung)
+       - `ag_23`: **Tarek** – *RAG & Code-Context Engineer* (Wissensabruf & Projekt-Analyse)
+       - `ag_24`: **Hannah** – *Async & Queue Architect* (Parallele Promise.all-Pipelines & Task-Queue)
+       - `ag_25`: **Tim** – *Parser & Validation Dev* (JSON-Sicherheit & Fehlerbehandlung)
+     - **ABTEILUNG 4: `UG_SERVER` (Zentrales Tieffeld / Arena-Grube im UG):**
+       - `ag_26`: **Ilja** – *Abteilungsleiter Systemintegration & Security* (Prüfung, Härtung & Infrastruktur) `[LEAD]`
+       - `ag_27`: **Milan** – *Network & Subnetting Engineer* (IPv4/IPv6, CIDR, VLSM, VLAN & Routing)
+       - `ag_28`: **Freya** – *Security & Sandbox Guardian* (API-Schutz, PIN-Auth & Richtlinien)
+       - `ag_29`: **Anton** – *Cloud & Render DevOps* (Git-Workflows, Build-Logs & Deployment)
+       - `ag_30`: **Kian** – *Hardware & Virtualization Spec* (Server-Hardware, Proxmox, RAM/CPU & VMs)
+       - `ag_31`: **Nora** – *Firewall & VPN Specialist* (WireGuard, Tailscale & Netzwerksicherheit)
+       - `ag_32`: **Rico** – *QA & Logic Debugger* (Tiefenprüfung auf Logikfehler & Bugs)
+       - `ag_33`: **Yuna** – *Idle-Trainer & AI Optimizer* (Kontinuierliches Lernen & System-Audits)
+   - Synchron exportiert als `window.TREVOR_AGENT_ROSTER` und `window.AGENT_ROSTER_BY_ID`.
+
+2. **3D-Arena-Platzierung aller 33 Agenten ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - **Trevor am Holo-Kern (`ag_01`):** Eigene Command Station bei `(0, 0.4, 3.8)` mit Iron-Man-Avatar (`0x991B1B` / `0xFBBF24`), leuchtendem Arc-Reactor (`0x00F0FF`) und Blick zum Holo-JARVIS.
+   - **Sektor Nord-West (`EG_ARCHITEKTUR`):** Marcus (`ag_02`, Lead-Desk mit Gold/Cyan-Schulterring) + 7 Architektur-Spezialisten (`ag_03`..`ag_09`) im ergonomischen Bogen.
+   - **Sektor Nord-Ost (`EG_FRONTEND`):** Daria (`ag_10`, Lead-Desk mit Gold/Cyan-Schulterring) + 7 Frontend-Spezialisten (`ag_11`..`ag_17`).
+   - **Sektor Süd (`EG_BACKEND`):** David (`ag_18`, Lead-Desk mit Gold/Cyan-Schulterring) + 7 Backend-Spezialisten (`ag_19`..`ag_25`).
+   - **Arena-Grube UG (`UG_SERVER`, $y = -2.0$):** Ilja (`ag_26`, Lead-Desk) + 7 Server-Spezialisten (`ag_27`..`ag_33`) kreisförmig um die Server-Racks.
+   - **Sleek Hover Mini-Badge:** Schwebendes HUD-Overlay bei Maus-Hover (`Raycaster`): `Name – Rolle (Abteilung) | Status: Bereit` / `Arbeitet an: ...`.
+   - **Klick & Kamera-Fokus:** Klick auf Agenten oder Aufruf von `focusAgentIn3D(agentId)` zoomt die 3D-Kamera sanft auf seinen Arbeitsplatz.
+
+3. **Echte Aufgaben-Zuordnung & Orchestrator ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Dynamische Spezialisten-Auswahl via `selectSpecialistsForTask(dept, prompt)`:
+     - Python/Mathematik -> Jonas (`ag_21`), Tim (`ag_25`), Sarah (`ag_19`), konsolidiert durch David (`ag_18`).
+     - Subnetting/Netzwerk -> Milan (`ag_27`), Nora (`ag_31`), Rico (`ag_32`), konsolidiert durch Ilja (`ag_26`).
+     - 3D/Three.js -> Liam (`ag_11`), Zoe (`ag_14`), Ben (`ag_17`), konsolidiert durch Daria (`ag_10`).
+     - Prompts/Systemdesign -> Nadia (`ag_07`), Henrik (`ag_08`), Clara (`ag_09`), konsolidiert durch Marcus (`ag_02`).
+   - Parallele Bearbeitung via `Promise.all()`, Nennung der echten Spezialisten und ihrer Fachgebiete in Teilergebnissen und finalem Markdown.
+   - Live-Statusupdates (`working` / `ready`) im 3D-Studio während der Ausführung.
+
+4. **Sidebar-Drawer "Abteilungen & 33 Agenten" ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - Saubere Gliederung in 1 Zentrale + 4 Fachabteilungen mit allen 33 Agentenkarten.
+   - Status-Dots, Lead-Badges (`[LEAD]`), 1-Klick `3D Fokus`-Buttons und `Info`-Buttons (Inspektor).
+   - Live-Filterung über Name, Rolle, Abteilung und Fachbegriffe.
+
+5. **Cache-Version & Verifikation ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html)):**
+   - Cache-Version auf allen CSS- und JS-Dateien auf `?v=7.0` angehoben.
+   - Test-Suite `test_roster_33_agents.mjs` verifiziert alle 33 Agenten, Rollen, Selektion, 3D-Setup und Drawer zu 100%.

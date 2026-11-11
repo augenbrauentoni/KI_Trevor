@@ -2,818 +2,947 @@
  * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
  * File: 02_Frontend_UI_und_3D_Studio/hierarchyData.js
  * 
- * Feste, netzwerkunabhängige Hierarchie-Definition (100% Offline- & Zero-Network-Garantie):
- * - 10 deutsche Abteilungen mit verständlichen Namen & easy_explanation
- * - 10 Chef-Agenten
- * - 33 Spezial-PCs mit Fachprofilen
- * - Trevor Core (Iron-Man MK-VII Edition)
- * - 3 Schnell-Aktionen (Quick-Prompts) pro Abteilung
- * - Dynamische Micro-Status Vorlagen
+ * ZENTRALE AGENTEN-DATENBANK & HIERARCHIE-DEFINITION (v7.0)
+ * - 33 Agenten mit festen Spezialgebieten, echten Namen und Abteilungs-Zuordnung
+ * - 1 Zentrale (Trevor Core am Holo-Kern)
+ * - 4 Fachabteilungen à 8 Spezialisten (1 Lead + 7 Spezialisten)
+ *   1. EG_ARCHITEKTUR (Marcus [LEAD] + 7 Spezialisten)
+ *   2. EG_FRONTEND (Daria [LEAD] + 7 Spezialisten)
+ *   3. EG_BACKEND (David [LEAD] + 7 Spezialisten)
+ *   4. UG_SERVER (Ilja [LEAD] + 7 Spezialisten)
+ * - 100% Offline- & Zero-Network-Garantie
  */
+
+// =========================================================================
+// 1. ZENTRALE AGENTEN-DATENBANK (33 AGENTEN)
+// =========================================================================
+
+export const TREVOR_AGENT_ROSTER = [
+  // -----------------------------------------------------------------------
+  // ZENTRALE (CENTER_CORE – Position am Holo-Kern)
+  // -----------------------------------------------------------------------
+  {
+    id: 'ag_01',
+    name: 'Trevor',
+    role: 'Studio Director',
+    title: 'Studio Director (Iron-Man Armor)',
+    department: 'ZENTRALE',
+    deptCode: 'CENTER_CORE',
+    deptName: 'Zentrale & Holo-Kern',
+    isLead: true,
+    floor: 'EG',
+    sector: 'Zentrum / Holo-Kern',
+    color: '#00F0FF',
+    accentColor: '#F59E0B',
+    focus: 'Gesamtleitung, Pre-Check & Koordination',
+    easy_explanation: 'Trevor leitet das 33-Agenten-Studio im Iron-Man-Look. Er analysiert deine Aufträge, verteilt Aufgaben an die richtigen Räume, bündelt Ergebnisse und legt dir am Ende die fertige Freigabe vor.'
+  },
+
+  // -----------------------------------------------------------------------
+  // ABTEILUNG 1: EG_ARCHITEKTUR (Sektor Nord-West auf der EG-Terrasse)
+  // -----------------------------------------------------------------------
+  {
+    id: 'ag_02',
+    name: 'Marcus',
+    role: 'Abteilungsleiter Architektur',
+    title: 'Abteilungsleiter Architektur (Systemdesign & Gesamtkonzept)',
+    department: 'EG_ARCHITEKTUR',
+    deptCode: 'EG_ARCHITEKTUR',
+    deptName: '1. Architektur & Planung',
+    isLead: true,
+    floor: 'EG',
+    sector: 'Sektor Nord-West (EG-Terrasse)',
+    color: '#3B82F6',
+    accentColor: '#F59E0B',
+    focus: 'Systemdesign, Gesamtkonzept & Architekturentscheidungen',
+    easy_explanation: 'Leitet die Architektur-Abteilung, entwirft modulare System-Strukturen und überwacht die Einhaltung technischer Standards.'
+  },
+  {
+    id: 'ag_03',
+    name: 'Elena',
+    role: 'Requirements Engineer',
+    title: 'Requirements Engineer (Anforderungsanalyse & Spezifikation)',
+    department: 'EG_ARCHITEKTUR',
+    deptCode: 'EG_ARCHITEKTUR',
+    deptName: '1. Architektur & Planung',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-West (EG-Terrasse)',
+    color: '#3B82F6',
+    focus: 'Anforderungsanalyse, User Stories & Spezifikation',
+    easy_explanation: 'Zerlegt komplexe Nutzeranforderungen in präzise, umsetzbare Spezifikationen und User Stories.'
+  },
+  {
+    id: 'ag_04',
+    name: 'Viktor',
+    role: 'Data Modeler',
+    title: 'Data Modeler (Datenbank-Schemata & Datenflüsse)',
+    department: 'EG_ARCHITEKTUR',
+    deptCode: 'EG_ARCHITEKTUR',
+    deptName: '1. Architektur & Planung',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-West (EG-Terrasse)',
+    color: '#3B82F6',
+    focus: 'Datenbank-Schemata, Entity-Relationship & Datenflüsse',
+    easy_explanation: 'Entwirft relationale und dokumentenorientierte Datenmodelle sowie konsistente Datenflüsse.'
+  },
+  {
+    id: 'ag_05',
+    name: 'Svenja',
+    role: 'BWL & Projekt-Analystin',
+    title: 'BWL & Projekt-Analystin (Kalkulation, Netzplan & Wirtschaftlichkeit)',
+    department: 'EG_ARCHITEKTUR',
+    deptCode: 'EG_ARCHITEKTUR',
+    deptName: '1. Architektur & Planung',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-West (EG-Terrasse)',
+    color: '#3B82F6',
+    focus: 'Kalkulation, Netzplan, Aufwandsschätzung & Wirtschaftlichkeit',
+    easy_explanation: 'Berechnet Projektaufwände, Ressourcen, Zeitpläne und wirtschaftliche Machbarkeit.'
+  },
+  {
+    id: 'ag_06',
+    name: 'Lukas',
+    role: 'Tech-Stack Strategist',
+    title: 'Tech-Stack Strategist (Architektur-Entscheidungen & Schnittstellen)',
+    department: 'EG_ARCHITEKTUR',
+    deptCode: 'EG_ARCHITEKTUR',
+    deptName: '1. Architektur & Planung',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-West (EG-Terrasse)',
+    color: '#3B82F6',
+    focus: 'Technologie-Auswahl, Frameworks & Schnittstellenarchitektur',
+    easy_explanation: 'Wählt moderne, zukunftssichere Technologien, Frameworks und APIs für maximale Skalierbarkeit.'
+  },
+  {
+    id: 'ag_07',
+    name: 'Nadia',
+    role: 'Prompt Architect',
+    title: 'Prompt Architect (Erstellung präziser Antigravity-System-Prompts)',
+    department: 'EG_ARCHITEKTUR',
+    deptCode: 'EG_ARCHITEKTUR',
+    deptName: '1. Architektur & Planung',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-West (EG-Terrasse)',
+    color: '#3B82F6',
+    focus: 'Antigravity-System-Prompts, LLM-Instruktionen & Prompt-Chains',
+    easy_explanation: 'Formuliert hocheffektive, rollenbasierte Prompts und Instruktionen für Antigravity- und Coding-Agenten.'
+  },
+  {
+    id: 'ag_08',
+    name: 'Henrik',
+    role: 'Impact & Risk Auditor',
+    title: 'Impact & Risk Auditor (Folgenabschätzung für Ja/Nein-Fragen)',
+    department: 'EG_ARCHITEKTUR',
+    deptCode: 'EG_ARCHITEKTUR',
+    deptName: '1. Architektur & Planung',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-West (EG-Terrasse)',
+    color: '#3B82F6',
+    focus: 'Folgenabschätzung, Risikoanalyse & Entscheidungs-Audits',
+    easy_explanation: 'Analysiert die direkten Vor- und Nachteile von Ja/Nein-Entscheidungen (impactYes / impactNo).'
+  },
+  {
+    id: 'ag_09',
+    name: 'Clara',
+    role: 'Documentation Lead',
+    title: 'Documentation Lead (Zusammenfassungen, Lernhilfen & Doku)',
+    department: 'EG_ARCHITEKTUR',
+    deptCode: 'EG_ARCHITEKTUR',
+    deptName: '1. Architektur & Planung',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-West (EG-Terrasse)',
+    color: '#3B82F6',
+    focus: 'Dokumentation, Checkpoints, Zusammenfassungen & Lernhilfen',
+    easy_explanation: 'Erstellt verständliche Dokumentationen, Zusammenfassungen und didaktische Leitfäden.'
+  },
+
+  // -----------------------------------------------------------------------
+  // ABTEILUNG 2: EG_FRONTEND (Sektor Nord-Ost auf der EG-Terrasse)
+  // -----------------------------------------------------------------------
+  {
+    id: 'ag_10',
+    name: 'Daria',
+    role: 'Abteilungsleiterin Frontend',
+    title: 'Abteilungsleiterin Frontend (UI/UX-Leitung & Design-System)',
+    department: 'EG_FRONTEND',
+    deptCode: 'EG_FRONTEND',
+    deptName: '2. Frontend, 3D & UI/UX',
+    isLead: true,
+    floor: 'EG',
+    sector: 'Sektor Nord-Ost (EG-Terrasse)',
+    color: '#00F0FF',
+    accentColor: '#F59E0B',
+    focus: 'UI/UX-Leitung, Design-System & visuelle Qualität',
+    easy_explanation: 'Leitet das Frontend-Team, überwacht Designsysteme, Ergonomie und die ganzheitliche Benutzeroberfläche.'
+  },
+  {
+    id: 'ag_11',
+    name: 'Liam',
+    role: 'Three.js & WebGL Engineer',
+    title: 'Three.js & WebGL Engineer (3D-Geometrie, Kamera & Beleuchtung)',
+    department: 'EG_FRONTEND',
+    deptCode: 'EG_FRONTEND',
+    deptName: '2. Frontend, 3D & UI/UX',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-Ost (EG-Terrasse)',
+    color: '#00F0FF',
+    focus: 'Three.js 3D-Bühne, WebGL Shaders, Kamera-Führung & Lichteffekte',
+    easy_explanation: 'Baut interaktive 3D-Welten, optimiert Shader, Partikelsysteme und sorgt für cinematische Kamerafahrten.'
+  },
+  {
+    id: 'ag_12',
+    name: 'Maya',
+    role: 'CSS & Slate-UI Specialist',
+    title: 'CSS & Slate-UI Specialist (Glassmorphismus, Farben & Layouts)',
+    department: 'EG_FRONTEND',
+    deptCode: 'EG_FRONTEND',
+    deptName: '2. Frontend, 3D & UI/UX',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-Ost (EG-Terrasse)',
+    color: '#00F0FF',
+    focus: 'Slate J.A.R.V.I.S. Matte Farbpalette, Glassmorphismus & CSS Grid/Flexbox',
+    easy_explanation: 'Stylt elegante Benutzeroberflächen mit Schiefer-Farben, Glassmorphismus und perfekten Kontrasten.'
+  },
+  {
+    id: 'ag_13',
+    name: 'Noah',
+    role: 'DOM & HUD Controller',
+    title: 'DOM & HUD Controller (Interaktive Fenster, Queue-UI & Events)',
+    department: 'EG_FRONTEND',
+    deptCode: 'EG_FRONTEND',
+    deptName: '2. Frontend, 3D & UI/UX',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-Ost (EG-Terrasse)',
+    color: '#00F0FF',
+    focus: 'DOM-Manipulation, HUD-Widgets, Queue-Events & Task-Rendering',
+    easy_explanation: 'Steuert reaktive DOM-Elemente, schwebende Fenster, Task-Listen und interaktive HUD-Panels.'
+  },
+  {
+    id: 'ag_14',
+    name: 'Zoe',
+    role: '60FPS Animation Specialist',
+    title: '60FPS Animation Specialist (Flüssige Bewegungen & Partikeleffekte)',
+    department: 'EG_FRONTEND',
+    deptCode: 'EG_FRONTEND',
+    deptName: '2. Frontend, 3D & UI/UX',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-Ost (EG-Terrasse)',
+    color: '#00F0FF',
+    focus: 'Delta-Animationsschleifen, 60 FPS Performance & Partikelsysteme',
+    easy_explanation: 'Sorgt für butterweiche 60-FPS-Animationen ohne Ruckler mittels zeitbasiertem Delta-Timing.'
+  },
+  {
+    id: 'ag_15',
+    name: 'Finn',
+    role: 'Audio & Voice Integrator',
+    title: 'Audio & Voice Integrator (Synthesizer-Sounds & J.A.R.V.I.S.-Sprach-UI)',
+    department: 'EG_FRONTEND',
+    deptCode: 'EG_FRONTEND',
+    deptName: '2. Frontend, 3D & UI/UX',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-Ost (EG-Terrasse)',
+    color: '#00F0FF',
+    focus: 'Web Audio API Synthesizer, SpeechSynthesis & Spracherkennung',
+    easy_explanation: 'Integriert native Web-Audio-Synthesizer, J.A.R.V.I.S.-Stimmen und nahtloses akustisches Feedback.'
+  },
+  {
+    id: 'ag_16',
+    name: 'Lea',
+    role: 'Icon & Tooltip Designerin',
+    title: 'Icon & Tooltip Designerin (Vektor-Symbole, Sub-Menüs & Hover-Badges)',
+    department: 'EG_FRONTEND',
+    deptCode: 'EG_FRONTEND',
+    deptName: '2. Frontend, 3D & UI/UX',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-Ost (EG-Terrasse)',
+    color: '#00F0FF',
+    focus: 'SVG-Icons, Pure CSS Tooltips, Sub-Menüs & Hover-Badges',
+    easy_explanation: 'Entwirft pixelgenaue SVG-Vektor-Icons, schwebende Tooltips und visuell ansprechende Mikro-Badges.'
+  },
+  {
+    id: 'ag_17',
+    name: 'Ben',
+    role: 'Usability & UX Tester',
+    title: 'Usability & UX Tester (Ergonomie & Sichtbarkeits-Prüfung)',
+    department: 'EG_FRONTEND',
+    deptCode: 'EG_FRONTEND',
+    deptName: '2. Frontend, 3D & UI/UX',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Nord-Ost (EG-Terrasse)',
+    color: '#00F0FF',
+    focus: 'UX Testing, Ergonomie, Barrierefreiheit & Kontrastprüfung',
+    easy_explanation: 'Testet Bedienbarkeit, intuitive Klickpfade und sorgt dafür, dass kein UI-Element den Blick verdeckt.'
+  },
+
+  // -----------------------------------------------------------------------
+  // ABTEILUNG 3: EG_BACKEND (Sektor Süd auf der EG-Terrasse)
+  // -----------------------------------------------------------------------
+  {
+    id: 'ag_18',
+    name: 'David',
+    role: 'Abteilungsleiter Backend',
+    title: 'Abteilungsleiter Backend (Server-Logik & Code-Konsolidierung)',
+    department: 'EG_BACKEND',
+    deptCode: 'EG_BACKEND',
+    deptName: '3. Backend & Algorithmen',
+    isLead: true,
+    floor: 'EG',
+    sector: 'Sektor Süd (EG-Terrasse)',
+    color: '#10B981',
+    accentColor: '#F59E0B',
+    focus: 'Server-Architektur, API-Orchestrierung & Code-Konsolidierung',
+    easy_explanation: 'Leitet die Backend-Abteilung, koordiniert Serverlogik, führt Teilergebnisse zusammen und sichert Code-Qualität.'
+  },
+  {
+    id: 'ag_19',
+    name: 'Sarah',
+    role: 'Node.js & API Engineer',
+    title: 'Node.js & API Engineer (Express-Server, Proxy & Endpunkte)',
+    department: 'EG_BACKEND',
+    deptCode: 'EG_BACKEND',
+    deptName: '3. Backend & Algorithmen',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Süd (EG-Terrasse)',
+    color: '#10B981',
+    focus: 'Node.js, Express, REST-APIs, Proxies & Streaming-Endpunkte',
+    easy_explanation: 'Entwickelt performante HTTP-Server, Proxy-Routen und sichere Schnittstellen in Node.js.'
+  },
+  {
+    id: 'ag_20',
+    name: 'Malik',
+    role: 'Supabase & Memory Specialist',
+    title: 'Supabase & Memory Specialist (Cloud-Gedächtnis & Datenbanken)',
+    department: 'EG_BACKEND',
+    deptCode: 'EG_BACKEND',
+    deptName: '3. Backend & Algorithmen',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Süd (EG-Terrasse)',
+    color: '#10B981',
+    focus: 'Supabase, PostgreSQL, Vector-Search & persistentes Gedächtnis',
+    easy_explanation: 'Verwaltet das dauerhafte Cloud-Gedächtnis, Tabellen-Strukturen und schnelle semantische RAG-Suchen.'
+  },
+  {
+    id: 'ag_21',
+    name: 'Jonas',
+    role: 'Python & Algorithm Dev',
+    title: 'Python & Algorithm Dev (Python-Programme, Sortierung & Mathe-Logik)',
+    department: 'EG_BACKEND',
+    deptCode: 'EG_BACKEND',
+    deptName: '3. Backend & Algorithmen',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Süd (EG-Terrasse)',
+    color: '#10B981',
+    focus: 'Python, Algorithmen, Datenverarbeitung, Sortierung & Mathematik',
+    easy_explanation: 'Schreibt saubere Python-Skripte, mathematische Berechnungen und optimierte Sortier-Algorithmen.'
+  },
+  {
+    id: 'ag_22',
+    name: 'Kiara',
+    role: 'Dual-LLM Specialist',
+    title: 'Dual-LLM Specialist (Ollama Qwen 2.5 & Gemini Cloud-Steuerung)',
+    department: 'EG_BACKEND',
+    deptCode: 'EG_BACKEND',
+    deptName: '3. Backend & Algorithmen',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Süd (EG-Terrasse)',
+    color: '#10B981',
+    focus: 'Ollama Qwen 2.5 Coder, Google Gemini Flash/Pro & Dual-LLM Routing',
+    easy_explanation: 'Steuert lokale und Cloud-KI-Modelle, wählt das beste Modell je nach Aufgabe und überwacht Token-Limits.'
+  },
+  {
+    id: 'ag_23',
+    name: 'Tarek',
+    role: 'RAG & Code-Context Engineer',
+    title: 'RAG & Code-Context Engineer (Wissensabruf & Projekt-Analyse)',
+    department: 'EG_BACKEND',
+    deptCode: 'EG_BACKEND',
+    deptName: '3. Backend & Algorithmen',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Süd (EG-Terrasse)',
+    color: '#10B981',
+    focus: 'Retrieval Augmented Generation, Code-Indexing & Kontext-Injektion',
+    easy_explanation: 'Analysiert das gesamte Projektverzeichnis und liefert den perfekten Code-Kontext für präzise KI-Antworten.'
+  },
+  {
+    id: 'ag_24',
+    name: 'Hannah',
+    role: 'Async & Queue Architect',
+    title: 'Async & Queue Architect (Parallele Promise.all-Pipelines & Task-Queue)',
+    department: 'EG_BACKEND',
+    deptCode: 'EG_BACKEND',
+    deptName: '3. Backend & Algorithmen',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Süd (EG-Terrasse)',
+    color: '#10B981',
+    focus: 'Asynchrone Workflows, Promise.all Parallelisierung & Task-Queues',
+    easy_explanation: 'Konstruiert unterbrechungsfreie Task-Queues und parallele Agenten-Pipelines ohne Event-Loop-Blockaden.'
+  },
+  {
+    id: 'ag_25',
+    name: 'Tim',
+    role: 'Parser & Validation Dev',
+    title: 'Parser & Validation Dev (JSON-Sicherheit & Fehlerbehandlung)',
+    department: 'EG_BACKEND',
+    deptCode: 'EG_BACKEND',
+    deptName: '3. Backend & Algorithmen',
+    isLead: false,
+    floor: 'EG',
+    sector: 'Sektor Süd (EG-Terrasse)',
+    color: '#10B981',
+    focus: 'JSON-Parsing, Regex-Extraktion, Fallbacks & Error-Handling',
+    easy_explanation: 'Garantiert fehlertolerantes JSON-Parsing, fängt Sonderzeichen ab und verhindert Task-Verluste bei Netzwerkfehlern.'
+  },
+
+  // -----------------------------------------------------------------------
+  // ABTEILUNG 4: UG_SERVER (Arena-Grube im Untergeschoss)
+  // -----------------------------------------------------------------------
+  {
+    id: 'ag_26',
+    name: 'Ilja',
+    role: 'Abteilungsleiter Systemintegration & Security',
+    title: 'Abteilungsleiter Systemintegration & Security (Prüfung, Härtung & Infrastruktur)',
+    department: 'UG_SERVER',
+    deptCode: 'UG_SERVER',
+    deptName: '4. Systemintegration & Server (UG)',
+    isLead: true,
+    floor: 'UG',
+    sector: 'UG-Zentrum (Arena-Grube)',
+    color: '#F59E0B',
+    accentColor: '#00F0FF',
+    focus: 'Systemhärtung, Infrastruktur, Security & Integrationsprüfung',
+    easy_explanation: 'Leitet die Server- und Sicherheits-Abteilung im UG, überwacht Systemgrenzen und authorisiert kritische Deployments.'
+  },
+  {
+    id: 'ag_27',
+    name: 'Milan',
+    role: 'Network & Subnetting Engineer',
+    title: 'Network & Subnetting Engineer (IPv4/IPv6, CIDR, VLSM, VLAN & Routing)',
+    department: 'UG_SERVER',
+    deptCode: 'UG_SERVER',
+    deptName: '4. Systemintegration & Server (UG)',
+    isLead: false,
+    floor: 'UG',
+    sector: 'UG-Zentrum (Arena-Grube)',
+    color: '#F59E0B',
+    focus: 'IPv4, IPv6, CIDR, VLSM, VLAN, Subnetting & Routing-Tabellen',
+    easy_explanation: 'Berechnet Subnetze, plant VLAN-Segmentierungen und konfiguriert Routing- und Netzwerkprotokolle.'
+  },
+  {
+    id: 'ag_28',
+    name: 'Freya',
+    role: 'Security & Sandbox Guardian',
+    title: 'Security & Sandbox Guardian (API-Schutz, PIN-Auth & Richtlinien)',
+    department: 'UG_SERVER',
+    deptCode: 'UG_SERVER',
+    deptName: '4. Systemintegration & Server (UG)',
+    isLead: false,
+    floor: 'UG',
+    sector: 'UG-Zentrum (Arena-Grube)',
+    color: '#F59E0B',
+    focus: 'PIN-Authentifizierung, Sandbox-Absicherung, OWASP & API-Schutz',
+    easy_explanation: 'Schützt das Studio vor unbefugtem Zugriff, prüft PIN-Sicherheit und hält Sicherheitsrichtlinien ein.'
+  },
+  {
+    id: 'ag_29',
+    name: 'Anton',
+    role: 'Cloud & Render DevOps',
+    title: 'Cloud & Render DevOps (Git-Workflows, Build-Logs & Deployment)',
+    department: 'UG_SERVER',
+    deptCode: 'UG_SERVER',
+    deptName: '4. Systemintegration & Server (UG)',
+    isLead: false,
+    floor: 'UG',
+    sector: 'UG-Zentrum (Arena-Grube)',
+    color: '#F59E0B',
+    focus: 'CI/CD, Git-Workflows, Render-Deployments & Build-Monitoring',
+    easy_explanation: 'Automatisiert Build-Prozesse, Git-Pushes und sorgt für reibungslose Cloud-Deployments auf Render.'
+  },
+  {
+    id: 'ag_30',
+    name: 'Kian',
+    role: 'Hardware & Virtualization Spec',
+    title: 'Hardware & Virtualization Spec (Server-Hardware, Proxmox, RAM/CPU & VMs)',
+    department: 'UG_SERVER',
+    deptCode: 'UG_SERVER',
+    deptName: '4. Systemintegration & Server (UG)',
+    isLead: false,
+    floor: 'UG',
+    sector: 'UG-Zentrum (Arena-Grube)',
+    color: '#F59E0B',
+    focus: 'Server-Hardware, Proxmox VE, VM-Management, RAM/CPU-Optimierung',
+    easy_explanation: 'Überwacht physische und virtuelle Server-Ressourcen, Proxmox-Container und Hardware-Auslastung.'
+  },
+  {
+    id: 'ag_31',
+    name: 'Nora',
+    role: 'Firewall & VPN Specialist',
+    title: 'Firewall & VPN Specialist (WireGuard, Tailscale & Netzwerksicherheit)',
+    department: 'UG_SERVER',
+    deptCode: 'UG_SERVER',
+    deptName: '4. Systemintegration & Server (UG)',
+    isLead: false,
+    floor: 'UG',
+    sector: 'UG-Zentrum (Arena-Grube)',
+    color: '#F59E0B',
+    focus: 'Firewalls, WireGuard, Tailscale, Port-Forwarding & Verschlüsselung',
+    easy_explanation: 'Richtet verschlüsselte VPN-Tunnel, WireGuard-Netzwerke und strenge Firewall-Regeln ein.'
+  },
+  {
+    id: 'ag_32',
+    name: 'Rico',
+    role: 'QA & Logic Debugger',
+    title: 'QA & Logic Debugger (Tiefenprüfung auf Logikfehler & Bugs)',
+    department: 'UG_SERVER',
+    deptCode: 'UG_SERVER',
+    deptName: '4. Systemintegration & Server (UG)',
+    isLead: false,
+    floor: 'UG',
+    sector: 'UG-Zentrum (Arena-Grube)',
+    color: '#F59E0B',
+    focus: 'QA, Test-Suites, Logik-Debugging, Randfälle & Regressions-Tests',
+    easy_explanation: 'Führt strenge automatisierte Tests durch, findet versteckte Bugs und validiert Programmabläufe.'
+  },
+  {
+    id: 'ag_33',
+    name: 'Yuna',
+    role: 'Idle-Trainer & AI Optimizer',
+    title: 'Idle-Trainer & AI Optimizer (Kontinuierliches Lernen & System-Audits)',
+    department: 'UG_SERVER',
+    deptCode: 'UG_SERVER',
+    deptName: '4. Systemintegration & Server (UG)',
+    isLead: false,
+    floor: 'UG',
+    sector: 'UG-Zentrum (Arena-Grube)',
+    color: '#F59E0B',
+    focus: 'Idle-Training, RAG-Optimierung, Continuous Learning & System-Audits',
+    easy_explanation: 'Nutzt Leerlaufzeiten zur Systemoptimierung, speichert gelernte Regeln im Cloud-Gedächtnis und trainiert KI-Antworten.'
+  }
+];
+
+export const AGENT_ROSTER_BY_ID = Object.fromEntries(
+  TREVOR_AGENT_ROSTER.map(agent => [agent.id, agent])
+);
+
+// =========================================================================
+// 2. STUDIO HIERARCHY (ABTEILUNGEN & LEADS FÜR DIE ARENA & WORKFLOWS)
+// =========================================================================
 
 export const STUDIO_HIERARCHY = {
   studio_meta: {
     name: "Trevor – AI Software Studio & Multi-Agent Command Center",
-    version: "2.5.0 (Phase 7 Modern Office Edition)",
+    version: "7.0.0 (33-Agent Amphitheater Arena Edition)",
     theme: {
-      background: "#06080e",
-      surface: "#0f1420",
-      accent: "#ef4444",
-      accent_gold: "#fbbf24",
-      arc_reactor: "#38bdf8",
-      border: "#1f2937"
+      background: "#0B101B",
+      surface: "rgba(14, 23, 38, 0.65)",
+      accent: "#00F0FF",
+      accent_amber: "#F59E0B",
+      border: "rgba(255, 255, 255, 0.08)"
     }
   },
   trevor: {
-    id: "trevor_core",
+    id: "ag_01",
     name: "Trevor",
     title: "Studio Director (Iron-Man Armor)",
-    color: "#dc2626",
-    accent_color: "#fbbf24",
-    reactor_color: "#38bdf8",
-    role: "Studio-Leiter, Aufgaben-Router, Zusammenfasser & Entscheidungs-Vorbereiter",
-    easy_explanation: "Trevor leitet das 43-Agenten-Studio im Iron-Man-Look. Er analysiert deine Aufträge, verteilt Aufgaben an die richtigen Räume, bündelt Ergebnisse und legt dir am Ende die fertige Freigabe (JA/NEIN) vor.",
-    position_3d: { x: 0, y: 1.2, z: 0 }
+    color: "#00F0FF",
+    accent_color: "#F59E0B",
+    role: "Studio Director, Aufgaben-Router, Zusammenfasser & Entscheidungs-Vorbereiter",
+    easy_explanation: "Trevor leitet das 33-Agenten-Studio im Iron-Man-Look. Er analysiert deine Aufträge, verteilt Aufgaben an die richtigen Räume, bündelt Ergebnisse und legt dir am Ende die fertige Freigabe vor.",
+    position_3d: { x: 0, y: 0.4, z: 3.8 }
   },
   departments: [
     {
-      id: 1,
+      id: 2, // Map to 2 for backward compatibility with tests
+      alt_id: 1,
       floor: "EG",
-      code: "dept_plan",
-      name: "1. Ideen & Planung",
-      description: "Prüft deine Idee und plant alle Funktionen",
-      easy_explanation: "Hier wird deine Projektidee auf Herz und Nieren geprüft, in logische Funktionen zerlegt und ein klarer Ablaufplan erstellt.",
-      color: "#3b82f6",
-      floor_type: "wood",
-      micro_status: "💬 Prüft Feature-Roadmap",
+      code: "EG_ARCHITEKTUR",
+      name: "1. Architektur & Planung",
+      short_name: "Architektur",
+      description: "Systemdesign, Anforderungsanalyse, BWL & Antigravity-Prompts",
+      easy_explanation: "Entwirft das technische Fundament, zerlegt Anforderungen, berechnet Wirtschaftlichkeit und verfasst System-Prompts.",
+      color: "#3B82F6",
+      sector: "Nord-West",
+      micro_status: "🏗️ Systemdesign & Spezifikation",
       quick_prompts: [
-        "💡 Neue Feature-Idee auf Machbarkeit prüfen",
-        "🗺️ Vollständige Roadmap & MVP-Phasen planen",
-        "⚖️ Kosten-, Zeit- & Aufwandsanalyse erstellen"
+        "🏗️ Systemarchitektur & Ordnerstruktur entwerfen",
+        "📝 Anforderungsanalyse & Spezifikation erstellen",
+        "⚖️ BWL-Kalkulation & Netzplan berechnen"
       ],
       chef_agent: {
-        id: "chef_plan",
-        name: "Planungs-Chef",
-        title: "Leiter Ideen & Konzeption",
+        id: "ag_02",
+        name: "Marcus",
+        title: "Abteilungsleiter Architektur",
         role: "chef_agent",
-        department_id: 1,
-        focus: "Prüft Ideen auf Machbarkeit und leitet das Planungsteam",
-        easy_explanation: "Prüft alle Ideen auf Machbarkeit, löst Widersprüche und leitet das Planungsteam."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_plan_1",
-          name: "Ideen-Prüfer",
-          title: "Ideen- & Nutzen-Analyst",
-          role: "pc_agent",
-          department_id: 1,
-          focus: "Prüft Idee auf Logik, Zielgruppe und Nutzen",
-          easy_explanation: "Testet deine Idee auf Logik, echten Nutzen und beste Erfolgsaussichten."
-        },
-        {
-          id: "pc_plan_2",
-          name: "Funktions-Planer",
-          title: "Feature- & Roadmap-Architekt",
-          role: "pc_agent",
-          department_id: 1,
-          focus: "Erstellt vollständigen Feature-Katalog",
-          easy_explanation: "Erstellt die Liste aller Funktionen und Knöpfe, die für dein Projekt gebraucht werden."
-        },
-        {
-          id: "pc_plan_3",
-          name: "Machbarkeits-Checker",
-          title: "Scope- & Ressourcen-Prüfer",
-          role: "pc_agent",
-          department_id: 1,
-          focus: "Validiert Umsetzbarkeit und Zeitaufwand",
-          easy_explanation: "Prüft, ob die Technik, Schnittstellen und Zeit für diese Idee realistisch ausreichen."
-        }
-      ]
-    },
-    {
-      id: 2,
-      floor: "EG",
-      code: "dept_arch",
-      name: "2. Bauplan & Technik",
-      description: "Legt Ordnerstruktur, Sprachen und Systemaufbau fest",
-      easy_explanation: "Entwirft das technische Fundament: Welche Frameworks werden genutzt, wie sieht der Verzeichnisbaum aus und wie kommunizieren Systeme?",
-      color: "#6366f1",
-      floor_type: "stone",
-      micro_status: "🏗️ Entwirft Ordnerstruktur",
-      quick_prompts: [
-        "🏗️ Saubere Projekt- & Ordnerstruktur entwerfen",
-        "🔌 REST / GraphQL Schnittstellen-Plan erstellen",
-        "⚡ Tech-Stack & Framework-Evaluation durchführen"
-      ],
-      chef_agent: {
-        id: "chef_arch",
-        name: "Chef-Architekt",
-        title: "Leitender Systemarchitekt",
-        role: "chef_agent",
+        isLead: true,
         department_id: 2,
-        focus: "Überwacht das technische Fundament und den Gesamtbauplan",
-        easy_explanation: "Überwacht das gesamte technische Fundament, harmonisiert Schnittstellen und gibt den Bauplan frei."
+        deptCode: "EG_ARCHITEKTUR",
+        focus: "Systemdesign, Gesamtkonzept & Architekturentscheidungen",
+        easy_explanation: "Leitet das Architektur-Team, entwirft modulare System-Strukturen und überwacht Standards."
       },
       specialist_pcs: [
         {
-          id: "pc_arch_1",
-          name: "Technik-Wähler",
-          title: "Tech-Stack & Framework Experte",
+          id: "ag_03",
+          name: "Elena",
+          title: "Requirements Engineer",
           role: "pc_agent",
           department_id: 2,
-          focus: "Entscheidet über Libraries, Node, Python, Three.js",
-          easy_explanation: "Wählt die modernsten und stabilsten Werkzeuge und Bibliotheken für dein Projekt aus."
+          focus: "Anforderungsanalyse & Spezifikation",
+          easy_explanation: "Zerlegt Nutzeranforderungen in präzise, umsetzbare Spezifikationen."
         },
         {
-          id: "pc_arch_2",
-          name: "Ordner- & Struktur-Planer",
-          title: "Dateibaum- & Modul-Architekt",
+          id: "ag_04",
+          name: "Viktor",
+          title: "Data Modeler",
           role: "pc_agent",
           department_id: 2,
-          focus: "Definiert modulare Ordnerstruktur",
-          easy_explanation: "Sorgt dafür, dass jede Datei am richtigen Platz liegt und der Code übersichtlich bleibt."
+          focus: "Datenbank-Schemata & Datenflüsse",
+          easy_explanation: "Entwirft relationale Datenmodelle und konsistente Datenflüsse."
         },
         {
-          id: "pc_arch_3",
-          name: "Schnittstellen-Planer",
-          title: "API- & Protokoll-Designer",
+          id: "ag_05",
+          name: "Svenja",
+          title: "BWL & Projekt-Analystin",
           role: "pc_agent",
           department_id: 2,
-          focus: "Spezifiziert Datenaustausch und Endpunkte",
-          easy_explanation: "Plant, wie Daten fehlerfrei zwischen Frontend, Server und Datenbank transportiert werden."
+          focus: "Kalkulation, Netzplan & Wirtschaftlichkeit",
+          easy_explanation: "Berechnet Projektaufwände, Ressourcen, Zeitpläne und Wirtschaftlichkeit."
+        },
+        {
+          id: "ag_06",
+          name: "Lukas",
+          title: "Tech-Stack Strategist",
+          role: "pc_agent",
+          department_id: 2,
+          focus: "Architektur-Entscheidungen & Schnittstellen",
+          easy_explanation: "Wählt moderne, zukunftssichere Technologien, Frameworks und APIs."
+        },
+        {
+          id: "ag_07",
+          name: "Nadia",
+          title: "Prompt Architect",
+          role: "pc_agent",
+          department_id: 2,
+          focus: "Erstellung präziser Antigravity-System-Prompts",
+          easy_explanation: "Formuliert hocheffektive Prompts für Antigravity- und Coding-Agenten."
+        },
+        {
+          id: "ag_08",
+          name: "Henrik",
+          title: "Impact & Risk Auditor",
+          role: "pc_agent",
+          department_id: 2,
+          focus: "Folgenabschätzung für Ja/Nein-Fragen",
+          easy_explanation: "Analysiert Vor- und Nachteile von Entscheidungen (impactYes / impactNo)."
+        },
+        {
+          id: "ag_09",
+          name: "Clara",
+          title: "Documentation Lead",
+          role: "pc_agent",
+          department_id: 2,
+          focus: "Zusammenfassungen, Lernhilfen & Doku",
+          easy_explanation: "Erstellt verständliche Dokumentationen und didaktische Leitfäden."
         }
       ]
     },
     {
       id: 3,
+      alt_id: 4,
       floor: "EG",
-      code: "dept_design",
-      name: "3. Optik & Bedienung",
-      description: "Entwirft Farben, Buttons und einfache Bedienbarkeit",
-      easy_explanation: "Sorgt dafür, dass alles fantastisch aussieht: Farben, Animationen, Dark-Mode und kinderleichte Bedienung auf PC und Handy.",
-      color: "#ec4899",
-      floor_type: "wood",
-      micro_status: "🎨 Optimiert Dark-Mode & Glow",
+      code: "EG_FRONTEND",
+      name: "2. Frontend, 3D & UI/UX",
+      short_name: "Frontend",
+      description: "Three.js 3D-Bühne, Slate-UI, DOM-Widgets, 60 FPS & J.A.R.V.I.S.-Audio",
+      easy_explanation: "Baut responsive Web-Frontends, interaktive Three.js-3D-Bühnen, 60-FPS-Animationen und die J.A.R.V.I.S.-Sprachoberfläche.",
+      color: "#00F0FF",
+      sector: "Nord-Ost",
+      micro_status: "💻 3D-Bühne & Slate-HUD aktiv",
       quick_prompts: [
-        "🎨 UI auf modernen Dark-Mode & Crimson Glow optimieren",
-        "📱 Mobile Touch-Bedienung & Responsiveness verfeinern",
-        "✨ Hochwertige Glassmorphism-Karten stylen"
+        "🎨 Slate-UI & Glassmorphismus-Komponente bauen",
+        "🌐 Three.js 3D-Geometrie & Shader optimieren",
+        "⚡ 60-FPS-Animation & Web Audio Sound einbinden"
       ],
       chef_agent: {
-        id: "chef_design",
-        name: "Design-Chef",
-        title: "Art Director & UX Lead",
+        id: "ag_10",
+        name: "Daria",
+        title: "Abteilungsleiterin Frontend",
         role: "chef_agent",
+        isLead: true,
         department_id: 3,
-        focus: "Kuriert Designsprache, Farben und Ergonomie",
-        easy_explanation: "Verbindet Ästhetik und Nutzerfreundlichkeit zu einem beeindruckenden Gesamterlebnis."
+        deptCode: "EG_FRONTEND",
+        focus: "UI/UX-Leitung, Design-System & visuelle Qualität",
+        easy_explanation: "Leitet das Frontend-Team, überwacht Designsysteme und Ergonomie."
       },
       specialist_pcs: [
         {
-          id: "pc_design_1",
-          name: "Layout-Zeichner",
-          title: "Wireframe & Screens-Designer",
+          id: "ag_11",
+          name: "Liam",
+          title: "Three.js & WebGL Engineer",
           role: "pc_agent",
           department_id: 3,
-          focus: "Erstellt Seitenaufbau, Grids und Panels",
-          easy_explanation: "Zeichnet den perfekten Aufbau aller Seiten, Boxen und Bedienleisten."
+          focus: "3D-Geometrie, Kamera & Beleuchtung",
+          easy_explanation: "Baut interaktive 3D-Welten, Shaders und cinematische Kamerafahrten."
         },
         {
-          id: "pc_design_2",
-          name: "Farben- & Dark-Mode-Profi",
-          title: "Palette- & Theme-Spezialist",
+          id: "ag_12",
+          name: "Maya",
+          title: "CSS & Slate-UI Specialist",
           role: "pc_agent",
           department_id: 3,
-          focus: "Feinabstimmung von Dark-Slate, Crimson-Red und Kontrasten",
-          easy_explanation: "Mischt harmonische Farben, Neon-Akzente und sorgt für augenfreundlichen Dark-Mode."
+          focus: "Glassmorphismus, Farben & Layouts",
+          easy_explanation: "Stylt Benutzeroberflächen mit Schiefer-Farben und Glassmorphismus."
         },
         {
-          id: "pc_design_3",
-          name: "Handy- & PC-Prüfer",
-          title: "Responsive & Usability Experte",
+          id: "ag_13",
+          name: "Noah",
+          title: "DOM & HUD Controller",
           role: "pc_agent",
           department_id: 3,
-          focus: "Garantiert perfekte Ansicht auf allen Displaygrößen",
-          easy_explanation: "Prüft, ob jeder Knopf auf dem Handy mit dem Daumen bequem erreichbar ist."
+          focus: "Interaktive Fenster, Queue-UI & Events",
+          easy_explanation: "Steuert reaktive DOM-Elemente, schwebende Fenster und Task-HUDs."
+        },
+        {
+          id: "ag_14",
+          name: "Zoe",
+          title: "60FPS Animation Specialist",
+          role: "pc_agent",
+          department_id: 3,
+          focus: "Flüssige Bewegungen & Partikeleffekte",
+          easy_explanation: "Sorgt für flüssige 60-FPS-Animationen mittels Delta-Timing."
+        },
+        {
+          id: "ag_15",
+          name: "Finn",
+          title: "Audio & Voice Integrator",
+          role: "pc_agent",
+          department_id: 3,
+          focus: "Synthesizer-Sounds & J.A.R.V.I.S.-Sprach-UI",
+          easy_explanation: "Integriert Web Audio Synthesizer und J.A.R.V.I.S.-Stimmen."
+        },
+        {
+          id: "ag_16",
+          name: "Lea",
+          title: "Icon & Tooltip Designerin",
+          role: "pc_agent",
+          department_id: 3,
+          focus: "Vektor-Symbole, Sub-Menüs & Hover-Badges",
+          easy_explanation: "Entwirft SVG-Icons, schwebende Tooltips und Hover-Badges."
+        },
+        {
+          id: "ag_17",
+          name: "Ben",
+          title: "Usability & UX Tester",
+          role: "pc_agent",
+          department_id: 3,
+          focus: "Ergonomie & Sichtbarkeits-Prüfung",
+          easy_explanation: "Testet Bedienbarkeit, intuitive Klickpfade und Barrierefreiheit."
         }
       ]
     },
     {
-      id: 4,
+      id: 5, // Supported for ID 5 and 4
+      alt_id: 4,
       floor: "EG",
-      code: "dept_fe",
-      name: "4. Sichtbare Webseite (Frontend)",
-      description: "Programmiert alles, was man im Browser sieht und anklickt",
-      easy_explanation: "Baut HTML, CSS, JavaScript, 3D-Canvas und reaktive Komponenten zusammen, die direkt im Browser laufen.",
-      color: "#06b6d4",
-      floor_type: "stone",
-      micro_status: "💻 Baut interaktive 3D-Bühne",
+      code: "EG_BACKEND",
+      name: "3. Backend & Algorithmen",
+      short_name: "Backend",
+      description: "Express-Server, Python-Algorithmen, Supabase RAG, Dual-LLM & Task-Queue",
+      easy_explanation: "Programmiert Node.js-Server, mathematische Python-Algorithmen, Supabase RAG-Archive und sichere Schnittstellen.",
+      color: "#10B981",
+      sector: "Süd",
+      micro_status: "⚡ APIs, Algorithmen & DB aktiv",
       quick_prompts: [
-        "💻 Neue interaktive Klick-Komponente programmieren",
-        "🚀 Ladezeiten & Rendering-Performance beschleunigen",
-        "✨ Flüssige CSS- & Canvas-Animationen einbauen"
+        "🐍 Python-Algorithmus & Sortierlogik entwickeln",
+        "🔌 Express API Route mit Validierung bauen",
+        "🧠 Supabase RAG-Gedächtnis durchsuchen & abfragen"
       ],
       chef_agent: {
-        id: "chef_fe",
-        name: "Frontend-Chef",
-        title: "Leiter Frontend-Engineering",
+        id: "ag_18",
+        name: "David",
+        title: "Abteilungsleiter Backend",
         role: "chef_agent",
-        department_id: 4,
-        focus: "Überwacht Code-Qualität und flüssige Interaktion im Browser",
-        easy_explanation: "Überwacht modernen Frontend-Code und sorgt für 60 FPS Animationen."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_fe_1",
-          name: "Seiten- & Button-Bauer",
-          title: "HTML5/CSS3 & Komponenten-Programmierer",
-          role: "pc_agent",
-          department_id: 4,
-          focus: "Baut solide, saubere Web-Elemente",
-          easy_explanation: "Baut sauberen HTML- und CSS-Code für alle Menüs, Karten und Formulare."
-        },
-        {
-          id: "pc_fe_2",
-          name: "Klick-Logik-Programmierer",
-          title: "JavaScript / React State Manager",
-          role: "pc_agent",
-          department_id: 4,
-          focus: "Verarbeitet Nutzerklicks und Datenströme",
-          easy_explanation: "Programmiert die Logik: Was passiert bei welchem Klick, Modal und Dateneingabe."
-        },
-        {
-          id: "pc_fe_3",
-          name: "3D- & Animations-Bauer",
-          title: "Three.js & Canvas Spezialist",
-          role: "pc_agent",
-          department_id: 4,
-          focus: "Erzeugt interaktive 3D-Szenen und Lichteffekte",
-          easy_explanation: "Programmiert 3D-Kameras, Lichtquellen und rotierende Hologramme mit Three.js."
-        },
-        {
-          id: "pc_fe_4",
-          name: "Ladezeiten-Beschleuniger",
-          title: "Frontend-Performance Engineer",
-          role: "pc_agent",
-          department_id: 4,
-          focus: "Minimiert Ladezeiten und Asset-Größen",
-          easy_explanation: "Optimiert Grafiken und Skripte für blitzschnellen Seitenstart ohne Ruckeln."
-        }
-      ]
-    },
-    {
-      id: 5,
-      floor: "EG",
-      code: "dept_be",
-      name: "5. Server & Hintergrund-Logik (Backend)",
-      description: "Programmiert die Berechnungen und Datenverarbeitung im Hintergrund",
-      easy_explanation: "Entwickelt den Server, APIs und Hintergrundprozesse, die Anfragen entgegennehmen, verarbeiten und absichern.",
-      color: "#10b981",
-      floor_type: "tech_servers",
-      micro_status: "⚙️ Konfiguriert REST API Endpunkte",
-      quick_prompts: [
-        "⚙️ Neue Backend-API-Endpunkte & Router implementieren",
-        "🔐 Token-basierte Auth-Middleware programmieren",
-        "🔄 Asynchrone Worker-Jobs & Webhooks anbinden"
-      ],
-      chef_agent: {
-        id: "chef_be",
-        name: "Backend-Chef",
-        title: "Leiter Server- & Cloud-Architektur",
-        role: "chef_agent",
+        isLead: true,
         department_id: 5,
-        focus: "Koordiniert Server-Stabilität, APIs und Datenfluss",
-        easy_explanation: "Hält alle Server-Dienste stabil, sicher und hochperformant zusammen."
+        deptCode: "EG_BACKEND",
+        focus: "Server-Logik, API-Orchestrierung & Code-Konsolidierung",
+        easy_explanation: "Leitet das Backend-Team, koordiniert Serverlogik und konsolidiert Code."
       },
       specialist_pcs: [
         {
-          id: "pc_be_1",
-          name: "Datenwege-Bauer (API)",
-          title: "REST & WebSocket Architekt",
+          id: "ag_19",
+          name: "Sarah",
+          title: "Node.js & API Engineer",
           role: "pc_agent",
           department_id: 5,
-          focus: "Baut schnelle Schnittstellen zwischen Frontend und Server",
-          easy_explanation: "Entwickelt superschnelle REST- und WebSocket-Kanäle für Live-Datenübertragung."
+          focus: "Express-Server, Proxy & Endpunkte",
+          easy_explanation: "Entwickelt performante HTTP-Server und Proxy-Routen in Node.js."
         },
         {
-          id: "pc_be_2",
-          name: "Rechenlogik-Programmierer",
-          title: "Core Business Logic Developer",
+          id: "ag_20",
+          name: "Malik",
+          title: "Supabase & Memory Specialist",
           role: "pc_agent",
           department_id: 5,
-          focus: "Programmiert Berechnungen, Filter und Algorithmen",
-          easy_explanation: "Schreibt die Kern-Berechnungen, Auswertungen und Geschäftslogik deines Systems."
+          focus: "Cloud-Gedächtnis & Datenbanken",
+          easy_explanation: "Verwaltet das Supabase Cloud-Gedächtnis und schnelle RAG-Suchen."
         },
         {
-          id: "pc_be_3",
-          name: "Externe-Dienste-Anbinder",
-          title: "Integration & Cloud-Bridges",
+          id: "ag_21",
+          name: "Jonas",
+          title: "Python & Algorithm Dev",
           role: "pc_agent",
           department_id: 5,
-          focus: "Bindet KI-Modelle, Stripe, E-Mail und Payment an",
-          easy_explanation: "Verknüpft externe Dienste wie Gemini AI, Ollama, E-Mail-Provider und Payment."
+          focus: "Python-Programme, Sortierung & Mathe-Logik",
+          easy_explanation: "Schreibt saubere Python-Programme und mathematische Berechnungen."
+        },
+        {
+          id: "ag_22",
+          name: "Kiara",
+          title: "Dual-LLM Specialist",
+          role: "pc_agent",
+          department_id: 5,
+          focus: "Ollama Qwen 2.5 & Gemini Cloud-Steuerung",
+          easy_explanation: "Steuert lokale und Cloud-KI-Modelle mit dynamischem Routing."
+        },
+        {
+          id: "ag_23",
+          name: "Tarek",
+          title: "RAG & Code-Context Engineer",
+          role: "pc_agent",
+          department_id: 5,
+          focus: "Wissensabruf & Projekt-Analyse",
+          easy_explanation: "Liefert den perfekten Code-Kontext aus dem Workspace für präzise KI-Antworten."
+        },
+        {
+          id: "ag_24",
+          name: "Hannah",
+          title: "Async & Queue Architect",
+          role: "pc_agent",
+          department_id: 5,
+          focus: "Parallele Promise.all-Pipelines & Task-Queue",
+          easy_explanation: "Konstruiert unterbrechungsfreie Task-Queues und parallele Pipelines."
+        },
+        {
+          id: "ag_25",
+          name: "Tim",
+          title: "Parser & Validation Dev",
+          role: "pc_agent",
+          department_id: 5,
+          focus: "JSON-Sicherheit & Fehlerbehandlung",
+          easy_explanation: "Garantiert fehlertolerantes JSON-Parsing und sichere Typvalidierung."
         }
       ]
     },
     {
-      id: 6,
-      floor: "EG",
-      code: "dept_db",
-      name: "6. Datenbank & Speicher",
-      description: "Verwaltet Tabellen, Supabase und sichere Datenspeicherung",
-      easy_explanation: "Entwirft Datenmodelle, Supabase-Tabellen, Indizes und schützt deine Datensätze mit Row-Level-Security (RLS).",
-      color: "#8b5cf6",
-      floor_type: "tech_servers",
-      micro_status: "🗄️ Prüft RLS-Policies & Indizes",
-      quick_prompts: [
-        "🗄️ Supabase Tabellen-Schema & Relationen optimieren",
-        "⚡ Datenbank-Indizes & Query-Performance tunen",
-        "🛡️ Row-Level-Security (RLS) Policies für Tabellen erstellen"
-      ],
-      chef_agent: {
-        id: "chef_db",
-        name: "Datenbank-Chef",
-        title: "Lead Database Administrator & Data Architect",
-        role: "chef_agent",
-        department_id: 6,
-        focus: "Überwacht Datenintegrität, RLS-Sicherheit und Performance",
-        easy_explanation: "Sorgt dafür, dass niemals Daten verloren gehen und Abfragen in Millisekunden antworten."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_db_1",
-          name: "Tabellen-Architekt",
-          title: "SQL- & Schema-Experte",
-          role: "pc_agent",
-          department_id: 6,
-          focus: "Baut normalisierte Tabellen und Relationen",
-          easy_explanation: "Entwirft relationale SQL-Tabellen mit Fremdschlüsseln und sauberen Datentypen."
-        },
-        {
-          id: "pc_db_2",
-          name: "Daten-Beschleuniger",
-          title: "Index & Query-Tuning Spezialist",
-          role: "pc_agent",
-          department_id: 6,
-          focus: "Verhindert langsame Abfragen durch smarte Indizes",
-          easy_explanation: "Baut Indizes und optimiert SQL-Abfragen für blitzschnelle Suchergebnisse."
-        },
-        {
-          id: "pc_db_3",
-          name: "Sicherheits- & Rechte-Wächter",
-          title: "Row Level Security (RLS) Engineer",
-          role: "pc_agent",
-          department_id: 6,
-          focus: "Schützt Benutzerdaten mit RLS-Policies",
-          easy_explanation: "Stellt sicher, dass jeder Nutzer streng nur auf seine eigenen Daten zugreifen darf."
-        }
-      ]
-    },
-    {
-      id: 7,
-      floor: "EG",
-      code: "dept_qa",
-      name: "7. Fehlersuche & Stabilität",
-      description: "Findet Bugs, testet Abläufe und sichert Qualität",
-      easy_explanation: "Testet jeden Knopf, simuliert Fehleingaben, spürt Programmfehler auf und sorgt für absturzsichere Software.",
-      color: "#f59e0b",
-      floor_type: "stone",
-      micro_status: "🔍 Testet Edge-Cases & Stabilität",
-      quick_prompts: [
-        "🔍 Kompletten Code auf Bugs & Edge-Cases prüfen",
-        "🧪 Automatisierte Unit- & Integrationstests schreiben",
-        "⏱️ Stresstest & Fehlertoleranz unter Last simulieren"
-      ],
-      chef_agent: {
-        id: "chef_qa",
-        name: "Chef-Tester",
-        title: "Head of Quality Assurance & Testing",
-        role: "chef_agent",
-        department_id: 7,
-        focus: "Leitet automatisierte Testreihen und Stabilitätsprüfungen",
-        easy_explanation: "Gibt Software erst frei, wenn alle Tests grün sind und keine Fehler auftreten."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_qa_1",
-          name: "Automatischer Tester",
-          title: "Unit- & Integrationstest-Entwickler",
-          role: "pc_agent",
-          department_id: 7,
-          focus: "Schreibt automatisierte Prüfroutinen",
-          easy_explanation: "Schreibt Roboter-Tests, die bei jeder Änderung sofort prüfen, ob noch alles klappt."
-        },
-        {
-          id: "pc_qa_2",
-          name: "Klick- & Ablauf-Prüfer",
-          title: "End-to-End Test Engineer",
-          role: "pc_agent",
-          department_id: 7,
-          focus: "Simuliert echte Benutzerklicks und Workflows",
-          easy_explanation: "Klickt wie ein echter User durch die gesamte App und deckt Stolpersteine auf."
-        },
-        {
-          id: "pc_qa_3",
-          name: "Stresstest-Spezialist",
-          title: "Last- & Grenzfall-Analyst",
-          role: "pc_agent",
-          department_id: 7,
-          focus: "Testet das System unter extremer Belastung",
-          easy_explanation: "Flutet das System mit tausenden Anfragen, um maximale Belastbarkeit zu garantieren."
-        }
-      ]
-    },
-    {
-      id: 8,
-      floor: "EG",
-      code: "dept_sec",
-      name: "8. Sicherheit & Schutz",
-      description: "Schützt vor Hackerangriffen, schützt Daten und sperrt Lücken",
-      easy_explanation: "Prüft Passwörter, verhindert unbefugte Zugriffe, verschlüsselt Verbindungen und erfüllt DSGVO-Standards.",
-      color: "#ef4444",
-      floor_type: "tech_servers",
-      micro_status: "🛡️ Scannt nach Security-Leaks",
-      quick_prompts: [
-        "🛡️ Sicherheits- & DSGVO-Audit durchführen",
-        "🔑 API-Keys, Token-Leaks & Injection-Schutz prüfen",
-        "🚫 CORS-, XSS- & CSRF-Schutzwall härten"
-      ],
-      chef_agent: {
-        id: "chef_sec",
-        name: "Sicherheits-Chef",
-        title: "Chief Information Security Officer (CISO)",
-        role: "chef_agent",
-        department_id: 8,
-        focus: "Schützt das gesamte Studio und Software vor Angriffen",
-        easy_explanation: "Verteidigt das System wie eine Festung gegen Manipulation und Datendiebstahl."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_sec_1",
-          name: "Lücken-Sucher",
-          title: "Schwachstellen- & Penetrationstester",
-          role: "pc_agent",
-          department_id: 8,
-          focus: "Sucht Sicherheitslücken und Angriffspunkte",
-          easy_explanation: "Versucht gezielt, Schwachstellen im Code zu finden, bevor Angreifer es tun."
-        },
-        {
-          id: "pc_sec_2",
-          name: "Zugangs- & Schloss-Wächter",
-          title: "Auth, Token & Session Guard",
-          role: "pc_agent",
-          department_id: 8,
-          focus: "Prüft JWT-Tokens, Passwörter und Rollen",
-          easy_explanation: "Überwacht Passwörter, Sitzungen und stellt sicher, dass Unbefugte draußen bleiben."
-        },
-        {
-          id: "pc_sec_3",
-          name: "Verschlüsselungs-Experte",
-          title: "Kryptografie & DSGVO-Wächter",
-          role: "pc_agent",
-          department_id: 8,
-          focus: "Sichert Passwörter und sensible Kundendaten",
-          easy_explanation: "Verschlüsselt Passwörter und Datenbankinhalte nach höchsten Krypto-Standards."
-        }
-      ]
-    },
-    {
-      id: 9,
-      floor: "EG",
-      code: "dept_ops",
-      name: "9. Veröffentlichung & Server",
-      description: "Bringt die App online (Render, Vercel, Docker, GitHub)",
-      easy_explanation: "Richtet Deployment-Pipelines ein, konfiguriert Cloud-Server, Domains, SSL-Zertifikate und Docker-Container.",
-      color: "#14b8a6",
-      floor_type: "stone",
-      micro_status: "🚀 Bereitet Cloud-Deployment vor",
-      quick_prompts: [
-        "🚀 Render.yaml & GitHub CI/CD Pipeline einrichten",
-        "🌐 Custom Domain, SSL & Cloudflare DNS konfigurieren",
-        "📦 Dockerfile & Container-Build optimieren"
-      ],
-      chef_agent: {
-        id: "chef_ops",
-        name: "DevOps-Chef",
-        title: "Head of Infrastructure & Operations",
-        role: "chef_agent",
-        department_id: 9,
-        focus: "Verantwortet automatisches Deployment und Cloud-Uptime",
-        easy_explanation: "Sorgt dafür, dass das Projekt auf Knopfdruck 24/7 weltweit erreichbar online geht."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_ops_1",
-          name: "Container-Bauer",
-          title: "Docker & Container-Architekt",
-          role: "pc_agent",
-          department_id: 9,
-          focus: "Erstellt standardisierte Docker-Images",
-          easy_explanation: "Verpackt die gesamte App in einen leichten Container, der überall identisch startet."
-        },
-        {
-          id: "pc_ops_2",
-          name: "Cloud-Einrichter",
-          title: "Render, Vercel & Supabase Deployer",
-          role: "pc_agent",
-          department_id: 9,
-          focus: "Konfiguriert Server in der Cloud",
-          easy_explanation: "Richtet Cloud-Server bei Render oder Vercel ein und verbindet Datenbanken."
-        },
-        {
-          id: "pc_ops_3",
-          name: "Domain- & Web-Wächter",
-          title: "DNS, SSL & Tunnel-Manager",
-          role: "pc_agent",
-          department_id: 9,
-          focus: "Verwaltet Domains, SSL-Zertifikate und Live-Tunnels",
-          easy_explanation: "Schaltet Web-Adressen und sichere HTTPS-Zertifikate frei für mobilen Zugriff."
-        },
-        {
-          id: "pc_ops_4",
-          name: "Dauerbetrieb-Wächter",
-          title: "Monitoring & Auto-Restart Engineer",
-          role: "pc_agent",
-          department_id: 9,
-          focus: "Überwacht Serverauslastung und Neustarts",
-          easy_explanation: "Beobachtet Serverauslastung und startet Dienste bei Abstürzen automatisch neu."
-        }
-      ]
-    },
-    {
-      id: 10,
-      floor: "EG",
-      code: "dept_doc",
-      name: "10. Dokumentation & Übergabe",
-      description: "Schreibt verständliche Anleitungen und das Übergabe-Paket",
-      easy_explanation: "Erstellt die README, API-Referenzen, Benutzerhandbücher und bereitet das finale Paket für Antigravity vor.",
-      color: "#a855f7",
-      floor_type: "wood",
-      micro_status: "📖 Erstellt Antigravity Master-Task",
-      quick_prompts: [
-        "📖 Vollständige README.md & System-Doku schreiben",
-        "📋 API-Referenz & Postman-Collection erstellen",
-        "🎯 Schritt-für-Schritt Schnellstart-Anleitung verfassen"
-      ],
-      chef_agent: {
-        id: "chef_doc",
-        name: "Doku-Chef",
-        title: "Lead Technical Writer & Release Manager",
-        role: "chef_agent",
-        department_id: 10,
-        focus: "Stellt glasklare Dokumentation und Übergabe sicher",
-        easy_explanation: "Macht komplexe Technik für jeden sofort verständlich und liefert perfekte Anleitungen."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_doc_1",
-          name: "Anleitungs-Schreiber",
-          title: "README- & Benutzerhandbuch-Autor",
-          role: "pc_agent",
-          department_id: 10,
-          focus: "Schreibt Schritt-für-Schritt-Anleitungen",
-          easy_explanation: "Schreibt die README-Datei und einfache Schritt-für-Schritt-Anleitungen."
-        },
-        {
-          id: "pc_doc_2",
-          name: "Schnittstellen-Erklärer",
-          title: "API-Dokumentations-Spezialist",
-          role: "pc_agent",
-          department_id: 10,
-          focus: "Dokumentiert alle API-Endpunkte und Payloads",
-          easy_explanation: "Erklärt jeden Server-Befehl und welche Daten gesendet werden müssen."
-        },
-        {
-          id: "pc_doc_3",
-          name: "Antigravity-Übergabe-Profi",
-          title: "Master-Prompt & Checkpoint-Verfasser",
-          role: "pc_agent",
-          department_id: 10,
-          focus: "Generiert den fertigen ANTIGRAVITY_TASK.md Prompt",
-          easy_explanation: "Formuliert den finalen, wasserdichten Master-Prompt für Antigravity mit allen Checkpoints."
-        }
-      ]
-    },
-    // =========================================================================
-    // UNTERGESCHOSS (KELLER / UG): NON-CODING & HARDWARE-ABTEILUNGEN
-    // =========================================================================
-    {
-      id: 11,
+      id: 12, // Standard ID 12 for UG_SERVER
+      alt_id: 11,
       floor: "UG",
-      code: "dept_archiv",
-      name: "Das Archiv",
-      description: "Allgemeinwissen, Recherche, Textverfassung & kreatives Brainstorming",
-      easy_explanation: "Verwaltet das weltweite Wissen, recherchiert Fakten, formuliert Texte und entwickelt kreative Konzepte abseits von Code.",
-      color: "#8b5cf6",
-      floor_type: "concrete",
-      micro_status: "📚 Durchsucht Wissensdatenbank",
+      code: "UG_SERVER",
+      name: "4. Systemintegration & Server",
+      short_name: "Serverraum",
+      description: "Netzwerk & Subnetting, Security, Sandboxing, DevOps & Continuous Learning",
+      easy_explanation: "Verwaltet Server-Hardware, Netzwerk-Subnetze (CIDR, VLSM), Firewalls, Proxmox-VMs und das kontinuierliche KI-Lernen.",
+      color: "#F59E0B",
+      sector: "UG-Zentrum",
+      micro_status: "🔒 Server-Racks & Härtung aktiv",
       quick_prompts: [
-        "📖 Recherche & Fakten-Zusammenfassung erstellen",
-        "✍️ Detaillierten Text / Artikel formulieren",
-        "💡 Kreatives Brainstorming durchführen"
+        "🌐 Subnetting, VLSM & Routing-Plan berechnen",
+        "🛡️ Sandbox-Absicherung & PIN-Security prüfen",
+        "🧠 Idle-Trainer KI-Audit & Wissensarchivierung starten"
       ],
       chef_agent: {
-        id: "chef_archiv",
-        name: "Archiv-Direktor",
-        title: "Leiter Archiv & Wissensmanagement",
+        id: "ag_26",
+        name: "Ilja",
+        title: "Abteilungsleiter Systemintegration & Security",
         role: "chef_agent",
-        department_id: 11,
-        floor: "UG",
-        focus: "Strukturiert Wissen, validiert Quellen & kuratiert Texte",
-        easy_explanation: "Prüft Fakten, ordnet Wissen logisch und leitet die Recherche-Spezialisten."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_archiv_1",
-          name: "Fakten- & Wissens-Forscher",
-          title: "Knowledge Retrieval Specialist",
-          role: "pc_agent",
-          department_id: 11,
-          focus: "Sucht Fakten, verifiziert Quellen und ordnet Kontext",
-          easy_explanation: "Findet verlässliche Fakten und Hintergründe zu jedem Thema."
-        },
-        {
-          id: "pc_archiv_2",
-          name: "Texter & Redakteur",
-          title: "Content & Prose Stylist",
-          role: "pc_agent",
-          department_id: 11,
-          focus: "Verfasst ansprechende Texte, Leitfäden und Artikel",
-          easy_explanation: "Schreibt professionelle, verständliche Texte und Berichte."
-        },
-        {
-          id: "pc_archiv_3",
-          name: "Kreativ- & Brainstorm-Partner",
-          title: "Ideation & Synthesis Specialist",
-          role: "pc_agent",
-          department_id: 11,
-          focus: "Entwickelt unkonventionelle Ideen und strukturierte Konzepte",
-          easy_explanation: "Generiert neue Blickwinkel und Ideen abseits des Mainstreams."
-        }
-      ]
-    },
-    {
-      id: 12,
-      floor: "UG",
-      code: "dept_serverraum",
-      name: "Der Serverraum",
-      description: "Netzwerktechnik, Systemintegration, Infrastruktur & Server-Cluster",
-      easy_explanation: "Überwacht Router, Firewalls, Server-Racks und sorgt für unterbrechungsfreie Netzwerke und VPN-Tunnel.",
-      color: "#06b6d4",
-      floor_type: "tech_servers",
-      micro_status: "🖥️ Überwacht Server-Racks",
-      quick_prompts: [
-        "🌐 Netzwerk-Topologie & Routing planen",
-        "🛡️ Firewall-Regeln & VPN konfigurieren",
-        "⚙️ Server-Cluster & Storage partitionieren"
-      ],
-      chef_agent: {
-        id: "chef_serverraum",
-        name: "Infrastruktur-Leiter",
-        title: "SysAdmin & Network Architect",
-        role: "chef_agent",
+        isLead: true,
         department_id: 12,
-        floor: "UG",
-        focus: "Koordiniert Hardware-Server, Verkabelung & Netzwerke",
-        easy_explanation: "Leitet das Serverraum-Team und stellt stabile Verbindungen sicher."
+        deptCode: "UG_SERVER",
+        focus: "Prüfung, Härtung & Infrastruktur",
+        easy_explanation: "Leitet die Server- und Sicherheits-Abteilung im UG und authorisiert Deployments."
       },
       specialist_pcs: [
         {
-          id: "pc_server_1",
-          name: "Netzwerk- & Routing-Ingenieur",
-          title: "Network Infrastructure Engineer",
+          id: "ag_27",
+          name: "Milan",
+          title: "Network & Subnetting Engineer",
           role: "pc_agent",
           department_id: 12,
-          focus: "Konfiguriert Subnetze, VLANs und Routing-Tabellen",
-          easy_explanation: "Plant und verbindet sichere Firmen- und Heimnetzwerke."
+          focus: "IPv4/IPv6, CIDR, VLSM, VLAN & Routing",
+          easy_explanation: "Berechnet Subnetze, plant VLANs und konfiguriert Routing-Tabellen."
         },
         {
-          id: "pc_server_2",
-          name: "Firewall- & Security-Guard",
-          title: "Perimeter Security Specialist",
+          id: "ag_28",
+          name: "Freya",
+          title: "Security & Sandbox Guardian",
           role: "pc_agent",
           department_id: 12,
-          focus: "Überwacht Ports, filtert Datenverkehr und blockiert Angriffe",
-          easy_explanation: "Schützt das Netzwerk gegen unbefugte Zugriffe von außen."
+          focus: "API-Schutz, PIN-Auth & Richtlinien",
+          easy_explanation: "Schützt das Studio vor unbefugtem Zugriff und sichert Endpunkte ab."
         },
         {
-          id: "pc_server_3",
-          name: "Cluster- & Storage-Admin",
-          title: "Storage & Virtualization Admin",
+          id: "ag_29",
+          name: "Anton",
+          title: "Cloud & Render DevOps",
           role: "pc_agent",
           department_id: 12,
-          focus: "Verwaltet NAS, RAID-Verbünde und Virtualisierungs-Nodes",
-          easy_explanation: "Sorgt für redundanten Speicher und zuverlässige Server-Hardware."
-        }
-      ]
-    },
-    {
-      id: 13,
-      floor: "UG",
-      code: "dept_werkstatt",
-      name: "Die Werkstatt",
-      description: "Hardware, Elektronik, Schaltpläne, Löten & Mikrocontroller (ESP32/Arduino/Raspberry Pi)",
-      easy_explanation: "Entwirft Schaltpläne, wählt elektronische Bauteile aus und programmiert Hardware und Mikrocontroller.",
-      color: "#f97316",
-      floor_type: "concrete",
-      micro_status: "🔧 Schaltungs- & Hardwaretest",
-      quick_prompts: [
-        "⚡ ESP32 / Arduino Schaltung entwerfen",
-        "📐 PCB-Schaltplan & Bauteilliste prüfen",
-        "🎛️ Sensor-Integration & Pinout abstimmen"
-      ],
-      chef_agent: {
-        id: "chef_werkstatt",
-        name: "Werkstatt-Meister",
-        title: "Chief Hardware & Electronics Engineer",
-        role: "chef_agent",
-        department_id: 13,
-        floor: "UG",
-        focus: "Leitet Elektronik-Entwicklung, PCB-Designs & Mikrocontroller",
-        easy_explanation: "Prüft Schaltungen auf Kurzschlüsse, Spannungsstabilität und Funktion."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_werk_1",
-          name: "Schaltplan- & PCB-Designer",
-          title: "Circuit & PCB Design Engineer",
-          role: "pc_agent",
-          department_id: 13,
-          focus: "Erstellt Schaltpläne, Leiterbahnen und BOM-Stücklisten",
-          easy_explanation: "Zeichnet funktionierende Elektronikschaltungen."
+          focus: "Git-Workflows, Build-Logs & Deployment",
+          easy_explanation: "Automatisiert Git-Workflows und überwacht Cloud-Deployments auf Render."
         },
         {
-          id: "pc_werk_2",
-          name: "Mikrocontroller- & Firmware-Spezialist",
-          title: "Embedded & Microcontroller Expert",
+          id: "ag_30",
+          name: "Kian",
+          title: "Hardware & Virtualization Spec",
           role: "pc_agent",
-          department_id: 13,
-          focus: "Schreibt C++/MicroPython für ESP32, STM32 und Arduino",
-          easy_explanation: "Programmiert Chips, Steuerungen und Sensoren."
+          department_id: 12,
+          focus: "Server-Hardware, Proxmox, RAM/CPU & VMs",
+          easy_explanation: "Überwacht Server-Ressourcen, Proxmox VE und Hardware-Auslastung."
         },
         {
-          id: "pc_werk_3",
-          name: "Sensor- & Aktor-Ingenieur",
-          title: "IoT & Mechatronics Specialist",
+          id: "ag_31",
+          name: "Nora",
+          title: "Firewall & VPN Specialist",
           role: "pc_agent",
-          department_id: 13,
-          focus: "Integriert Motoren, Servos, Relais und Umweltsensoren",
-          easy_explanation: "Verbindet reale Sensoren und Schalter mit Mikrocontrollern."
-        }
-      ]
-    },
-    {
-      id: 14,
-      floor: "UG",
-      code: "dept_lounge",
-      name: "Die Lounge",
-      description: "Alltagsplanung, Produktivität, Freizeit, Gaming & Off-Topic",
-      easy_explanation: "Hilft bei täglichen Zeitplänen, Entspannung, Lifestyle, Gaming-Tipps und zwanglosem Austausch.",
-      color: "#10b981",
-      floor_type: "carpet",
-      micro_status: "☕ Pausiert & plant Alltags-Routinen",
-      quick_prompts: [
-        "📅 Realistischen Tages- & Wochenplan aufstellen",
-        "🎮 Gaming-Empfehlungen & Tipps einholen",
-        "🧘 Produktivitäts- & Pause-Routinen optimieren"
-      ],
-      chef_agent: {
-        id: "chef_lounge",
-        name: "Lounge-Host",
-        title: "Lifestyle & Productivity Concierge",
-        role: "chef_agent",
-        department_id: 14,
-        floor: "UG",
-        focus: "Begleitet Alltagsorganisation, Pausenzeiten & Work-Life-Balance",
-        easy_explanation: "Sorgt für gute Laune, klare Tagesstruktur und erholsame Pausen."
-      },
-      specialist_pcs: [
-        {
-          id: "pc_lounge_1",
-          name: "Tages- & Terminplaner",
-          title: "Daily Schedule & Habit Coach",
-          role: "pc_agent",
-          department_id: 14,
-          focus: "Strukturiert Termine, To-Dos und Gewohnheiten",
-          easy_explanation: "Bringt Ordnung in deinen Alltag und Terminkalender."
+          department_id: 12,
+          focus: "WireGuard, Tailscale & Netzwerksicherheit",
+          easy_explanation: "Richtet verschlüsselte VPN-Tunnel und Firewall-Regeln ein."
         },
         {
-          id: "pc_lounge_2",
-          name: "Gaming- & Entertainment-Guide",
-          title: "Gaming & Pop Culture Specialist",
+          id: "ag_32",
+          name: "Rico",
+          title: "QA & Logic Debugger",
           role: "pc_agent",
-          department_id: 14,
-          focus: "Empfiehlt Spiele, Filme, Hobbys und Entertainment",
-          easy_explanation: "Kennt die besten Spiele, Setups und Freizeit-Tipps."
+          department_id: 12,
+          focus: "Tiefenprüfung auf Logikfehler & Bugs",
+          easy_explanation: "Führt strenge automatisierte Tests durch und findet versteckte Bugs."
         },
         {
-          id: "pc_lounge_3",
-          name: "Work-Life- & Mindset-Berater",
-          title: "Wellness & Focus Advisor",
+          id: "ag_33",
+          name: "Yuna",
+          title: "Idle-Trainer & AI Optimizer",
           role: "pc_agent",
-          department_id: 14,
-          focus: "Fördert Konzentration, Pausenmanagement und Ergonomie",
-          easy_explanation: "Hilft dir, ohne Stress und fokussiert durch den Tag zu kommen."
+          department_id: 12,
+          focus: "Kontinuierliches Lernen & System-Audits",
+          easy_explanation: "Führt kontinuierliche Selbst-Audits durch und erweitert das Cloud-Gedächtnis."
         }
       ]
     }
@@ -823,7 +952,10 @@ export const STUDIO_HIERARCHY = {
 // Aliase für garantierte synchrone Verfügbarkeit
 export const STUDIO_HIERARCHY_DATA = STUDIO_HIERARCHY;
 
+// Globaler Browser- & Node-Export
 if (typeof window !== 'undefined') {
+  window.TREVOR_AGENT_ROSTER = TREVOR_AGENT_ROSTER;
+  window.AGENT_ROSTER_BY_ID = AGENT_ROSTER_BY_ID;
   window.STUDIO_HIERARCHY = STUDIO_HIERARCHY;
   window.STUDIO_HIERARCHY_DATA = STUDIO_HIERARCHY;
 }

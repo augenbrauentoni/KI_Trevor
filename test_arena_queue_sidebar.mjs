@@ -20,9 +20,9 @@ console.log('[PASS] studio3D.js: Amphitheater arena, Holo-JARVIS & 60-FPS loop v
 console.log('\n--- Test 2: index.html Cache Version, Sidebar Icons & 6 Sub-Drawers ---');
 const indexHtml = fs.readFileSync('02_Frontend_UI_und_3D_Studio/index.html', 'utf8');
 
-assert(indexHtml.includes('styles.css?v=6.0'), 'styles.css must be versioned ?v=6.0');
-assert(indexHtml.includes('style.css?v=6.0'), 'style.css must be versioned ?v=6.0');
-assert(indexHtml.includes('app.js?v=6.0'), 'app.js must be versioned ?v=6.0');
+assert(indexHtml.includes('styles.css?v=6.0') || indexHtml.includes('styles.css?v=7.0'), 'styles.css must be versioned ?v=6.0 or ?v=7.0');
+assert(indexHtml.includes('style.css?v=6.0') || indexHtml.includes('style.css?v=7.0'), 'style.css must be versioned ?v=6.0 or ?v=7.0');
+assert(indexHtml.includes('app.js?v=6.0') || indexHtml.includes('app.js?v=7.0'), 'app.js must be versioned ?v=6.0 or ?v=7.0');
 
 // 6 Sidebar Icons with data-tooltip
 const requiredIcons = [

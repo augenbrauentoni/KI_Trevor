@@ -10,7 +10,7 @@
  */
 
 import { queryLLM } from './llmEngine.js';
-import { STUDIO_HIERARCHY } from './hierarchyData.js';
+import { STUDIO_HIERARCHY, TREVOR_AGENT_ROSTER, AGENT_ROSTER_BY_ID } from './hierarchyData.js';
 
 /**
  * Klassifiziert den Nutzer-Auftrag strikt in einen der 3 Arbeits-Modi:
@@ -210,39 +210,49 @@ export function safeParseTrevorJSON(rawText, originalPrompt) {
 export function getDepartmentByCodeOrId(deptCodeOrId, departments) {
   if (!departments || departments.length === 0) return null;
 
+  const code = String(deptCodeOrId || '').toUpperCase().trim();
+
+  // 1. Direkter Code- oder Short-Name-Match
+  const directMatch = departments.find(d => 
+    (d.code && d.code.toUpperCase() === code) ||
+    (d.short_name && d.short_name.toUpperCase() === code)
+  );
+  if (directMatch) return directMatch;
+
+  // 2. Numerischer Match (id oder alt_id)
   if (typeof deptCodeOrId === 'number' || /^\d+$/.test(String(deptCodeOrId))) {
     const numId = parseInt(deptCodeOrId, 10);
-    const found = departments.find(d => d.id === numId);
+    const found = departments.find(d => d.id === numId || d.alt_id === numId);
     if (found) return found;
   }
 
-  const code = String(deptCodeOrId || '').toUpperCase().trim();
+  // 3. Mapping für bekannte Kürzel
   const map = {
     'EG_FRONTEND': 3,
     'EG_UI': 3,
-    'EG_3D': 4,
+    'EG_3D': 3,
     'EG_BACKEND': 5,
     'EG_SERVER': 5,
-    'EG_DATENBANK': 6,
-    'EG_DB': 6,
-    'EG_API': 7,
-    'EG_QA': 8,
-    'EG_TESTING': 8,
-    'EG_SECURITY': 9,
-    'EG_SEC': 9,
-    'EG_DEVOPS': 10,
-    'EG_PLANUNG': 1,
+    'EG_DATENBANK': 5,
+    'EG_DB': 5,
+    'EG_API': 5,
+    'EG_QA': 12,
+    'EG_TESTING': 12,
+    'EG_SECURITY': 12,
+    'EG_SEC': 12,
+    'EG_DEVOPS': 12,
+    'EG_PLANUNG': 2,
     'EG_ARCHITEKTUR': 2,
-    'UG_ARCHIV': 11,
+    'UG_ARCHIV': 12,
     'UG_SERVER': 12,
     'UG_SERVERRAUM': 12,
-    'UG_WERKSTATT': 13,
-    'UG_LOUNGE': 14
+    'UG_WERKSTATT': 12,
+    'UG_LOUNGE': 12
   };
 
   const targetId = map[code];
   if (targetId) {
-    const found = departments.find(d => d.id === targetId);
+    const found = departments.find(d => d.id === targetId || d.alt_id === targetId);
     if (found) return found;
   }
 
@@ -252,7 +262,126 @@ export function getDepartmentByCodeOrId(deptCodeOrId, departments) {
   );
   if (byName) return byName;
 
-  return departments.find(d => d.id === 5) || departments[0];
+  return departments.find(d => d.id === 5 || d.alt_id === 4) || departments[0];
+}
+
+/**
+ * Wählt anhand des Prompts und der Fachgebiete genau die 3 passenden Spezialisten
+ * aus dem 33-Agenten-Roster für paralleles Arbeiten via Promise.all() aus.
+ */
+export function selectSpecialistsForTask(dept, promptText = '') {
+  const p = (promptText || '').toLowerCase();
+  const pcs = (dept && dept.specialist_pcs) ? dept.specialist_pcs : [];
+  if (pcs.length <= 3) return pcs;
+
+  const deptCode = dept.code || '';
+
+  if (deptCode === 'EG_BACKEND') {
+    // Python / Algorithmen / Mathe -> Jonas (ag_21), Tim (ag_25), Sarah (ag_19)
+    if (p.includes('python') || p.includes('algor') || p.includes('sort') || p.includes('math') || p.includes('berechn')) {
+      const jonas = pcs.find(x => x.name === 'Jonas') || pcs[2];
+      const tim = pcs.find(x => x.name === 'Tim') || pcs[6];
+      const sarah = pcs.find(x => x.name === 'Sarah') || pcs[0];
+      return [jonas, tim, sarah];
+    }
+    // Datenbank / Supabase / Cache -> Malik (ag_20), Tarek (ag_23), Tim (ag_25)
+    if (p.includes('datenbank') || p.includes('db') || p.includes('supabase') || p.includes('sql') || p.includes('cache') || p.includes('postgres')) {
+      const malik = pcs.find(x => x.name === 'Malik') || pcs[1];
+      const tarek = pcs.find(x => x.name === 'Tarek') || pcs[4];
+      const tim = pcs.find(x => x.name === 'Tim') || pcs[6];
+      return [malik, tarek, tim];
+    }
+    // KI / LLM / RAG -> Kiara (ag_22), Tarek (ag_23), Hannah (ag_24)
+    if (p.includes('llm') || p.includes('qwen') || p.includes('gemini') || p.includes('ki') || p.includes('rag')) {
+      const kiara = pcs.find(x => x.name === 'Kiara') || pcs[3];
+      const tarek = pcs.find(x => x.name === 'Tarek') || pcs[4];
+      const hannah = pcs.find(x => x.name === 'Hannah') || pcs[5];
+      return [kiara, tarek, hannah];
+    }
+    // Default Backend: Sarah (API), Jonas (Logik), Tim (Validierung)
+    return [
+      pcs.find(x => x.name === 'Sarah') || pcs[0],
+      pcs.find(x => x.name === 'Jonas') || pcs[2],
+      pcs.find(x => x.name === 'Tim') || pcs[6]
+    ];
+  }
+
+  if (deptCode === 'EG_FRONTEND') {
+    // 3D / Three.js / WebGL / Canvas -> Liam (ag_11), Zoe (ag_14), Ben (ag_17)
+    if (p.includes('3d') || p.includes('three') || p.includes('shader') || p.includes('webgl') || p.includes('kamera') || p.includes('canvas')) {
+      return [
+        pcs.find(x => x.name === 'Liam') || pcs[0],
+        pcs.find(x => x.name === 'Zoe') || pcs[3],
+        pcs.find(x => x.name === 'Ben') || pcs[6]
+      ];
+    }
+    // Audio / Voice / Sounds -> Finn (ag_15), Noah (ag_13), Ben (ag_17)
+    if (p.includes('sound') || p.includes('audio') || p.includes('voice') || p.includes('sprache') || p.includes('synthesizer')) {
+      return [
+        pcs.find(x => x.name === 'Finn') || pcs[4],
+        pcs.find(x => x.name === 'Noah') || pcs[2],
+        pcs.find(x => x.name === 'Ben') || pcs[6]
+      ];
+    }
+    // Default Frontend: Maya (CSS/Slate), Noah (DOM/HUD), Zoe (Animation)
+    return [
+      pcs.find(x => x.name === 'Maya') || pcs[1],
+      pcs.find(x => x.name === 'Noah') || pcs[2],
+      pcs.find(x => x.name === 'Zoe') || pcs[3]
+    ];
+  }
+
+  if (deptCode === 'EG_ARCHITEKTUR') {
+    // Prompts / Antigravity -> Nadia (ag_07), Henrik (ag_08), Clara (ag_09)
+    if (p.includes('prompt') || p.includes('antigravity') || p.includes('instruktion')) {
+      return [
+        pcs.find(x => x.name === 'Nadia') || pcs[4],
+        pcs.find(x => x.name === 'Henrik') || pcs[5],
+        pcs.find(x => x.name === 'Clara') || pcs[6]
+      ];
+    }
+    // BWL / Kalkulation / Aufwand -> Svenja (ag_05), Lukas (ag_06), Henrik (ag_08)
+    if (p.includes('bwl') || p.includes('kosten') || p.includes('kalkulation') || p.includes('netzplan') || p.includes('wirtschaft')) {
+      return [
+        pcs.find(x => x.name === 'Svenja') || pcs[2],
+        pcs.find(x => x.name === 'Lukas') || pcs[3],
+        pcs.find(x => x.name === 'Henrik') || pcs[5]
+      ];
+    }
+    // Default Architektur: Elena (Requirements), Viktor (Datenmodell), Lukas (Tech-Stack)
+    return [
+      pcs.find(x => x.name === 'Elena') || pcs[0],
+      pcs.find(x => x.name === 'Viktor') || pcs[1],
+      pcs.find(x => x.name === 'Lukas') || pcs[3]
+    ];
+  }
+
+  if (deptCode === 'UG_SERVER') {
+    // Subnetting / IP / CIDR / VLAN / Routing -> Milan (ag_27), Nora (ag_31), Rico (ag_32)
+    if (p.includes('subnet') || p.includes('ip') || p.includes('cidr') || p.includes('vlsm') || p.includes('vlan') || p.includes('netzwerk') || p.includes('routing')) {
+      return [
+        pcs.find(x => x.name === 'Milan') || pcs[0],
+        pcs.find(x => x.name === 'Nora') || pcs[4],
+        pcs.find(x => x.name === 'Rico') || pcs[5]
+      ];
+    }
+    // Security / PIN / Sandbox / Firewall -> Freya (ag_28), Nora (ag_31), Rico (ag_32)
+    if (p.includes('security') || p.includes('pin') || p.includes('sandbox') || p.includes('auth') || p.includes('firewall')) {
+      return [
+        pcs.find(x => x.name === 'Freya') || pcs[1],
+        pcs.find(x => x.name === 'Nora') || pcs[4],
+        pcs.find(x => x.name === 'Rico') || pcs[5]
+      ];
+    }
+    // Default Server: Milan (Netzwerk), Anton (DevOps), Yuna (Optimizer)
+    return [
+      pcs.find(x => x.name === 'Milan') || pcs[0],
+      pcs.find(x => x.name === 'Anton') || pcs[2],
+      pcs.find(x => x.name === 'Yuna') || pcs[6]
+    ];
+  }
+
+  return pcs.slice(0, 3);
 }
 
 export class WorkflowOrchestrator {
@@ -659,8 +788,16 @@ Antworte AUSSCHLIESSLICH als valides JSON:
 
     } finally {
       this.setDepartmentBusy(dept.id, false);
-      if (typeof window !== 'undefined' && typeof window.processNextTaskInQueue === 'function') {
-        window.processNextTaskInQueue();
+      if (typeof window !== 'undefined') {
+        if (typeof window.updateAgentStatus === 'function') {
+          if (pc1) window.updateAgentStatus(pc1.id, 'ready');
+          if (pc2) window.updateAgentStatus(pc2.id, 'ready');
+          if (pc3) window.updateAgentStatus(pc3.id, 'ready');
+          if (dept.chef_agent) window.updateAgentStatus(dept.chef_agent.id, 'ready');
+        }
+        if (typeof window.processNextTaskInQueue === 'function') {
+          window.processNextTaskInQueue();
+        }
       }
     }
   }
@@ -919,47 +1056,52 @@ Antworte als valides JSON:
 
     this.setDepartmentBusy(dept.id, true);
 
+    let pc1, pc2, pc3;
     try {
+      const selectedPcs = selectSpecialistsForTask(dept, taskObject.userPrompt);
+      pc1 = selectedPcs[0] || (dept.specialist_pcs && dept.specialist_pcs[0]) || { name: 'Jonas', title: 'Python & Algorithm Dev', role: 'pc_agent' };
+      pc2 = selectedPcs[1] || (dept.specialist_pcs && dept.specialist_pcs[1]) || { name: 'Tim', title: 'Parser & Validation Dev', role: 'pc_agent' };
+      pc3 = selectedPcs[2] || (dept.specialist_pcs && dept.specialist_pcs[2]) || { name: 'Sarah', title: 'Node.js & API Engineer', role: 'pc_agent' };
+
       const stage2Status = `2/4: [${dept.name}] – Fach-Spezialisten erarbeiten Komplettlösung...`;
-      onStatusUpdate(stage2Status, dept.name, `3 Spezial-Agenten von ${dept.name} bearbeiten die Aufgabe parallel via Promise.all()...`);
+      onStatusUpdate(stage2Status, dept.name, `${pc1.name}, ${pc2.name} und ${pc3.name} bearbeiten die Aufgabe parallel via Promise.all()...`);
       if (typeof window !== 'undefined') {
         if (typeof window.updateActiveQueueItemStatus === 'function') window.updateActiveQueueItemStatus(stage2Status);
         if (typeof window.update3DStudioState === 'function') window.update3DStudioState('stage2', targetFloor);
         if (typeof window.setStageIn3D === 'function') window.setStageIn3D(2);
-        dept.specialist_pcs.forEach(pc => {
-          if (typeof window.updateAgentStatus === 'function') {
-            window.updateAgentStatus(pc.id, 'working', 'Erarbeitet Fachbeitrag...');
-          }
-        });
+        if (typeof window.updateAgentStatus === 'function') {
+          window.updateAgentStatus(pc1.id, 'working', `Erstellt Lösung: ${taskObject.title || taskObject.summary}`);
+          window.updateAgentStatus(pc2.id, 'working', `Prüft Kernaussagen & Synthese`);
+          window.updateAgentStatus(pc3.id, 'working', `Analysiert Stolpersteine & Edge-Cases`);
+          if (dept.chef_agent) window.updateAgentStatus(dept.chef_agent.id, 'working', `Koordiniert Fachteam`);
+        }
       }
-
-      const pcs = dept.specialist_pcs || [];
-      const pc1 = pcs[0] || { name: 'Lösungs-Experte', easy_explanation: 'Schritt-für-Schritt Ausarbeitung & Code' };
-      const pc2 = pcs[1] || { name: 'Synthese-Experte', easy_explanation: 'Kompakte Zusammenfassung & Kernaussagen' };
-      const pc3 = pcs[2] || { name: 'Qualitäts-Experte', easy_explanation: 'Stolpersteine, Best Practices & Sicherheit' };
 
       // 3 Fach-Agenten bearbeiten parallel via Promise.all()
       const [solutionPart, summaryPart, pitfallsPart] = await Promise.all([
         queryLLM(
-          `Du bist ${pc1.name}, Lösungs-Experte in der Abteilung "${dept.name}".
+          `Du bist ${pc1.name}, ${pc1.title || 'Spezialist'} in der Abteilung "${dept.name}".
 Aufgabe: Erstelle eine exakte, vollständige Schritt-für-Schritt-Lösung, den lauffähigen Code/Skript oder die genaue Berechnung für folgende Anforderung:
 "${taskObject.userPrompt}".
+Nenne zu Beginn deines Beitrags deinen Namen (${pc1.name}) und dein Fachgebiet (${pc1.title || pc1.focus}).
 Strukturiere die Antwort klar mit Markdown-Überschriften und Code-Blöcken.`,
           taskObject.userPrompt,
           false
         ),
         queryLLM(
-          `Du bist ${pc2.name}, Synthese-Experte in der Abteilung "${dept.name}".
+          `Du bist ${pc2.name}, ${pc2.title || 'Spezialist'} in der Abteilung "${dept.name}".
 Aufgabe: Erstelle eine prägnante Zusammenfassung (Executive Summary) und 3-4 zentrale Merksätze für folgende Anforderung:
 "${taskObject.userPrompt}".
+Nenne zu Beginn deines Beitrags deinen Namen (${pc2.name}) und dein Fachgebiet (${pc2.title || pc2.focus}).
 Verzichte auf Floskeln, bringe die Kernaussage auf den Punkt.`,
           taskObject.userPrompt,
           false
         ),
         queryLLM(
-          `Du bist ${pc3.name}, Qualitäts- & Sicherheits-Experte in der Abteilung "${dept.name}".
+          `Du bist ${pc3.name}, ${pc3.title || 'Spezialist'} in der Abteilung "${dept.name}".
 Aufgabe: Nenne die 3 wichtigsten typischen Stolpersteine, Best Practices und Sicherheits- oder Edge-Case-Aspekte für folgende Anforderung:
-"${taskObject.userPrompt}".`,
+"${taskObject.userPrompt}".
+Nenne zu Beginn deines Beitrags deinen Namen (${pc3.name}) und dein Fachgebiet (${pc3.title || pc3.focus}).`,
           taskObject.userPrompt,
           false
         )
@@ -973,23 +1115,23 @@ Aufgabe: Nenne die 3 wichtigsten typischen Stolpersteine, Best Practices und Sic
         if (typeof window.setStageIn3D === 'function') window.setStageIn3D(3);
       }
 
-      const consolidationPrompt = `Du bist Trevor, Studio Director, unterstützt von ${dept.chef_agent.name} (${dept.name}).
+      const consolidationPrompt = `Du bist Trevor, Studio Director, unterstützt von Abteilungsleiter ${dept.chef_agent.name} (${dept.name}).
 Führe die drei Bausteine deiner Spezial-Agenten zu einer perfekten, übersichtlichen und direkt verwendbaren Gesamtlösung zusammen.
 
-BAUSTEIN 1 (LÖSUNG/CODE/BERECHNUNG von ${pc1.name}):
+BEITRAG 1 (LÖSUNG/CODE von ${pc1.name} – ${pc1.title}):
 ${solutionPart}
 
-BAUSTEIN 2 (ZUSAMMENFASSUNG von ${pc2.name}):
+BEITRAG 2 (ZUSAMMENFASSUNG von ${pc2.name} – ${pc2.title}):
 ${summaryPart}
 
-BAUSTEIN 3 (STOLPERSTEINE & BEST PRACTICES von ${pc3.name}):
+BEITRAG 3 (BEST PRACTICES & EDGE-CASES von ${pc3.name} – ${pc3.title}):
 ${pitfallsPart}
 
 ANFORDERUNG:
 Erzeuge ein valides JSON-Objekt mit:
 1. "spokenSummary": 1-2 prägnante Sätze im J.A.R.V.I.S.-Stil auf Deutsch, die inhaltlich zusammenfassen, WAS gelöst wurde.
 2. "executiveSummary": Kompakte Zusammenfassung der Kernaussage.
-3. "fullSolutionMarkdown": Die vollständige, wunderschön formatierte Gesamtlösung mit allen Abschnitten (📋 Executive Summary, 🛠️ Schritt-für-Schritt Lösung / Code, 💡 Best Practices & Stolpersteine).
+3. "fullSolutionMarkdown": Die vollständige, wunderschön formatierte Gesamtlösung mit allen Abschnitten (📋 Executive Summary, 🛠️ Schritt-für-Schritt Lösung / Code von ${pc1.name}, 💡 Best Practices & Stolpersteine von ${pc3.name}, 🔍 Freigabe durch ${dept.chef_agent.name}).
 
 Antworte AUSSCHLIESSLICH als valides JSON:
 {
@@ -1005,12 +1147,12 @@ Antworte AUSSCHLIESSLICH als valides JSON:
         console.warn('[WorkflowOrchestrator] Fehler bei Konsolidierung von GENERAL_AI_TASK:', err);
       }
 
-      const sPart = solutionPart || `### Lösungsausarbeitung für: ${taskObject.userPrompt}\n\`\`\`javascript\n// Implementierung durch ${pc1.name}\nexport function executeSolution() {\n  return { status: "ready", processed: true, timestamp: Date.now() };\n}\n\`\`\``;
-      const sumPart = summaryPart || `Die Anforderung "${taskObject.userPrompt}" wurde durch das Fachteam analysiert und eine modulare Implementierung bereitgestellt.`;
-      const pitPart = pitfallsPart || `- Eingabevalidierung zur Absicherung vor ungültigen Typen sicherstellen.\n- Fehlerbehandlung für Randfälle und asynchrone Fehlerketten etablieren.\n- Auf synchrone Blockierung im Hauptprozess verzichten.`;
+      const sPart = solutionPart || `### 🛠️ Lösungsausarbeitung durch ${pc1.name} (${pc1.title})\n\`\`\`javascript\n// Implementierung durch ${pc1.name} (${dept.name})\nexport function executeSolution() {\n  return { status: "ready", processed: true, specialist: "${pc1.name}", timestamp: Date.now() };\n}\n\`\`\``;
+      const sumPart = summaryPart || `Die Anforderung "${taskObject.userPrompt}" wurde durch ${pc2.name} (${pc2.title}) analysiert und strukturiert.`;
+      const pitPart = pitfallsPart || `- [${pc3.name}]: Eingabevalidierung zur Absicherung vor ungültigen Typen sicherstellen.\n- [${pc3.name}]: Fehlerbehandlung für Randfälle und asynchrone Fehlerketten etablieren.\n- [${dept.chef_agent.name}]: Abteilungs-Audit erfolgreich abgeschlossen.`;
 
       const fullMarkdown = consolidated?.fullSolutionMarkdown || `## 📋 Zusammenfassung\n${sumPart}\n\n## 🛠️ Schritt-für-Schritt Lösung\n${sPart}\n\n## 💡 Best Practices & Stolpersteine\n${pitPart}`;
-      const spokenSummary = consolidated?.spokenSummary || `Sir, die Lösung für Ihre Anfrage bezüglich "${taskObject.title || 'Aufgabe'}" wurde durch die Spezialisten von ${dept.name} ausgearbeitet und liegt im Action-Center bereit.`;
+      const spokenSummary = consolidated?.spokenSummary || `Sir, die Lösung für Ihre Anfrage bezüglich "${taskObject.title || 'Aufgabe'}" wurde durch die Spezialisten von ${dept.name} (${pc1.name}, ${pc2.name}) ausgearbeitet und liegt im Action-Center bereit.`;
 
       const actionId = 'act_sol_' + Date.now();
       const cardData = {
@@ -1062,8 +1204,16 @@ Antworte AUSSCHLIESSLICH als valides JSON:
 
     } finally {
       this.setDepartmentBusy(dept.id, false);
-      if (typeof window !== 'undefined' && typeof window.processNextTaskInQueue === 'function') {
-        window.processNextTaskInQueue();
+      if (typeof window !== 'undefined') {
+        if (typeof window.updateAgentStatus === 'function') {
+          if (pc1) window.updateAgentStatus(pc1.id, 'ready');
+          if (pc2) window.updateAgentStatus(pc2.id, 'ready');
+          if (pc3) window.updateAgentStatus(pc3.id, 'ready');
+          if (dept.chef_agent) window.updateAgentStatus(dept.chef_agent.id, 'ready');
+        }
+        if (typeof window.processNextTaskInQueue === 'function') {
+          window.processNextTaskInQueue();
+        }
       }
     }
   }
