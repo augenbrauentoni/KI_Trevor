@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TREVOR – AI Software Studio & Multi-Agent Command Center</title>
-  <!-- Cache-Busting Version v=4.0 laut Anforderung -->
-  <link rel="stylesheet" href="./styles.css?v=4.0">
-  <link rel="stylesheet" href="./style.css?v=4.0">
+  <!-- Cache-Busting Version v=6.0 laut Anforderung -->
+  <link rel="stylesheet" href="./styles.css?v=6.0">
+  <link rel="stylesheet" href="./style.css?v=6.0">
   <!-- Three.js & OrbitControls (Einziger autoritativer CDN-Import im <head>) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -95,50 +95,64 @@
   <aside id="slate-icon-sidebar" class="slate-icon-sidebar">
     <div class="sidebar-top-icons">
       <!-- Trevor Logo / Arc-Orb Badge -->
-      <div class="sidebar-brand-orb" id="btn-sidebar-brand" title="TREVOR MK-VII · Slate J.A.R.V.I.S. Studio">
+      <div class="sidebar-brand-orb" id="btn-sidebar-brand" title="TREVOR MK-VII · Slate J.A.R.V.I.S. Studio" data-tooltip="TREVOR MK-VII Zentrale">
         <span class="brand-text">TRVR</span>
       </div>
 
-      <!-- Neuer Auftrag an Trevor (Terminal öffnen) -->
-      <button id="btn-sidebar-open-trevor" class="sidebar-icon-btn active-hover" title="Neuen Auftrag erstellen / Trevor Terminal">
-        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-      </button>
-
-      <!-- Task-Warteschlange Panel ein-/ausklappen -->
-      <button id="ctrl-task-queue-toggle" class="sidebar-icon-btn badge-parent" title="Task-Warteschlange anzeigen/verbergen">
+      <!-- 1. Task-Queue -->
+      <button id="nav-task-queue" class="sidebar-icon-btn badge-parent" data-tooltip="Task-Warteschlange & aktive Aufträge" title="Task-Warteschlange & aktive Aufträge">
         <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
         <span id="queue-badge-count" class="sidebar-badge-count">0</span>
       </button>
 
-      <!-- User Action-Center Button -->
-      <button id="btn-open-action-center" class="sidebar-icon-btn action-center-toggle-btn badge-parent" title="User Action-Center öffnen">
-        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        <span id="action-center-badge" class="sidebar-badge-count">0</span>
+      <!-- 2. Schnellstart Arbeits-Modi -->
+      <button id="nav-modes" class="sidebar-icon-btn" data-tooltip="Auftrags-Modus direkt starten" title="Auftrags-Modus direkt starten">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
       </button>
 
-      <!-- Chef-Agenten Berichte & Audit -->
-      <button id="btn-sidebar-chef-reports" class="sidebar-icon-btn" title="Chef-Agenten Berichte & Audit">
-        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+      <!-- 3. Abteilungen & 33 Agenten -->
+      <button id="nav-agents" class="sidebar-icon-btn" data-tooltip="Abteilungen & 33 Agenten direkt ansteuern" title="Abteilungen & 33 Agenten direkt ansteuern">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </button>
+
+      <!-- 4. Cloud-Gedächtnis & RAG -->
+      <button id="nav-memory" class="sidebar-icon-btn" data-tooltip="Supabase Cloud-Gedächtnis & Code-Wissen" title="Supabase Cloud-Gedächtnis & Code-Wissen">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      </button>
+
+      <!-- 5. KI-Engine & Sprache -->
+      <button id="nav-settings" class="sidebar-icon-btn" data-tooltip="LLM-Engine (Qwen / Gemini) & J.A.R.V.I.S. Sprache" title="LLM-Engine (Qwen / Gemini) & J.A.R.V.I.S. Sprache">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+
+      <!-- 6. 3D-Kamera & Presets -->
+      <button id="nav-camera" class="sidebar-icon-btn" data-tooltip="3D-Kamera & Arena-Perspektiven" title="3D-Kamera & Arena-Perspektiven">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
       </button>
     </div>
 
     <div class="sidebar-bottom-icons">
+      <!-- User Action-Center Button -->
+      <button id="btn-open-action-center" class="sidebar-icon-btn action-center-toggle-btn badge-parent" data-tooltip="User Action-Center Freigaben" title="User Action-Center Freigaben">
+        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span id="action-center-badge" class="sidebar-badge-count">0</span>
+      </button>
+
       <!-- Web Audio Sound Toggle -->
-      <button id="btn-toggle-sound" class="sidebar-icon-btn" title="Synthesizer Sound Effekte an/aus">
+      <button id="btn-toggle-sound" class="sidebar-icon-btn" data-tooltip="Synthesizer Sound Effekte an/aus" title="Synthesizer Sound Effekte an/aus">
         <svg class="ui-icon" id="sound-toggle-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
       </button>
 
       <!-- JARVIS Voice Toggle -->
-      <button id="btn-toggle-jarvis-voice" class="sidebar-icon-btn" title="J.A.R.V.I.S. Sprachausgabe an/aus">
+      <button id="btn-toggle-jarvis-voice" class="sidebar-icon-btn" data-tooltip="J.A.R.V.I.S. Sprachausgabe an/aus" title="J.A.R.V.I.S. Sprachausgabe an/aus">
         <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
       </button>
 
-      <!-- Settings Dialog -->
-      <button id="btn-open-settings" class="sidebar-icon-btn" title="System- & KI-Einstellungen">
-        <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-      </button>
-
       <!-- Kompatibilitäts-Elemente (Versteckt, verhindern NullPointer) -->
+      <button id="btn-sidebar-open-trevor" style="display: none;"></button>
+      <button id="ctrl-task-queue-toggle" style="display: none;"></button>
+      <button id="btn-sidebar-chef-reports" style="display: none;"></button>
+      <button id="btn-open-settings" style="display: none;"></button>
       <button id="btn-sidebar-trevor-terminal" style="display: none;"></button>
       <button id="btn-sidebar-task-queue" style="display: none;"></button>
       <button id="btn-resume-limit" style="display: none;"></button>
@@ -150,11 +164,11 @@
   </aside>
 
   <!-- =========================================================================
-       1b. SLATE-HUD: EINKLAPPBARES TASK-WARTESCHLANGE PANEL (NEBEN DER SIDEBAR)
+       SUB-DRAWER 1: TASK-WARTESCHLANGE (#drawer-task-queue / #task-queue-panel)
        ========================================================================= -->
-  <div id="task-queue-panel" class="task-queue-panel" style="display: none;">
-    <div class="task-queue-header">
-      <div class="task-queue-title">
+  <div id="drawer-task-queue" class="sub-drawer-panel" style="display: none;">
+    <div class="sub-drawer-header">
+      <div class="sub-drawer-title">
         <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
         <span>TASK-WARTESCHLANGE</span>
       </div>
@@ -163,10 +177,10 @@
           <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
           <span>Zentrale</span>
         </button>
-        <button id="task-queue-close-btn" class="ctrl-btn panel-close-btn" title="Schließen">✕</button>
+        <button id="task-queue-close-btn" class="sub-drawer-close" data-close-drawer="drawer-task-queue" title="Schließen">✕</button>
       </div>
     </div>
-    <div class="task-queue-body">
+    <div class="sub-drawer-body">
       <div class="task-queue-input-box">
         <input type="text" id="task-queue-new-input" placeholder="Neuen Auftrag in Queue einreihen..." autocomplete="off" />
         <button id="btn-add-to-queue" class="btn-queue-add" title="Auftrag einreihen">
@@ -191,6 +205,230 @@
         <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
         <span>Zurück zur Zentrale</span>
       </button>
+    </div>
+  </div>
+  <!-- Kompatibilitäts-Alias für bestehende IDs -->
+  <div id="task-queue-panel" style="display: none;"></div>
+
+  <!-- =========================================================================
+       SUB-DRAWER 2: SCHNELLSTART ARBEITS-MODI (#drawer-modes)
+       ========================================================================= -->
+  <div id="drawer-modes" class="sub-drawer-panel" style="display: none;">
+    <div class="sub-drawer-header">
+      <div class="sub-drawer-title">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span>SCHNELLSTART ARBEITS-MODI</span>
+      </div>
+      <button class="sub-drawer-close" data-close-drawer="drawer-modes" title="Schließen">✕</button>
+    </div>
+    <div class="sub-drawer-body">
+      <p class="sub-drawer-desc">Wähle einen spezifischen Modus für deinen nächsten Arbeitsauftrag:</p>
+      
+      <div class="drawer-mode-prompt-box">
+        <label class="sub-drawer-label">Auftrags-Beschreibung / Prompt:</label>
+        <textarea id="drawer-mode-prompt-input" class="prompt-textarea" style="min-height: 75px; margin-top: 4px;" placeholder="Beschreibe dein Vorhaben oder Feature..."></textarea>
+      </div>
+
+      <!-- Modus A -->
+      <div class="mode-select-card" id="card-mode-prompt">
+        <div class="mode-card-header">
+          <span class="mode-badge badge-prompt">MODUS A</span>
+          <span class="mode-title">Prompt-Optimierung & Roadmap</span>
+        </div>
+        <p class="mode-desc">4-Stufen Antigravity Master-Plan mit interaktiven [JA]/[NEIN] Checklisten und Dateipfad-Spezifikationen.</p>
+        <button id="btn-start-mode-prompt" class="btn-mode-trigger">
+          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          <span>Als PROMPT_REQUEST starten</span>
+        </button>
+      </div>
+
+      <!-- Modus B -->
+      <div class="mode-select-card" id="card-mode-audit">
+        <div class="mode-card-header">
+          <span class="mode-badge badge-audit">MODUS B</span>
+          <span class="mode-title">Code-Audit & Qualitätsprüfung</span>
+        </div>
+        <p class="mode-desc">Umfassende Prüfung auf ES-Modul-Standards, Sicherheitslücken, Redundanzen und Architektur-Widersprüche.</p>
+        <button id="btn-start-mode-audit" class="btn-mode-trigger">
+          <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <span>Als IMPROVEMENT_AUDIT starten</span>
+        </button>
+      </div>
+
+      <!-- Modus C -->
+      <div class="mode-select-card" id="card-mode-general">
+        <div class="mode-card-header">
+          <span class="mode-badge badge-general">MODUS C</span>
+          <span class="mode-title">Allgemeine KI-Aufgabe & Code-Lösung</span>
+        </div>
+        <p class="mode-desc">Direkte modulare Problemlösung und Codeerzeugung mit vollem Fokus der jeweiligen Spezialabteilung.</p>
+        <button id="btn-start-mode-general" class="btn-mode-trigger">
+          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <span>Als GENERAL_AI_TASK starten</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       SUB-DRAWER 3: ABTEILUNGEN & 33 AGENTEN (#drawer-agents)
+       ========================================================================= -->
+  <div id="drawer-agents" class="sub-drawer-panel" style="display: none;">
+    <div class="sub-drawer-header">
+      <div class="sub-drawer-title">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>ABTEILUNGEN & 33 AGENTEN</span>
+      </div>
+      <button class="sub-drawer-close" data-close-drawer="drawer-agents" title="Schließen">✕</button>
+    </div>
+    <div class="sub-drawer-body">
+      <div class="sub-drawer-search-box">
+        <input type="text" id="drawer-agents-search" placeholder="Abteilung, Agent oder Rolle suchen..." autocomplete="off">
+      </div>
+      <div id="drawer-agents-list" class="drawer-agents-list"></div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       SUB-DRAWER 4: CLOUD-GEDÄCHTNIS & RAG (#drawer-memory)
+       ========================================================================= -->
+  <div id="drawer-memory" class="sub-drawer-panel" style="display: none;">
+    <div class="sub-drawer-header">
+      <div class="sub-drawer-title">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        <span>CLOUD-GEDÄCHTNIS (SUPABASE RAG)</span>
+      </div>
+      <button class="sub-drawer-close" data-close-drawer="drawer-memory" title="Schließen">✕</button>
+    </div>
+    <div class="sub-drawer-body">
+      <div class="memory-status-badge">
+        <span class="memory-dot"></span>
+        <span>Supabase Long-Term RAG aktiv</span>
+      </div>
+
+      <!-- RAG Wissenssuche -->
+      <div class="drawer-memory-section">
+        <span class="sub-drawer-label">RAG-Wissenssuche:</span>
+        <div class="drawer-search-row">
+          <input type="text" id="drawer-memory-search-input" placeholder="Suchbegriff (z.B. auth, css, websocket)...">
+          <button id="btn-drawer-memory-search" class="ctrl-btn">Suchen</button>
+        </div>
+        <div id="drawer-memory-search-results" class="drawer-memory-results">
+          <div class="memory-empty-hint">Gib einen Suchbegriff ein, um das Archiv zu durchsuchen.</div>
+        </div>
+      </div>
+
+      <!-- Neue Regel hinzufügen -->
+      <div class="drawer-memory-section">
+        <span class="sub-drawer-label">Neue Regel / Best Practice speichern:</span>
+        <input type="text" id="drawer-memory-new-tags" class="search-input" style="width: 100%; margin-top: 4px;" placeholder="Tags (z.B. architecture, clean-code)...">
+        <textarea id="drawer-memory-new-rule" class="prompt-textarea" style="min-height: 60px; margin-top: 6px;" placeholder="Regel oder Implementierungs-Vorgabe..."></textarea>
+        <button id="btn-drawer-memory-save-rule" class="btn-submit-task" style="margin-top: 6px; width: 100%; justify-content: center;">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>Regel im Gedächtnis speichern</span>
+        </button>
+      </div>
+
+      <!-- Autonomes Training -->
+      <div class="drawer-memory-section">
+        <span class="sub-drawer-label">Autonomer Idle-Trainer:</span>
+        <button id="btn-drawer-trigger-training" class="ctrl-btn" style="width: 100%; justify-content: center;">
+          <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <span>Lernzyklus manuell anstoßen</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       SUB-DRAWER 5: KI-ENGINE & SPRACHE (#drawer-settings)
+       ========================================================================= -->
+  <div id="drawer-settings" class="sub-drawer-panel" style="display: none;">
+    <div class="sub-drawer-header">
+      <div class="sub-drawer-title">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>KI-ENGINE & SPRACHE</span>
+      </div>
+      <button class="sub-drawer-close" data-close-drawer="drawer-settings" title="Schließen">✕</button>
+    </div>
+    <div class="sub-drawer-body">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label class="sub-drawer-label">Aktive KI-Engine:</label>
+        <select id="drawer-settings-llm-mode" class="search-input" style="width: 100%;">
+          <option value="gemini">Google Gemini 2.5 Flash (Cloud API)</option>
+          <option value="ollama">Ollama Local Bridge (Qwen 2.5 3B)</option>
+        </select>
+      </div>
+
+      <div class="drawer-proxy-info" style="margin-top: 8px;">
+        <strong>Cloud-Proxy aktiv:</strong> <code>process.env.GEMINI_API_KEY</code> wird auf dem Node-Server geschützt verarbeitet.
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+        <label class="sub-drawer-label">J.A.R.V.I.S. Audio-Interface:</label>
+        <button id="btn-drawer-test-voice" class="btn-submit-task" style="width: 100%; justify-content: center;">
+          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          <span>J.A.R.V.I.S. Audio-Matrix testen</span>
+        </button>
+        <button id="btn-drawer-toggle-sound" class="ctrl-btn" style="width: 100%; justify-content: center;">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <span>Synthesizer Sound Effekte umschalten</span>
+        </button>
+      </div>
+
+      <button id="btn-drawer-save-settings" class="btn-submit-task" style="margin-top: 14px; width: 100%; justify-content: center;">
+        Einstellungen speichern & übernehmen
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       SUB-DRAWER 6: 3D-KAMERA & PRESETS (#drawer-camera)
+       ========================================================================= -->
+  <div id="drawer-camera" class="sub-drawer-panel" style="display: none;">
+    <div class="sub-drawer-header">
+      <div class="sub-drawer-title">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+        <span>3D-KAMERA & ARENA-PRESETS</span>
+      </div>
+      <button class="sub-drawer-close" data-close-drawer="drawer-camera" title="Schließen">✕</button>
+    </div>
+    <div class="sub-drawer-body">
+      <p class="sub-drawer-desc">Schnell-Perspektiven für das Amphitheater:</p>
+
+      <div class="camera-presets-grid">
+        <button id="cam-btn-arena" class="cam-preset-btn active">
+          <span class="cam-preset-title">Gesamt-Arena 45°</span>
+          <span class="cam-preset-sub">Isometrischer Überblick (0, 22, 28)</span>
+        </button>
+        <button id="cam-btn-jarvis" class="cam-preset-btn">
+          <span class="cam-preset-title">Zentrum / Holo-Jarvis</span>
+          <span class="cam-preset-sub">Fokus auf 2500-Partikel-Kugelhologramm</span>
+        </button>
+        <button id="cam-btn-eg" class="cam-preset-btn">
+          <span class="cam-preset-title">EG Galerie-Rundflug</span>
+          <span class="cam-preset-sub">Software-Entwicklungsplätze & Tische</span>
+        </button>
+        <button id="cam-btn-ug" class="cam-preset-btn">
+          <span class="cam-preset-title">UG Server-Grube</span>
+          <span class="cam-preset-sub">Tieffeld-Arena & blinkende Server-Racks</span>
+        </button>
+        <button id="cam-btn-autorotate" class="cam-preset-btn">
+          <span class="cam-preset-title">Auto-Rotation An/Aus</span>
+          <span class="cam-preset-sub">Sanfter 360°-Kameraflug um die Arena</span>
+        </button>
+      </div>
+
+      <div class="camera-fine-controls" style="margin-top: 14px;">
+        <span class="sub-drawer-label">Feinjustierung:</span>
+        <div style="display: flex; gap: 6px; margin-top: 6px;">
+          <button id="cam-btn-zoomin" class="ctrl-btn" style="flex: 1;">Zoom +</button>
+          <button id="cam-btn-zoomout" class="ctrl-btn" style="flex: 1;">Zoom −</button>
+          <button id="cam-btn-rotleft" class="ctrl-btn" style="flex: 1;">Drehen ↶</button>
+          <button id="cam-btn-rotright" class="ctrl-btn" style="flex: 1;">Drehen ↷</button>
+          <button id="cam-btn-reset" class="ctrl-btn" style="flex: 1;">Reset</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -252,7 +490,23 @@
   </div>
 
   <!-- =========================================================================
-       4. SLATE-HUD: UNTEN MITTE – KOMPAKTES STEUERUNGS-DOCK
+       4a. SLATE-HUD: SCHWEBENDE PROMPT-EINGABELEISTE (TASK-QUEUE SCHNELLSTARTER)
+       ========================================================================= -->
+  <div id="trevor-prompt-bar" class="trevor-prompt-bar">
+    <div class="trevor-prompt-input-wrapper">
+      <span class="prompt-bar-icon">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+      </span>
+      <input type="text" id="trevor-prompt-input" class="trevor-prompt-input" placeholder="Neuen Auftrag an Trevor übergeben..." autocomplete="off">
+    </div>
+    <button id="trevor-submit-btn" class="trevor-submit-btn" title="Auftrag absenden (Queue)">
+      <span>Senden</span>
+      <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </button>
+  </div>
+
+  <!-- =========================================================================
+       4b. SLATE-HUD: UNTEN MITTE – KOMPAKTES STEUERUNGS-DOCK
        ========================================================================= -->
   <div id="slate-bottom-dock" class="canvas-controls-overlay">
     <!-- Mikrofon-Icon (Sprachsteuerung / STT) -->
@@ -741,7 +995,7 @@
     </div>
   </div>
 
-  <!-- Skripte mit defer-Absicherung gegen blockierte UI-Felder (Cache-Busting v=4.0) -->
-  <script defer type="module" src="./app.js?v=4.0"></script>
+  <!-- Skripte mit defer-Absicherung gegen blockierte UI-Felder (Cache-Busting v=6.0) -->
+  <script defer type="module" src="./app.js?v=6.0"></script>
 </body>
 </html>

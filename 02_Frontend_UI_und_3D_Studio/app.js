@@ -68,6 +68,9 @@ const state = {
 if (typeof window !== 'undefined') {
   window.trevorAudio = window.trevorAudio || { enabled: true, ctx: null };
   window.pendingTasksMap = window.pendingTasksMap || {};
+  window.isOrchestratorBusy = false;
+  window.trevorTaskQueue = state.taskQueue;
+  window.taskQueue = state.taskQueue;
 }
 
 // =============================================================================
@@ -916,240 +919,15 @@ async function dispatchDirectDepartmentInstruction() {
 // =============================================================================
 async function dispatchNewTask() {
   const promptInput = document.getElementById('task-prompt-input');
-  const userPrompt = promptInput.value.trim();
+  const userPrompt = (promptInput ? promptInput.value : '').trim();
 
   if (!userPrompt) {
     alert('Bitte gib zuerst eine Beschreibung deines Software-Auftrags ein!');
-    return;
+    return null;
   }
 
-  stopIdleTraining();
-
-  // 1. Sofort in Task-Queue einreihen mit Status "1/4: Trevor analysiert..."
-  const queueId = 'queue_' + Date.now();
-  const queueItem = {
-    id: queueId,
-    text: userPrompt,
-    title: userPrompt.length > 50 ? userPrompt.slice(0, 50) + '...' : userPrompt,
-    status: '1/4: Trevor analysiert...',
-    createdAt: new Date().toLocaleTimeString()
-  };
-  state.taskQueue.unshift(queueItem);
-  if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
-  try {
-    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
-  } catch {}
-  renderTaskQueueUI();
-
-  const monitorEl = document.getElementById('live-activity-monitor');
-  if (monitorEl) {
-    monitorEl.innerText = '1/4: Trevor analysiert...';
-  }
-
-  document.getElementById('section-task-input').style.display = 'none';
-  document.getElementById('section-task-progress').style.display = 'flex';
-  document.getElementById('section-decision').style.display = 'none';
-
-  updateTrackerStage(1);
-  setStageIn3D(1);
-  updateCheckpointBadge('Berechnung läuft (Stufe 1/4: Trevor Dispatcher)...', false);
-
-  const taskId = 'task_' + Date.now();
-  state.activeTask = {
-    id: taskId,
-    user_prompt: userPrompt,
-    selected_departments: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    current_stage: '1_fachteam',
-    status: 'running',
-    checkpoint_data: { pc_outputs: {}, chef_outputs: {}, structured_steps: [] },
-    trevor_summary: '',
-    antigravity_prompt: ''
-  };
-
-  saveLocalCheckpoint();
-
-  const progressBar = document.getElementById('progress-bar-fill');
-  const percentLabel = document.getElementById('progress-percent-label');
-  const statusLabel = document.getElementById('progress-status-label');
-  const activeAgentLabel = document.getElementById('progress-active-agent');
-
-  try {
-    const finalResult = await orchestrator.executeFullWorkflow(userPrompt, (stageName, agentName, message) => {
-      // Live-Update in Warteschlange & Activity Monitor
-      queueItem.status = stageName;
-      renderTaskQueueUI();
-      try {
-        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
-      } catch {}
-
-      if (monitorEl) {
-        monitorEl.innerText = `${stageName} ${agentName ? `[${agentName}]` : ''} ${message || ''}`.trim();
-      }
-
-      if (stageName === 'routing') {
-        if (statusLabel) statusLabel.innerText = 'Pre-Routing';
-        if (activeAgentLabel) activeAgentLabel.innerText = agentName || message;
-      } else {
-        if (statusLabel) statusLabel.innerText = stageName;
-        if (activeAgentLabel) activeAgentLabel.innerText = `${agentName ? `[${agentName}] ` : ''}${message || ''}`;
-      }
-
-      // Visuelle Echtzeit-Kopplung der 3D-Szene an den Workflow (inkl. Etagen-Routing EG/UG)
-      const targetFloor = (agentName && agentName.includes('UG')) || (message && message.includes('UG')) || stageName.includes('UG')
-        ? 'UG'
-        : ((agentName && agentName.includes('EG')) || (message && message.includes('EG')) ? 'EG' : undefined);
-
-      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
-        window.update3DStudioState(stageName, targetFloor);
-      } else {
-        update3DStudioState(stageName, targetFloor);
-      }
-
-      if (stageName.includes('1/4')) {
-        updateTrackerStage(1);
-        if (progressBar) progressBar.style.width = '25%';
-        if (percentLabel) percentLabel.innerText = '25%';
-      } else if (stageName.includes('2/4')) {
-        updateTrackerStage(2);
-        if (progressBar) progressBar.style.width = '50%';
-        if (percentLabel) percentLabel.innerText = '50%';
-      } else if (stageName.includes('3/4')) {
-        updateTrackerStage(3);
-        if (progressBar) progressBar.style.width = '75%';
-        if (percentLabel) percentLabel.innerText = '75%';
-      } else if (stageName.includes('4/4')) {
-        updateTrackerStage(4);
-        if (progressBar) progressBar.style.width = '100%';
-        if (percentLabel) percentLabel.innerText = '100%';
-      }
-    });
-
-    // Q&A-Modus: Bei direkter Frage wurde Antwort bereits in showQAPanel angezeigt
-    if (finalResult && finalResult.isQuestion) {
-      console.log('[Trevor App] Q&A-Workflow erfolgreich abgeschlossen (Direkt-Antwort angezeigt).');
-      queueItem.status = '4/4: Im Q&A-Modus beantwortet';
-      renderTaskQueueUI();
-      try {
-        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
-      } catch {}
-      if (monitorEl) {
-        monitorEl.innerText = '4/4: Im Q&A-Modus beantwortet';
-      }
-      const progressSection = document.getElementById('section-task-progress');
-      if (progressSection) progressSection.style.display = 'none';
-      const promptSection = document.getElementById('section-task-input');
-      if (promptSection) promptSection.style.display = 'flex';
-      const promptInput = document.getElementById('task-prompt-input');
-      if (promptInput) promptInput.value = '';
-      updateCheckpointBadge('Frage im Q&A-Modus beantwortet', true);
-      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
-        window.update3DStudioState('stage1', 'EG');
-      }
-      return;
-    }
-
-    // Non-Blocking Action-Center Pause (Rückfragen oder Modus A/B Entscheidungen)
-    if (finalResult && finalResult.isPaused) {
-      console.log('[Trevor App] Workflow pausiert für Nutzer-Aktion im Action-Center:', finalResult);
-      queueItem.isPaused = true;
-      queueItem.status = finalResult.reason === 'CLARIFICATION_NEEDED'
-        ? 'Wartet auf Nutzer-Antwort'
-        : 'Wartet auf Nutzer-Entscheidung';
-      renderTaskQueueUI();
-      try {
-        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
-      } catch {}
-      if (monitorEl) {
-        monitorEl.innerText = queueItem.status;
-      }
-      const progressSection = document.getElementById('section-task-progress');
-      if (progressSection) progressSection.style.display = 'none';
-      const promptSection = document.getElementById('section-task-input');
-      if (promptSection) promptSection.style.display = 'flex';
-      const promptInput = document.getElementById('task-prompt-input');
-      if (promptInput) promptInput.value = '';
-
-      updateCheckpointBadge(queueItem.status, false);
-      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
-        window.update3DStudioState('idle', 'EG');
-      }
-
-      // Non-blocking: Nächsten wartenden Auftrag anstoßen oder Idle-Trainer starten
-      await processNextTaskInQueue();
-      return;
-    }
-
-    state.activeTask.current_stage = '4_user_decision';
-    state.activeTask.status = 'pending_approval';
-    state.activeTask.trevor_summary = finalResult.summary || '';
-    state.activeTask.checkpoint_data = {
-      ...state.activeTask.checkpoint_data,
-      structured_steps: finalResult.steps || [],
-      department_reports: finalResult.departmentReports || []
-    };
-    state.activeTask.antigravity_prompt = finalResult.solution || buildAntigravityPromptForSteps(
-      (finalResult.steps || []).filter(s => s.approved !== false && s.enabled !== false),
-      state.activeTask
-    );
-
-    updateTrackerStage(4);
-    if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
-      window.update3DStudioState('stage4');
-    } else {
-      update3DStudioState('stage4');
-    }
-    saveLocalCheckpoint();
-    updateCheckpointBadge('Entscheidung erforderlich (JA / NEIN)', false);
-
-    queueItem.status = '4/4: Bereit zur Freigabe im Action-Center';
-    queueItem.isPaused = false;
-    renderTaskQueueUI();
-    try {
-      localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
-    } catch {}
-    if (monitorEl) {
-      monitorEl.innerText = '4/4: Bereit zur Freigabe im Action-Center';
-    }
-
-    document.getElementById('section-task-progress').style.display = 'none';
-    document.getElementById('section-decision').style.display = 'flex';
-
-    document.getElementById('decision-summary-text').innerText = state.activeTask.trevor_summary;
-    document.getElementById('code-preview-content').innerText = state.activeTask.antigravity_prompt;
-    renderInteractiveRoadmap(state.activeTask.checkpoint_data.structured_steps);
-
-    // Audio-Feedback & Toast für fertiges Ergebnis (Dynamische Sprache statt Standardsatz)
-    playNotificationSound('SUCCESS');
-    const completionMsg = finalResult.spokenSummary || 'Auftrag erfolgreich abgeschlossen und zur Freigabe bereitgestellt.';
-    showActionToast('Ergebnis bereit', completionMsg, 'SUCCESS');
-
-    if (typeof window !== 'undefined' && typeof window.speakAsJarvis === 'function' && finalResult.spokenSummary) {
-      window.speakAsJarvis(finalResult.spokenSummary);
-    }
-
-    addActionCenterItem({
-      id: `act_${state.activeTask.id}_final`,
-      type: finalResult.workMode === 'GENERAL_AI_TASK' ? 'SOLUTION_READY' : 'APPROVAL_NEEDED',
-      title: finalResult.workMode === 'GENERAL_AI_TASK' ? 'KI-Lösung fertiggestellt' : 'Ergebnis bereit zur Abstimmung',
-      message: completionMsg,
-      data: {
-        actionId: `act_${state.activeTask.id}_final`,
-        solution: state.activeTask.antigravity_prompt,
-        steps: state.activeTask.checkpoint_data.structured_steps,
-        spokenSummary: finalResult.spokenSummary
-      }
-    });
-
-  } catch (err) {
-    console.warn('[Trevor App] Fehler bei executeFullWorkflow, starte Simulation als Fallback:', err);
-    queueItem.status = 'Fallback-Simulation aktiv...';
-    renderTaskQueueUI();
-    if (monitorEl) monitorEl.innerText = 'Fallback-Simulation aktiv...';
-    await runLiveWorkflowSimulation(state.activeTask);
-    queueItem.status = '4/4: Bereit zur Freigabe im Action-Center';
-    renderTaskQueueUI();
-    if (monitorEl) monitorEl.innerText = '4/4: Bereit zur Freigabe im Action-Center';
-  }
+  if (promptInput) promptInput.value = '';
+  return enqueueTask(userPrompt);
 }
 
 async function runLiveWorkflowSimulation(task) {
@@ -1878,36 +1656,71 @@ export function loadTaskQueue() {
   }
   if (typeof window !== 'undefined') {
     window.taskQueue = state.taskQueue;
+    window.trevorTaskQueue = state.taskQueue;
   }
 }
 
-export function addToTaskQueue(promptText) {
+export function enqueueTask(promptText, forcedMode = null) {
   const text = (promptText || '').trim();
   if (!text) {
-    showExportNotification('⚠️ Bitte gib einen Text für den Auftrag ein.', 'warning');
-    return;
+    if (typeof showActionToast === 'function') {
+      showActionToast('Hinweis', 'Bitte gib eine Aufgaben-Beschreibung ein.', 'WARNING');
+    } else {
+      alert('Bitte gib eine Aufgaben-Beschreibung ein.');
+    }
+    return null;
   }
 
-  const newItem = {
-    id: 'queue_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-    text,
+  const taskId = 'task_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  const task = {
+    id: taskId,
+    prompt: text,
+    text: text, // Kompatibilität
     title: text.length > 50 ? text.slice(0, 50) + '...' : text,
-    status: 'In Warteschlange eingereiht',
+    mode: forcedMode,
+    status: 'QUEUED',
     createdAt: new Date().toLocaleTimeString()
   };
 
-  state.taskQueue.push(newItem);
-  if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
-  localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+  state.taskQueue.push(task);
+  if (typeof window !== 'undefined') {
+    window.taskQueue = state.taskQueue;
+    window.trevorTaskQueue = state.taskQueue;
+  }
+  try {
+    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+  } catch {}
+
   renderTaskQueueUI();
-  showExportNotification(`✔ Auftrag zur Queue hinzugefügt (#${state.taskQueue.length})`, 'success');
+
+  if (typeof showActionToast === 'function') {
+    showActionToast('Auftrag eingereiht', `Auftrag #${state.taskQueue.length} in die Warteschlange eingereiht.`, 'INFO');
+  }
+
+  const isBusy = (typeof window !== 'undefined' && window.isOrchestratorBusy === true);
+  if (!isBusy) {
+    processNextTaskInQueue();
+  } else {
+    console.log(`[Trevor App] Orchestrator ist ausgelastet, Auftrag #${state.taskQueue.length} wartet in Queue.`);
+  }
+
+  return task;
+}
+
+export function addToTaskQueue(promptText) {
+  return enqueueTask(promptText);
 }
 
 export function removeFromTaskQueue(index) {
   if (index >= 0 && index < state.taskQueue.length) {
     state.taskQueue.splice(index, 1);
-    if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
-    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    if (typeof window !== 'undefined') {
+      window.taskQueue = state.taskQueue;
+      window.trevorTaskQueue = state.taskQueue;
+    }
+    try {
+      localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    } catch {}
     renderTaskQueueUI();
   }
 }
@@ -1916,8 +1729,13 @@ export function moveTaskQueueUp(index) {
   if (index > 0 && index < state.taskQueue.length) {
     const item = state.taskQueue.splice(index, 1)[0];
     state.taskQueue.splice(index - 1, 0, item);
-    if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
-    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    if (typeof window !== 'undefined') {
+      window.taskQueue = state.taskQueue;
+      window.trevorTaskQueue = state.taskQueue;
+    }
+    try {
+      localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    } catch {}
     renderTaskQueueUI();
   }
 }
@@ -1926,38 +1744,242 @@ export function moveTaskQueueDown(index) {
   if (index >= 0 && index < state.taskQueue.length - 1) {
     const item = state.taskQueue.splice(index, 1)[0];
     state.taskQueue.splice(index + 1, 0, item);
-    if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
-    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    if (typeof window !== 'undefined') {
+      window.taskQueue = state.taskQueue;
+      window.trevorTaskQueue = state.taskQueue;
+    }
+    try {
+      localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    } catch {}
     renderTaskQueueUI();
   }
 }
 
 export async function runQueueTask(index) {
   if (index < 0 || index >= state.taskQueue.length) return;
-  const item = state.taskQueue.splice(index, 1)[0];
-  if (typeof window !== 'undefined') window.taskQueue = state.taskQueue;
-  localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
-  renderTaskQueueUI();
+  const item = state.taskQueue[index];
+  if (!item) return;
 
-  const input = document.getElementById('task-prompt-input');
-  if (input) {
-    input.value = item.text;
+  if (typeof window !== 'undefined' && window.isOrchestratorBusy && item.status === 'RUNNING') {
+    return;
   }
-  const queuePanel = document.getElementById('task-queue-panel');
-  if (queuePanel) {
-    queuePanel.style.display = 'none';
+
+  if (typeof window !== 'undefined') {
+    window.isOrchestratorBusy = true;
   }
-  await dispatchNewTask();
+
+  item.status = '1/4: Trevor analysiert...';
+  renderTaskQueueUI();
+  try {
+    localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+  } catch {}
+
+  const userPrompt = (item.prompt || item.text || '').trim();
+  stopIdleTraining();
+
+  const monitorEl = document.getElementById('live-activity-monitor');
+  if (monitorEl) monitorEl.innerText = '1/4: Trevor analysiert...';
+
+  const promptSection = document.getElementById('section-task-input');
+  if (promptSection) promptSection.style.display = 'none';
+  const progressSection = document.getElementById('section-task-progress');
+  if (progressSection) progressSection.style.display = 'flex';
+  const decSection = document.getElementById('section-decision');
+  if (decSection) decSection.style.display = 'none';
+
+  updateTrackerStage(1);
+  if (typeof setStageIn3D === 'function') setStageIn3D(1);
+  updateCheckpointBadge('Berechnung läuft (Stufe 1/4: Trevor Dispatcher)...', false);
+
+  const taskId = item.id || ('task_' + Date.now());
+  state.activeTask = {
+    id: taskId,
+    user_prompt: userPrompt,
+    selected_departments: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    current_stage: '1_fachteam',
+    status: 'running',
+    checkpoint_data: { pc_outputs: {}, chef_outputs: {}, structured_steps: [] },
+    trevor_summary: '',
+    antigravity_prompt: '',
+    mode: item.mode || null
+  };
+  saveLocalCheckpoint();
+
+  const progressBar = document.getElementById('progress-bar-fill');
+  const percentLabel = document.getElementById('progress-percent-label');
+  const statusLabel = document.getElementById('progress-status-label');
+  const activeAgentLabel = document.getElementById('progress-active-agent');
+
+  try {
+    const finalResult = await orchestrator.executeFullWorkflow(userPrompt, (stageName, agentName, message) => {
+      item.status = stageName;
+      renderTaskQueueUI();
+      try {
+        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+      } catch {}
+
+      if (monitorEl) {
+        monitorEl.innerText = `${stageName} ${agentName ? `[${agentName}]` : ''} ${message || ''}`.trim();
+      }
+
+      if (stageName === 'routing') {
+        if (statusLabel) statusLabel.innerText = 'Pre-Routing';
+        if (activeAgentLabel) activeAgentLabel.innerText = agentName || message;
+      } else {
+        if (statusLabel) statusLabel.innerText = stageName;
+        if (activeAgentLabel) activeAgentLabel.innerText = `${agentName ? `[${agentName}] ` : ''}${message || ''}`;
+      }
+
+      const targetFloor = (agentName && agentName.includes('UG')) || (message && message.includes('UG')) || stageName.includes('UG')
+        ? 'UG'
+        : ((agentName && agentName.includes('EG')) || (message && message.includes('EG')) ? 'EG' : undefined);
+
+      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+        window.update3DStudioState(stageName, targetFloor);
+      } else if (typeof update3DStudioState === 'function') {
+        update3DStudioState(stageName, targetFloor);
+      }
+
+      if (stageName.includes('1/4')) {
+        updateTrackerStage(1);
+        if (progressBar) progressBar.style.width = '25%';
+        if (percentLabel) percentLabel.innerText = '25%';
+      } else if (stageName.includes('2/4')) {
+        updateTrackerStage(2);
+        if (progressBar) progressBar.style.width = '50%';
+        if (percentLabel) percentLabel.innerText = '50%';
+      } else if (stageName.includes('3/4')) {
+        updateTrackerStage(3);
+        if (progressBar) progressBar.style.width = '75%';
+        if (percentLabel) percentLabel.innerText = '75%';
+      } else if (stageName.includes('4/4')) {
+        updateTrackerStage(4);
+        if (progressBar) progressBar.style.width = '100%';
+        if (percentLabel) percentLabel.innerText = '100%';
+      }
+    }, item.mode);
+
+    if (finalResult && finalResult.isQuestion) {
+      item.status = '4/4: Im Q&A-Modus beantwortet';
+      renderTaskQueueUI();
+      try {
+        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+      } catch {}
+      if (monitorEl) monitorEl.innerText = '4/4: Im Q&A-Modus beantwortet';
+      if (progressSection) progressSection.style.display = 'none';
+      if (promptSection) promptSection.style.display = 'flex';
+      updateCheckpointBadge('Frage im Q&A-Modus beantwortet', true);
+      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+        window.update3DStudioState('stage1', 'EG');
+      }
+      return;
+    }
+
+    if (finalResult && finalResult.isPaused) {
+      item.isPaused = true;
+      item.status = finalResult.reason === 'CLARIFICATION_NEEDED'
+        ? 'Wartet auf Nutzer-Antwort'
+        : 'Wartet auf Nutzer-Entscheidung';
+      renderTaskQueueUI();
+      try {
+        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+      } catch {}
+      if (monitorEl) monitorEl.innerText = item.status;
+      if (progressSection) progressSection.style.display = 'none';
+      if (promptSection) promptSection.style.display = 'flex';
+      updateCheckpointBadge(item.status, false);
+      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+        window.update3DStudioState('idle', 'EG');
+      }
+      return;
+    }
+
+    state.activeTask.current_stage = '4_user_decision';
+    state.activeTask.status = 'pending_approval';
+    state.activeTask.trevor_summary = finalResult.summary || '';
+    state.activeTask.checkpoint_data = {
+      ...state.activeTask.checkpoint_data,
+      structured_steps: finalResult.steps || [],
+      department_reports: finalResult.departmentReports || []
+    };
+    state.activeTask.antigravity_prompt = finalResult.solution || buildAntigravityPromptForSteps(
+      (finalResult.steps || []).filter(s => s.approved !== false && s.enabled !== false),
+      state.activeTask
+    );
+
+    updateTrackerStage(4);
+    if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+      window.update3DStudioState('stage4');
+    } else if (typeof update3DStudioState === 'function') {
+      update3DStudioState('stage4');
+    }
+    saveLocalCheckpoint();
+    updateCheckpointBadge('Entscheidung erforderlich (JA / NEIN)', false);
+
+    item.status = '4/4: Bereit zur Freigabe im Action-Center';
+    item.isPaused = false;
+    renderTaskQueueUI();
+    try {
+      localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+    } catch {}
+    if (monitorEl) monitorEl.innerText = item.status;
+
+    if (progressSection) progressSection.style.display = 'none';
+    if (decSection) decSection.style.display = 'flex';
+
+    const sumEl = document.getElementById('decision-summary-text');
+    if (sumEl) sumEl.innerText = state.activeTask.trevor_summary;
+    const prevEl = document.getElementById('code-preview-content');
+    if (prevEl) prevEl.innerText = state.activeTask.antigravity_prompt;
+    renderInteractiveRoadmap(state.activeTask.checkpoint_data.structured_steps);
+
+    playNotificationSound('SUCCESS');
+    const completionMsg = finalResult.spokenSummary || 'Auftrag erfolgreich abgeschlossen und zur Freigabe bereitgestellt.';
+    showActionToast('Ergebnis bereit', completionMsg, 'SUCCESS');
+
+    if (typeof window !== 'undefined' && typeof window.speakAsJarvis === 'function' && finalResult.spokenSummary) {
+      window.speakAsJarvis(finalResult.spokenSummary);
+    }
+
+    addActionCenterItem({
+      id: `act_${state.activeTask.id}_final`,
+      type: finalResult.workMode === 'GENERAL_AI_TASK' ? 'SOLUTION_READY' : 'APPROVAL_NEEDED',
+      title: finalResult.workMode === 'GENERAL_AI_TASK' ? 'KI-Lösung fertiggestellt' : 'Ergebnis bereit zur Abstimmung',
+      message: completionMsg,
+      data: {
+        actionId: `act_${state.activeTask.id}_final`,
+        solution: state.activeTask.antigravity_prompt,
+        steps: state.activeTask.checkpoint_data.structured_steps,
+        spokenSummary: finalResult.spokenSummary
+      }
+    });
+
+  } catch (err) {
+    console.warn('[Trevor App] Fehler bei executeFullWorkflow, starte Simulation als Fallback:', err);
+    item.status = 'Fallback-Simulation aktiv...';
+    renderTaskQueueUI();
+    if (monitorEl) monitorEl.innerText = 'Fallback-Simulation aktiv...';
+    await runLiveWorkflowSimulation(state.activeTask);
+    item.status = '4/4: Bereit zur Freigabe im Action-Center';
+    renderTaskQueueUI();
+    if (monitorEl) monitorEl.innerText = item.status;
+  } finally {
+    if (typeof window !== 'undefined') {
+      window.isOrchestratorBusy = false;
+    }
+    renderTaskQueueUI();
+    await processNextTaskInQueue();
+  }
 }
 
 function getStatusBadgeClass(status) {
-  if (!status) return 'badge-analyzing';
+  if (!status) return 'badge-queued';
   const s = status.toLowerCase();
-  if (s.includes('wartet')) return 'badge-waiting';
-  if (s.includes('ausgelastet') || s.includes('busy')) return 'badge-busy';
-  if (s.includes('2/4') || s.includes('3/4') || s.includes('erarbeiten') || s.includes('prüft')) return 'badge-working';
-  if (s.includes('4/4') || s.includes('bereit') || s.includes('abgeschlossen') || s.includes('erledigt') || s.includes('erfolg')) return 'badge-done';
-  return 'badge-analyzing';
+  if (s === 'queued' || s.includes('in warteschlange')) return 'badge-queued';
+  if (s === 'running' || s.includes('1/4') || s.includes('2/4') || s.includes('3/4') || s.includes('analysiert') || s.includes('berechnet') || s.includes('programmieren') || s.includes('ausgelastet') || s.includes('busy')) return 'badge-active';
+  if (s.includes('wartet') || s.includes('paused')) return 'badge-paused';
+  if (s.includes('4/4') || s.includes('bereit') || s.includes('abgeschlossen') || s.includes('erledigt') || s.includes('beantwortet') || s.includes('erfolg')) return 'badge-done';
+  return 'badge-active';
 }
 
 export function renderTaskQueueUI() {
@@ -1967,22 +1989,23 @@ export function renderTaskQueueUI() {
   const btnStartNext = document.getElementById('btn-queue-start-next');
 
   const count = state.taskQueue ? state.taskQueue.length : 0;
+  const waitingCount = state.taskQueue ? state.taskQueue.filter(t => t.status === 'QUEUED' || (t.status && t.status.includes('Warteschlange'))).length : 0;
 
   if (countBadge) {
-    countBadge.innerText = `${count} ${count === 1 ? 'wartender Auftrag' : 'wartende Aufträge'}`;
+    countBadge.innerText = `${waitingCount} ${waitingCount === 1 ? 'wartender Auftrag' : 'wartende Aufträge'} (${count} gesamt)`;
   }
 
   const topBadge = document.getElementById('queue-badge-count');
-  if (topBadge) topBadge.innerText = count;
+  if (topBadge) topBadge.innerText = waitingCount;
   const sidebarBadge = document.getElementById('sidebar-queue-count');
-  if (sidebarBadge) sidebarBadge.innerText = count;
+  if (sidebarBadge) sidebarBadge.innerText = waitingCount;
 
   if (emptyPlaceholder) {
     emptyPlaceholder.style.display = count === 0 ? 'block' : 'none';
   }
 
   if (btnStartNext) {
-    btnStartNext.style.display = count > 0 ? 'inline-flex' : 'none';
+    btnStartNext.style.display = waitingCount > 0 ? 'inline-flex' : 'none';
   }
 
   if (!listEl) return;
@@ -1992,19 +2015,31 @@ export function renderTaskQueueUI() {
     return;
   }
 
-  listEl.innerHTML = state.taskQueue.map((item, idx) => `
-    <li class="task-queue-item" data-index="${idx}" data-id="${item.id}">
+  listEl.innerHTML = state.taskQueue.map((item, idx) => {
+    const badgeClass = getStatusBadgeClass(item.status);
+    let badgeText = item.status || 'In Warteschlange';
+    if (badgeClass === 'badge-queued') badgeText = 'In Warteschlange';
+    else if (badgeClass === 'badge-active') {
+      badgeText = item.status.length > 25 ? item.status.slice(0, 25) + '...' : item.status;
+      if (item.status === 'RUNNING') badgeText = 'Aktiv';
+    }
+
+    const isRunning = (badgeClass === 'badge-active');
+
+    return `
+    <li class="task-queue-item ${isRunning ? 'item-active' : ''}" data-index="${idx}" data-id="${item.id}">
       <div class="task-queue-item-header">
         <span class="task-queue-item-num">#${idx + 1}</span>
-        <span class="task-queue-item-text" title="${escapeHtml(item.text)}">${escapeHtml(item.text)}</span>
+        <span class="task-queue-item-text" title="${escapeHtml(item.prompt || item.text)}">${escapeHtml(item.prompt || item.text)}</span>
       </div>
       <div class="task-queue-status-line">
-        <span class="task-queue-badge ${getStatusBadgeClass(item.status)}">${escapeHtml(item.status || 'Wartet in Warteschlange...')}</span>
+        <span class="task-queue-badge ${badgeClass}">${escapeHtml(badgeText)}</span>
+        ${item.mode ? `<span class="mode-badge badge-${item.mode === 'PROMPT_REQUEST' ? 'prompt' : (item.mode === 'IMPROVEMENT_AUDIT' ? 'audit' : 'general')}">${item.mode}</span>` : ''}
       </div>
       <div class="task-queue-ctrl-row">
         <span style="font-size: 10px; color: var(--text-dim);">${item.createdAt || ''}</span>
         <div class="task-queue-btn-group">
-          <button class="btn-queue-ctrl btn-queue-run" data-action="run" data-index="${idx}" title="Diesen Auftrag sofort ausführen">
+          <button class="btn-queue-ctrl btn-queue-run" data-action="run" data-index="${idx}" title="Diesen Auftrag sofort ausführen" ${isRunning ? 'disabled style="opacity:0.4;"' : ''}>
             <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             <span>Start</span>
           </button>
@@ -2020,7 +2055,8 @@ export function renderTaskQueueUI() {
         </div>
       </div>
     </li>
-  `).join('');
+  `;
+  }).join('');
 
   listEl.querySelectorAll('.btn-queue-ctrl').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -3428,9 +3464,367 @@ function setupLoginScreen() {
 }
 
 // =============================================================================
+// SUB-DRAWERS & SIDEBAR NAVIGATION CONTROLLER
+// =============================================================================
+
+const DRAWER_IDS = [
+  'drawer-task-queue',
+  'drawer-modes',
+  'drawer-agents',
+  'drawer-memory',
+  'drawer-settings',
+  'drawer-camera'
+];
+
+export function closeAllDrawers() {
+  DRAWER_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const legacyQueue = document.getElementById('task-queue-panel');
+  if (legacyQueue) legacyQueue.style.display = 'none';
+  document.querySelectorAll('.sidebar-icon-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+}
+
+export function toggleDrawer(drawerId, triggerBtn = null) {
+  const target = document.getElementById(drawerId);
+  if (!target) return;
+  const isCurrentlyOpen = (target.style.display === 'flex');
+
+  closeAllDrawers();
+
+  if (!isCurrentlyOpen) {
+    target.style.display = 'flex';
+    if (triggerBtn) {
+      triggerBtn.classList.add('active');
+    }
+    if (drawerId === 'drawer-task-queue') {
+      renderTaskQueueUI();
+    } else if (drawerId === 'drawer-agents') {
+      renderDrawerAgentsList();
+    }
+  }
+}
+
+export function renderDrawerAgentsList(filterText = '') {
+  const container = document.getElementById('drawer-agents-list');
+  if (!container || !state.hierarchy || !state.hierarchy.departments) return;
+
+  const query = (filterText || '').toLowerCase().trim();
+  const depts = state.hierarchy.departments.filter(d => {
+    if (!query) return true;
+    if (d.name && d.name.toLowerCase().includes(query)) return true;
+    if (d.code && d.code.toLowerCase().includes(query)) return true;
+    if (d.chef_agent && d.chef_agent.name && d.chef_agent.name.toLowerCase().includes(query)) return true;
+    if (d.specialist_pcs && d.specialist_pcs.some(p => (p.name && p.name.toLowerCase().includes(query)) || (p.role && p.role.toLowerCase().includes(query)))) return true;
+    return false;
+  });
+
+  if (depts.length === 0) {
+    container.innerHTML = `<div class="memory-empty-hint">Keine Abteilungen für "${escapeHtml(filterText)}" gefunden.</div>`;
+    return;
+  }
+
+  container.innerHTML = depts.map(d => {
+    const isUg = (d.id >= 11 || (d.code && d.code.startsWith('UG')));
+    const floorLabel = isUg ? 'UG ARENA' : 'EG GALERIE';
+    const floorClass = isUg ? 'floor-ug' : 'floor-eg';
+
+    return `
+      <div class="drawer-dept-card" data-dept-id="${d.id}">
+        <div class="drawer-dept-header">
+          <span class="drawer-dept-title">${escapeHtml(d.name)}</span>
+          <span class="drawer-dept-floor ${floorClass}">${floorLabel}</span>
+        </div>
+        <div class="drawer-dept-chef">
+          <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <span>${escapeHtml(d.chef_agent ? d.chef_agent.name : 'Abteilungsleiter')}</span>
+        </div>
+        <div class="drawer-dept-pcs">
+          ${(d.specialist_pcs || []).map(pc => `
+            <span class="drawer-pc-pill" data-agent-id="${pc.id}" title="${escapeHtml(pc.role || pc.name)}">${escapeHtml(pc.name)}</span>
+          `).join('')}
+        </div>
+        <div class="drawer-dept-actions">
+          <button class="btn-focus-dept" data-dept-id="${d.id}">3D Fokus</button>
+          <button class="btn-inspect-dept" data-agent-id="${d.chef_agent ? d.chef_agent.id : d.id}">Inspektor</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.btn-focus-dept').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const deptId = parseInt(btn.dataset.deptId, 10);
+      if (typeof window !== 'undefined' && typeof window.focusDepartmentIn3D === 'function') {
+        window.focusDepartmentIn3D(deptId);
+      }
+    });
+  });
+
+  container.querySelectorAll('.btn-inspect-dept').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const agentId = btn.dataset.agentId;
+      showAgentInfo(agentId);
+    });
+  });
+
+  container.querySelectorAll('.drawer-pc-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const agentId = pill.dataset.agentId;
+      if (typeof window !== 'undefined' && typeof window.focusAgentIn3D === 'function') {
+        window.focusAgentIn3D(agentId);
+      }
+      showAgentInfo(agentId);
+    });
+  });
+}
+
+export function setupDrawerAndNavListeners() {
+  // 1. Sidebar Nav Toggles
+  const navTaskQueue = document.getElementById('nav-task-queue');
+  if (navTaskQueue) {
+    navTaskQueue.addEventListener('click', () => toggleDrawer('drawer-task-queue', navTaskQueue));
+  }
+  const navModes = document.getElementById('nav-modes');
+  if (navModes) {
+    navModes.addEventListener('click', () => toggleDrawer('drawer-modes', navModes));
+  }
+  const navAgents = document.getElementById('nav-agents');
+  if (navAgents) {
+    navAgents.addEventListener('click', () => toggleDrawer('drawer-agents', navAgents));
+  }
+  const navMemory = document.getElementById('nav-memory');
+  if (navMemory) {
+    navMemory.addEventListener('click', () => toggleDrawer('drawer-memory', navMemory));
+  }
+  const navSettings = document.getElementById('nav-settings');
+  if (navSettings) {
+    navSettings.addEventListener('click', () => toggleDrawer('drawer-settings', navSettings));
+  }
+  const navCamera = document.getElementById('nav-camera');
+  if (navCamera) {
+    navCamera.addEventListener('click', () => toggleDrawer('drawer-camera', navCamera));
+  }
+
+  // 2. Generic Close Buttons on Drawers
+  document.querySelectorAll('[data-close-drawer]').forEach(btn => {
+    btn.addEventListener('click', () => closeAllDrawers());
+  });
+
+  // 3. Floating Prompt Bar (#trevor-prompt-bar)
+  const promptInput = document.getElementById('trevor-prompt-input');
+  const submitBtn = document.getElementById('trevor-submit-btn');
+
+  const handlePromptSubmit = () => {
+    if (!promptInput) return;
+    const text = promptInput.value.trim();
+    if (!text) {
+      if (typeof showActionToast === 'function') {
+        showActionToast('Hinweis', 'Bitte gib einen Text für den Auftrag ein.', 'WARNING');
+      }
+      return;
+    }
+    promptInput.value = '';
+    enqueueTask(text);
+  };
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', handlePromptSubmit);
+  }
+  if (promptInput) {
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handlePromptSubmit();
+      }
+    });
+  }
+
+  // 4. Schnellstart Arbeits-Modi Drawer Buttons
+  const modePromptInput = document.getElementById('drawer-mode-prompt-input');
+  const btnStartPrompt = document.getElementById('btn-start-mode-prompt');
+  const btnStartAudit = document.getElementById('btn-start-mode-audit');
+  const btnStartGeneral = document.getElementById('btn-start-mode-general');
+
+  const dispatchMode = (forcedMode) => {
+    const text = (modePromptInput ? modePromptInput.value : '').trim() ||
+      (forcedMode === 'IMPROVEMENT_AUDIT' ? 'Führe ein vollständiges Architektur- und Code-Audit für das aktuelle Projekt durch.' :
+      (forcedMode === 'PROMPT_REQUEST' ? 'Erstelle einen modularen Antigravity Master-Plan mit [JA]/[NEIN] Roadmap.' :
+      'Implementiere eine vollständige modulare KI-Lösung für das Studio.'));
+    
+    if (modePromptInput) modePromptInput.value = '';
+    closeAllDrawers();
+    enqueueTask(text, forcedMode);
+  };
+
+  if (btnStartPrompt) btnStartPrompt.addEventListener('click', () => dispatchMode('PROMPT_REQUEST'));
+  if (btnStartAudit) btnStartAudit.addEventListener('click', () => dispatchMode('IMPROVEMENT_AUDIT'));
+  if (btnStartGeneral) btnStartGeneral.addEventListener('click', () => dispatchMode('GENERAL_AI_TASK'));
+
+  // 5. Abteilungen Filter
+  const agentSearchInput = document.getElementById('drawer-agents-search');
+  if (agentSearchInput) {
+    agentSearchInput.addEventListener('input', (e) => {
+      renderDrawerAgentsList(e.target.value);
+    });
+  }
+
+  // 6. Cloud-Gedächtnis Drawer
+  const memSearchInput = document.getElementById('drawer-memory-search-input');
+  const btnMemSearch = document.getElementById('btn-drawer-memory-search');
+  const memResults = document.getElementById('drawer-memory-search-results');
+
+  const handleMemSearch = async () => {
+    const q = (memSearchInput ? memSearchInput.value : '').trim();
+    if (!q) return;
+    if (memResults) memResults.innerHTML = '<div class="memory-empty-hint">Suche in Supabase...</div>';
+    try {
+      const resp = await fetch('/api/memory/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q })
+      });
+      const data = await resp.json();
+      if (data && data.results && data.results.length > 0) {
+        memResults.innerHTML = data.results.map(r => `
+          <div class="memory-result-card">
+            <div style="font-weight: 700; color: #00F0FF; margin-bottom: 2px;">${escapeHtml((r.tags || []).join(', ') || 'Regel')}</div>
+            <div style="color: #e2e8f0;">${escapeHtml(r.rule || r.content || '')}</div>
+          </div>
+        `).join('');
+      } else {
+        memResults.innerHTML = '<div class="memory-empty-hint">Keine passenden Einträge gefunden.</div>';
+      }
+    } catch (e) {
+      if (memResults) memResults.innerHTML = `<div class="memory-empty-hint" style="color: #f87171;">Suche fehlgeschlagen: ${escapeHtml(e.message)}</div>`;
+    }
+  };
+
+  if (btnMemSearch) btnMemSearch.addEventListener('click', handleMemSearch);
+  if (memSearchInput) {
+    memSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleMemSearch();
+    });
+  }
+
+  const btnSaveRule = document.getElementById('btn-drawer-memory-save-rule');
+  if (btnSaveRule) {
+    btnSaveRule.addEventListener('click', async () => {
+      const tagsInput = document.getElementById('drawer-memory-new-tags');
+      const ruleInput = document.getElementById('drawer-memory-new-rule');
+      const tags = (tagsInput ? tagsInput.value : '').split(',').map(s => s.trim()).filter(Boolean);
+      const rule = (ruleInput ? ruleInput.value : '').trim();
+      if (!rule) {
+        if (typeof showActionToast === 'function') showActionToast('Hinweis', 'Bitte gib eine Regel ein.', 'WARNING');
+        return;
+      }
+      try {
+        const resp = await fetch('/api/memory/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tags, rule, source: 'manual_ui' })
+        });
+        const res = await resp.json();
+        if (res.success) {
+          if (typeof showActionToast === 'function') showActionToast('Gespeichert', 'Regel erfolgreich in Supabase gesichert.', 'SUCCESS');
+          if (tagsInput) tagsInput.value = '';
+          if (ruleInput) ruleInput.value = '';
+        }
+      } catch (err) {
+        if (typeof showActionToast === 'function') showActionToast('Fehler', 'Speichern fehlgeschlagen: ' + err.message, 'DANGER');
+      }
+    });
+  }
+
+  const btnTriggerTraining = document.getElementById('btn-drawer-trigger-training');
+  if (btnTriggerTraining) {
+    btnTriggerTraining.addEventListener('click', () => {
+      if (typeof startIdleTraining === 'function' && state.hierarchy && state.hierarchy.departments) {
+        startIdleTraining(state.hierarchy.departments, 2000);
+        if (typeof showActionToast === 'function') showActionToast('Idle-Trainer', 'Autonomer Trainings-Zyklus manuell aktiviert.', 'INFO');
+      }
+    });
+  }
+
+  // 7. KI-Engine Drawer
+  const btnVoiceTest = document.getElementById('btn-drawer-test-voice');
+  if (btnVoiceTest) {
+    btnVoiceTest.addEventListener('click', () => {
+      if (typeof window !== 'undefined' && typeof window.speakAsJarvis === 'function') {
+        window.speakAsJarvis("J.A.R.V.I.S. Audiomatrix funktionsfähig, Sir.");
+      }
+    });
+  }
+
+  const btnSoundToggle = document.getElementById('btn-drawer-toggle-sound');
+  if (btnSoundToggle) {
+    btnSoundToggle.addEventListener('click', () => {
+      if (typeof window !== 'undefined' && window.trevorAudio) {
+        window.trevorAudio.enabled = !window.trevorAudio.enabled;
+        if (typeof showActionToast === 'function') {
+          showActionToast('Audio-FX', `Synthesizer-Sounds ${window.trevorAudio.enabled ? 'aktiviert' : 'deaktiviert'}.`, 'INFO');
+        }
+      }
+    });
+  }
+
+  const btnSaveLLMSettings = document.getElementById('btn-drawer-save-settings');
+  if (btnSaveLLMSettings) {
+    btnSaveLLMSettings.addEventListener('click', () => {
+      const modeSelect = document.getElementById('drawer-settings-llm-mode');
+      if (modeSelect) {
+        state.settings.llm_mode = modeSelect.value;
+        saveLocalSettings();
+        updateUIThemeSettings();
+        if (typeof showActionToast === 'function') {
+          showActionToast('Gespeichert', `KI-Engine auf ${modeSelect.value} umgestellt.`, 'SUCCESS');
+        }
+      }
+      closeAllDrawers();
+    });
+  }
+
+  // 8. 3D-Kamera Presets Drawer
+  const setupCamPresetBtn = (id, presetName) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('click', () => {
+        document.querySelectorAll('.cam-preset-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        if (typeof window !== 'undefined' && typeof window.setCameraPreset === 'function') {
+          window.setCameraPreset(presetName);
+        }
+      });
+    }
+  };
+
+  setupCamPresetBtn('cam-btn-arena', 'arena');
+  setupCamPresetBtn('cam-btn-jarvis', 'jarvis');
+  setupCamPresetBtn('cam-btn-eg', 'eg');
+  setupCamPresetBtn('cam-btn-ug', 'ug');
+  setupCamPresetBtn('cam-btn-autorotate', 'autorotate');
+
+  const btnZoomIn = document.getElementById('cam-btn-zoomin');
+  if (btnZoomIn) btnZoomIn.addEventListener('click', () => { if (typeof window !== 'undefined' && typeof window.zoom3DCamera === 'function') window.zoom3DCamera(1); });
+  const btnZoomOut = document.getElementById('cam-btn-zoomout');
+  if (btnZoomOut) btnZoomOut.addEventListener('click', () => { if (typeof window !== 'undefined' && typeof window.zoom3DCamera === 'function') window.zoom3DCamera(-1); });
+  const btnRotLeft = document.getElementById('cam-btn-rotleft');
+  if (btnRotLeft) btnRotLeft.addEventListener('click', () => { if (typeof window !== 'undefined' && typeof window.rotate3DCamera === 'function') window.rotate3DCamera(0.2); });
+  const btnRotRight = document.getElementById('cam-btn-rotright');
+  if (btnRotRight) btnRotRight.addEventListener('click', () => { if (typeof window !== 'undefined' && typeof window.rotate3DCamera === 'function') window.rotate3DCamera(-0.2); });
+  const btnReset = document.getElementById('cam-btn-reset');
+  if (btnReset) btnReset.addEventListener('click', () => { if (typeof window !== 'undefined' && typeof window.reset3DCamera === 'function') window.reset3DCamera(); });
+}
+
+// =============================================================================
 // EVENT LISTENERS SETUP
 // =============================================================================
 function setupEventListeners() {
+  // Sub-Drawers & Navigation initialisieren
+  setupDrawerAndNavListeners();
+
   // Ziel-Projekt Dropdown
   const projectSelect = document.getElementById('project-selector-select');
   if (projectSelect) {
@@ -4004,6 +4398,12 @@ if (typeof window !== 'undefined') {
   window.searchCloudMemory = (q) => orchestrator.searchCloudMemory(q);
   window.pendingTasksMap = window.pendingTasksMap || {};
   window.processNextTaskInQueue = processNextTaskInQueue;
+  window.enqueueTask = enqueueTask;
+  window.trevorTaskQueue = state.taskQueue;
+  window.isOrchestratorBusy = window.isOrchestratorBusy || false;
+  window.closeAllDrawers = closeAllDrawers;
+  window.toggleDrawer = toggleDrawer;
+  window.renderDrawerAgentsList = renderDrawerAgentsList;
   window.handleUserDecision = handleUserDecision;
   window.copyTextToClipboard = copyTextToClipboard;
   if (!Array.isArray(window.selectedContextFiles)) {

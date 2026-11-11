@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Radikaler Cleanup VOLLSTÄNDIG ABGESCHLOSSEN – Altes Layout restlos entfernt, einheitliche Slate-HUD Architektur & Terrassen-Arena aktiv (v4.0) 🏟️⚡
-- **Datum / Letztes Update:** 2026-11-11 22:00:00
+- **Status:** Kompletter 3D-Rebuild (Echte Arena), 60-FPS Holo-JARVIS, Task-Queue Reparatur & Erweiterte Funktions-Sidebar mit Hover-Tooltips & 6 Sub-Drawers VOLLSTÄNDIG ABGESCHLOSSEN (v6.0) 🏟️⚡
+- **Datum / Letztes Update:** 2026-11-11 22:30:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -664,3 +664,67 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
    - `test_workflow_execution_fix.mjs`: 5 von 5 Tests bestanden.
    - Syntax-Checks (`node -c`) für alle Skripte fehlerfrei.
    - Node.js Express Webserver liefert HTTP 200 für `/`, `/styles.css?v=4.0` und `/style.css?v=4.0`.
+
+---
+
+## 28. Amphitheater-Arena Rebuild, 60-FPS Holo-JARVIS, Task-Queue Reparatur & Erweiterte Funktions-Sidebar (v6.0)
+
+1. **Vollständiger 3D-Rebuild der Terrassen-Arena ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - **Beseitigung aller Altlasten:**
+     - Alte 2-Platten-Geometrie und schwebende Treppenstufen restlos entfernt.
+     - Alte riesige 512x190 Canvas-Sprites ("1. Ideen & Planung", "10. Dokumentation & Übergabe", "TREVOR MK-VII" etc.) vollständig gelöscht und durch elegante, dezente HUD-Labels (210x54 px Canvas, 1px Border, Skalierung 1.7x0.44 bei `y = 1.4`) ersetzt.
+     - Schwerfälliger Roboter / Mech (`setupTrevorIronManMech`) restlos entfernt.
+   - **Konzentrische Terrassen-Arena (Amphitheater):**
+     - Ebene Grundfläche bei `y = 0.0` für die 10 Software-Abteilungen des Erdgeschosses (`EG_ARCHITEKTUR`, `EG_FRONTEND`, `EG_BACKEND` etc.) mit Dual-Monitor Entwicklerplätzen im offenen Kreisbogen ($r = 12 \dots 22$).
+     - Zentral abgesenkte kreisrunde Server-Grube (`UG_SERVER`, $r = 0 \dots 7$, $y = -2.0$) mit transparentem Cyan-Glasgeländer (`MeshPhysicalMaterial`, `opacity: 0.35`), metallenem Handlauf und 6 Server-Racks mit animiert blinkenden LED-Arrays.
+     - 4 konzentrisch ansteigende Schiefer-Stufenringe ($r = 7 \dots 12$, $y = -2.0$ bis $0.0$) mit feinen cyanblauen Lichtlinien.
+   - **45°-Isometrischer Hauptkamera-Blickwinkel:**
+     - Standard-Perspektive bei `(0, 22, 28)` mit Blickpunkt `(0, -1, 0)` garantiert eine ungestörte Sicht auf alle 14 Abteilungen, sämtliche 33 Arbeitsplätze und den schwebenden Kern.
+     - Kamera-Presets: `arena` (45° Übersicht), `jarvis` (Zentrum), `eg` (Galerie-Rundflug), `ug` (Server-Grube) und `autorotate` (360° Umkreisung).
+
+2. **Hochauflösender Holo-JARVIS & 60-FPS-Delta-Animationsschleife ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - **3-Schicht Holo-Kugel bei `(0, 2.2, 0)`:**
+     1. 2500 Partikel (`THREE.Points`) auf sphärischer Fibonacci-Oberfläche ($r = 2.2$) mit `THREE.AdditiveBlending` und dynamischer Rotation.
+     2. Inneres Drahtgitter-Ikosaeder (`THREE.IcosahedronGeometry(2.18, 2)`) mit gegenläufiger Rotation.
+     3. 3 dünne gyroskopische Orbital-Scanringe auf individuellen Neigungsachsen.
+     4. Zentral pulsierender Arc-Core und audio-reaktives Punktlicht (`holoJarvisLight`).
+   - **60-FPS-Loop via `THREE.Clock`:**
+     - Frame-Rate-unabhängige Delta-Berechnung (`delta = clock.getDelta()`, `elapsed = clock.getElapsedTime()`).
+     - Sanftes Damping (`controls.enableDamping = true`, `dampingFactor = 0.05`).
+     - Dynamische Bézier-Datenpartikel fließen von den Abteilungen direkt in den Holo-JARVIS.
+
+3. **Task-Queue & Prompt-Bar Reparatur ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) & [`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js)):**
+   - **Schwebende Prompt-Eingabeleiste (`#trevor-prompt-bar`):**
+     - Zentral über dem unteren Dock schwebend mit `#trevor-prompt-input` und `#trevor-submit-btn`.
+     - Bleibt permanent sichtbar und wird **niemals** deaktiviert oder gesperrt!
+   - **Funktion `enqueueTask(promptText, forcedMode = null)`:**
+     - Erstellt standardisiertes Task-Objekt `{ id, prompt, text, mode, status: 'QUEUED', createdAt }`.
+     - Schiebt in `state.taskQueue` und `window.trevorTaskQueue`, synchronisiert mit `localStorage`.
+     - Farblich differenzierte Status-Badges: Grün = `Aktiv` (`.badge-active`), Orange = `In Warteschlange` (`.badge-queued`), Amber = `Wartet auf Freigabe` (`.badge-paused`), Cyan = `Bereit / Fertig` (`.badge-done`).
+     - Non-blocking Dispatch: Wenn `!window.isOrchestratorBusy`, startet `processNextTaskInQueue()` sofort. Wenn ausgelastet, verbleibt der Task in der Queue und startet automatisch als nächster nach Abschluss des laufenden Auftrags.
+
+4. **Erweiterte Funktions-Sidebar mit Hover-Tooltips & 6 Sub-Drawers ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html) & [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css)):**
+   - **Pure CSS Hover-Tooltips (`[data-tooltip]`):**
+     - Slate-blauer Hintergrund (`#0E1726`), 1px Cyan-Rahmen (`#00F0FF`), weiße Schrift, linksgerichteter Pfeil und sanfte Fade-In-Animation ohne JS-Latenz.
+   - **6 Funktionale Icons im linken Nav-Dock:**
+     1. `#nav-task-queue` (`data-tooltip="Task-Warteschlange & aktive Aufträge"`)
+     2. `#nav-modes` (`data-tooltip="Auftrags-Modus direkt starten"`)
+     3. `#nav-agents` (`data-tooltip="Abteilungen & 33 Agenten direkt ansteuern"`)
+     4. `#nav-memory` (`data-tooltip="Supabase Cloud-Gedächtnis & Code-Wissen"`)
+     5. `#nav-settings` (`data-tooltip="LLM-Engine (Qwen / Gemini) & J.A.R.V.I.S. Sprache"`)
+     6. `#nav-camera` (`data-tooltip="3D-Kamera & Arena-Perspektiven"`)
+   - **6 Slate-Glass Sub-Drawers (`.sub-drawer-panel`):**
+     - Gleiten flüssig links neben der Sidebar hervor (`left: 64px`, `width: 380px`), ohne das Zentrum der 3D-Arena zu verdecken:
+       1. `#drawer-task-queue`: Queue-Manager mit Direkt-Eingabe, Priorisierung (▲/▼), Sofortstart und Löschung.
+       2. `#drawer-modes`: 1-Klick Schnellstart für die 3 Arbeitsmodi (`PROMPT_REQUEST`, `IMPROVEMENT_AUDIT`, `GENERAL_AI_TASK`).
+       3. `#drawer-agents`: Suchbare Liste aller 14 Abteilungen mit Chefs und PCs inkl. Buttons für 3D-Kamerafokus und Spezialisten-Inspektor.
+       4. `#drawer-memory`: Supabase RAG-Archivsuche, manuelle Regelerstellung und manueller Trigger für den autonomen Idle-Trainer.
+       5. `#drawer-settings`: Umschaltung der LLM-Engine (Gemini/Ollama), Sprachmatrix-Audiotest und Sound-Effekte Toggle.
+       6. `#drawer-camera`: Direktauswahl der 5 Kamera-Presets plus Feinnavigation (Zoom, Rotation, Reset).
+
+5. **Verifikation & Testabdeckung:**
+   - `test_arena_queue_sidebar.mjs`: Alle 4 Test-Suiten (3D Arena, HTML-Markup/Drawers, CSS-Tooltips, Queue-Logik) zu 100% bestanden.
+   - `test_modes_and_nonblocking.mjs`: 37 von 37 Tests erfolgreich.
+   - `test_workflow_execution_fix.mjs`: 5 von 5 Tests erfolgreich.
+   - Syntax-Checks (`node -c`) für `studio3D.js`, `app.js` und `server.js` fehlerfrei validiert.
+   - Cache-Busting Parameter auf `?v=6.0` aktualisiert.
