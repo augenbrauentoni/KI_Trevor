@@ -64,9 +64,10 @@ const state = {
   }
 };
 
-// Globales Trevor-Audio-Objekt frühzeitig initialisieren
+// Globales Trevor-Audio-Objekt & Pending-Tasks frühzeitig initialisieren
 if (typeof window !== 'undefined') {
   window.trevorAudio = window.trevorAudio || { enabled: true, ctx: null };
+  window.pendingTasksMap = window.pendingTasksMap || {};
 }
 
 // =============================================================================
@@ -1047,16 +1048,47 @@ async function dispatchNewTask() {
       return;
     }
 
+    // Non-Blocking Action-Center Pause (Rückfragen oder Modus A/B Entscheidungen)
+    if (finalResult && finalResult.isPaused) {
+      console.log('[Trevor App] Workflow pausiert für Nutzer-Aktion im Action-Center:', finalResult);
+      queueItem.isPaused = true;
+      queueItem.status = finalResult.reason === 'CLARIFICATION_NEEDED'
+        ? 'Wartet auf Nutzer-Antwort'
+        : 'Wartet auf Nutzer-Entscheidung';
+      renderTaskQueueUI();
+      try {
+        localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+      } catch {}
+      if (monitorEl) {
+        monitorEl.innerText = queueItem.status;
+      }
+      const progressSection = document.getElementById('section-task-progress');
+      if (progressSection) progressSection.style.display = 'none';
+      const promptSection = document.getElementById('section-task-input');
+      if (promptSection) promptSection.style.display = 'flex';
+      const promptInput = document.getElementById('task-prompt-input');
+      if (promptInput) promptInput.value = '';
+
+      updateCheckpointBadge(queueItem.status, false);
+      if (typeof window !== 'undefined' && typeof window.update3DStudioState === 'function') {
+        window.update3DStudioState('idle', 'EG');
+      }
+
+      // Non-blocking: Nächsten wartenden Auftrag anstoßen oder Idle-Trainer starten
+      await processNextTaskInQueue();
+      return;
+    }
+
     state.activeTask.current_stage = '4_user_decision';
     state.activeTask.status = 'pending_approval';
-    state.activeTask.trevor_summary = finalResult.summary;
+    state.activeTask.trevor_summary = finalResult.summary || '';
     state.activeTask.checkpoint_data = {
       ...state.activeTask.checkpoint_data,
-      structured_steps: finalResult.steps,
-      department_reports: finalResult.departmentReports
+      structured_steps: finalResult.steps || [],
+      department_reports: finalResult.departmentReports || []
     };
-    state.activeTask.antigravity_prompt = buildAntigravityPromptForSteps(
-      finalResult.steps.filter(s => s.approved !== false && s.enabled !== false),
+    state.activeTask.antigravity_prompt = finalResult.solution || buildAntigravityPromptForSteps(
+      (finalResult.steps || []).filter(s => s.approved !== false && s.enabled !== false),
       state.activeTask
     );
 
@@ -1070,6 +1102,7 @@ async function dispatchNewTask() {
     updateCheckpointBadge('Entscheidung erforderlich (JA / NEIN)', false);
 
     queueItem.status = '4/4: Bereit zur Freigabe im Action-Center';
+    queueItem.isPaused = false;
     renderTaskQueueUI();
     try {
       localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
@@ -1085,14 +1118,26 @@ async function dispatchNewTask() {
     document.getElementById('code-preview-content').innerText = state.activeTask.antigravity_prompt;
     renderInteractiveRoadmap(state.activeTask.checkpoint_data.structured_steps);
 
-    // Audio-Feedback & Toast für fertiges Ergebnis
+    // Audio-Feedback & Toast für fertiges Ergebnis (Dynamische Sprache statt Standardsatz)
     playNotificationSound('SUCCESS');
-    showActionToast('Ergebnis bereit', 'Abteilung hat die Arbeit abgeschlossen', 'SUCCESS');
+    const completionMsg = finalResult.spokenSummary || 'Auftrag erfolgreich abgeschlossen und zur Freigabe bereitgestellt.';
+    showActionToast('Ergebnis bereit', completionMsg, 'SUCCESS');
+
+    if (typeof window !== 'undefined' && typeof window.speakAsJarvis === 'function' && finalResult.spokenSummary) {
+      window.speakAsJarvis(finalResult.spokenSummary);
+    }
+
     addActionCenterItem({
       id: `act_${state.activeTask.id}_final`,
-      type: 'APPROVAL_NEEDED',
-      title: 'Ergebnis bereit zur Abstimmung',
-      message: `${(state.activeTask.checkpoint_data.structured_steps || []).length} Maßnahmen freigabebereit.`
+      type: finalResult.workMode === 'GENERAL_AI_TASK' ? 'SOLUTION_READY' : 'APPROVAL_NEEDED',
+      title: finalResult.workMode === 'GENERAL_AI_TASK' ? 'KI-Lösung fertiggestellt' : 'Ergebnis bereit zur Abstimmung',
+      message: completionMsg,
+      data: {
+        actionId: `act_${state.activeTask.id}_final`,
+        solution: state.activeTask.antigravity_prompt,
+        steps: state.activeTask.checkpoint_data.structured_steps,
+        spokenSummary: finalResult.spokenSummary
+      }
     });
 
   } catch (err) {
@@ -1908,6 +1953,7 @@ export async function runQueueTask(index) {
 function getStatusBadgeClass(status) {
   if (!status) return 'badge-analyzing';
   const s = status.toLowerCase();
+  if (s.includes('wartet')) return 'badge-waiting';
   if (s.includes('ausgelastet') || s.includes('busy')) return 'badge-busy';
   if (s.includes('2/4') || s.includes('3/4') || s.includes('erarbeiten') || s.includes('prüft')) return 'badge-working';
   if (s.includes('4/4') || s.includes('bereit') || s.includes('abgeschlossen') || s.includes('erledigt') || s.includes('erfolg')) return 'badge-done';
@@ -2264,6 +2310,161 @@ export function closeActionCenter() {
 }
 
 /**
+ * Kopiert Text in die Zwischenablage (mit Fallback)
+ */
+export async function copyTextToClipboard(text) {
+  if (!text) return false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn('[Trevor App] navigator.clipboard.writeText nicht verfügbar, nutze Fallback:', err);
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const success = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return success;
+  } catch (err2) {
+    console.error('[Trevor App] Fallback Clipboard Copy fehlgeschlagen:', err2);
+    return false;
+  }
+}
+
+/**
+ * Führt den nächsten nicht-pausierten Auftrag in der Task-Queue aus
+ * oder reaktiviert das Idle-Training, falls keine Aufträge anstehen.
+ */
+export async function processNextTaskInQueue() {
+  if (state.taskQueue && state.taskQueue.length > 0) {
+    const nextIdx = state.taskQueue.findIndex(item => !item.isPaused && (!item.status || !item.status.includes('Wartet')));
+    if (nextIdx !== -1) {
+      console.log(`[Trevor App] processNextTaskInQueue: Starte Auftrag an Position #${nextIdx + 1}`);
+      await runQueueTask(nextIdx);
+      return true;
+    }
+  }
+  try {
+    if (state.hierarchy && state.hierarchy.departments) {
+      startIdleTraining(state.hierarchy.departments, 5000);
+    }
+  } catch (e) {
+    console.warn('[Trevor App] Idle-Training Reaktivierung:', e);
+  }
+  return false;
+}
+
+/**
+ * Verarbeitet die Nutzer-Entscheidung aus dem Action-Center (Modus A, B oder Rückfrage)
+ * und setzt den pausierten Auftrag nahtlos fort.
+ */
+export async function handleUserDecision(actionId, decision, notes = '') {
+  console.log(`[Trevor App] handleUserDecision für Action ${actionId}:`, decision);
+  const pendingData = (typeof window !== 'undefined' && window.pendingTasksMap)
+    ? window.pendingTasksMap[actionId]
+    : null;
+
+  removeActionCenterItem(actionId);
+  if (typeof window !== 'undefined' && window.pendingTasksMap) {
+    delete window.pendingTasksMap[actionId];
+  }
+
+  if (!pendingData) {
+    console.warn(`[Trevor App] Keine Pending-Daten für Action ${actionId} gefunden.`);
+    return;
+  }
+
+  if (state.taskQueue && state.taskQueue.length > 0) {
+    const qItem = state.taskQueue.find(item => item.id === pendingData.queueId || item.text === pendingData.userPrompt);
+    if (qItem) {
+      qItem.isPaused = false;
+      qItem.status = 'Wiederaufnahme: Trevor führt Auftrag aus...';
+      renderTaskQueueUI();
+    }
+  }
+
+  const monitorEl = document.getElementById('live-activity-monitor');
+  if (monitorEl) {
+    monitorEl.innerText = 'Wiederaufnahme: Trevor führt Auftrag aus...';
+  }
+
+  try {
+    const res = await orchestrator.resumePendingTask(pendingData, decision, notes);
+    if (res && res.isPaused) {
+      return;
+    }
+
+    if (res) {
+      const finalPrompt = res.antigravityPrompt || res.solution || res.markdown || '';
+      if (!state.activeTask) {
+        state.activeTask = {
+          id: 'task_' + Date.now(),
+          user_prompt: pendingData.userPrompt || '',
+          checkpoint_data: {}
+        };
+      }
+      state.activeTask.antigravity_prompt = finalPrompt;
+      state.activeTask.trevor_summary = res.summary || '';
+      state.activeTask.checkpoint_data = {
+        ...state.activeTask.checkpoint_data,
+        structured_steps: res.steps || []
+      };
+      state.activeTask.status = 'pending_approval';
+
+      const decSection = document.getElementById('section-decision');
+      if (decSection) {
+        decSection.style.display = 'flex';
+        const sumEl = document.getElementById('decision-summary-text');
+        if (sumEl) sumEl.innerText = state.activeTask.trevor_summary;
+        const prevEl = document.getElementById('code-preview-content');
+        if (prevEl) prevEl.innerText = state.activeTask.antigravity_prompt;
+        renderInteractiveRoadmap(state.activeTask.checkpoint_data.structured_steps);
+      }
+
+      if (state.taskQueue && state.taskQueue.length > 0) {
+        const qItem = state.taskQueue.find(item => item.id === pendingData.queueId || item.text === pendingData.userPrompt);
+        if (qItem) {
+          qItem.isPaused = false;
+          qItem.status = '4/4: Bereit zur Freigabe im Action-Center';
+          renderTaskQueueUI();
+          try {
+            localStorage.setItem('trevor_task_queue', JSON.stringify(state.taskQueue));
+          } catch {}
+        }
+      }
+
+      if (finalPrompt) {
+        try {
+          await exportTaskToLocalDisk(finalPrompt);
+        } catch (exportErr) {
+          console.warn('[Trevor App] Export error on task resume:', exportErr);
+        }
+      }
+
+      playNotificationSound('SUCCESS');
+      const spoken = res.spokenSummary || 'Auftrag erfolgreich fortgeführt und abgeschlossen.';
+      showActionToast('Auftrag abgeschlossen', spoken, 'SUCCESS');
+      if (typeof window !== 'undefined' && typeof window.speakAsJarvis === 'function' && res.spokenSummary) {
+        window.speakAsJarvis(res.spokenSummary);
+      }
+    }
+  } catch (err) {
+    console.error('[Trevor App] Fehler bei resumePendingTask:', err);
+    showActionToast('Fehler', 'Auftrag konnte nicht fortgesetzt werden: ' + err.message, 'DANGER');
+  } finally {
+    await processNextTaskInQueue();
+  }
+}
+
+/**
  * Fügt ein Action-Item ins Action-Center ein, spielt Sound & zeigt Toast
  */
 export function addActionCenterItem(item) {
@@ -2271,10 +2472,11 @@ export function addActionCenterItem(item) {
   const fullItem = {
     id,
     type: item.type || 'APPROVAL_NEEDED',
+    subType: item.subType || '',
     title: item.title || 'Aktion erforderlich',
     message: item.message || '',
     timestamp: Date.now(),
-    data: item.data || {}
+    data: item.data || item || {}
   };
 
   state.actionCenterItems.unshift(fullItem);
@@ -2344,54 +2546,275 @@ export function renderActionCenterUI() {
   list.innerHTML = '';
 
   state.actionCenterItems.forEach(item => {
-    const isClarification = item.type === 'CLARIFICATION_NEEDED' || item.type === 'QUESTION';
+    const isWaiting = item.type === 'WAITING_FOR_USER' || item.type === 'CLARIFICATION_NEEDED' || item.type === 'QUESTION';
+    const isPromptDecision = item.type === 'PROMPT_DECISION';
+    const isImprovementAudit = item.type === 'IMPROVEMENT_AUDIT';
+    const isSolution = item.type === 'SOLUTION_READY';
+
     const card = document.createElement('div');
     card.id = `action-card-${item.id}`;
-    card.className = `action-item-card ${isClarification ? 'type-clarification' : 'type-approval'}`;
 
-    const tagClass = isClarification ? 'tag-clarification' : 'tag-approval';
-    const tagText = isClarification ? '❓ RÜCKFRAGE' : '✔ FREIGABE BEREIT';
-    const btnText = isClarification ? '💬 Ansehen / Antworten' : '📋 Zur Checkliste';
+    let cardTypeClass = 'type-approval';
+    let tagClass = 'tag-approval';
+    let tagText = '✔ FREIGABE BEREIT';
 
-    card.innerHTML = `
-      <div class="action-item-header">
-        <span class="action-item-tag ${tagClass}">${tagText}</span>
-        <span style="font-size: 10px; color: var(--text-dim);">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+    if (isWaiting) {
+      cardTypeClass = 'type-waiting';
+      tagClass = 'tag-clarification';
+      tagText = '❓ RÜCKFRAGE';
+    } else if (isPromptDecision) {
+      cardTypeClass = 'type-decision';
+      tagClass = 'tag-clarification';
+      tagText = '⚡ ENTSCHEIDUNG';
+    } else if (isImprovementAudit) {
+      cardTypeClass = 'type-decision';
+      tagClass = 'tag-clarification';
+      tagText = '🔍 AUDIT-FREIGABE';
+    } else if (isSolution) {
+      cardTypeClass = 'type-solution';
+      tagClass = 'tag-approval';
+      tagText = '✨ LÖSUNG BEREIT';
+    }
+
+    card.className = `action-item-card ${cardTypeClass}`;
+
+    const impact = item.data?.impactAnalysis;
+    const impactHtml = (impact && (impact.impactYes || impact.impactNo)) ? `
+      <div class="action-impact-box">
+        <div class="action-impact-title">⚠️ Konsequenz-Analyse:</div>
+        ${impact.impactYes ? `<div class="action-impact-yes"><strong>Wenn JA:</strong> ${escapeHtml(impact.impactYes)}</div>` : ''}
+        ${impact.impactNo ? `<div class="action-impact-no"><strong>Wenn NEIN:</strong> ${escapeHtml(impact.impactNo)}</div>` : ''}
       </div>
-      <div class="action-item-title">${escapeHtml(item.title)}</div>
-      <div class="action-item-msg">${escapeHtml(item.message)}</div>
-      <div class="action-item-actions">
-        <button class="history-btn btn-action-dismiss" title="Erledigt / Entfernen">✕</button>
-        <button class="btn-action-act">${btnText}</button>
-      </div>
-    `;
+    ` : '';
 
-    card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
-      e.stopPropagation();
-      removeActionCenterItem(item.id);
-    });
+    if (isWaiting) {
+      // 1. RÜCKFRAGE / WAITING_FOR_USER
+      card.innerHTML = `
+        <div class="action-item-header">
+          <span class="action-item-tag ${tagClass}">${tagText}</span>
+          <span style="font-size: 10px; color: var(--text-dim);">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="action-item-title">${escapeHtml(item.title)}</div>
+        <div class="action-item-msg">${escapeHtml(item.message)}</div>
+        ${impactHtml}
+        <textarea class="action-item-notes" placeholder="Optionale Anmerkung oder Details eingeben..." rows="2"></textarea>
+        <div class="action-item-actions">
+          <button class="history-btn btn-action-dismiss" title="Verwerfen">✕</button>
+          <button class="btn-action-decision-yes" data-decision="JA">✔ Ja</button>
+          <button class="btn-action-decision-no" data-decision="NEIN">✕ Nein</button>
+          <button class="btn-action-decision-submit">Antwort senden</button>
+        </div>
+      `;
 
-    card.querySelector('.btn-action-act').addEventListener('click', () => {
-      closeActionCenter();
-      if (isClarification) {
-        const qaPanel = document.getElementById('qa-panel');
-        if (qaPanel && qaPanel.style.display !== 'none') {
-          qaPanel.scrollIntoView({ behavior: 'smooth' });
-        } else {
-          const input = document.getElementById('task-prompt-input');
-          if (input) {
-            input.focus();
-            input.scrollIntoView({ behavior: 'smooth' });
+      const notesInput = card.querySelector('.action-item-notes');
+      card.querySelector('.btn-action-decision-yes').addEventListener('click', () => {
+        handleUserDecision(item.id, 'JA', notesInput ? notesInput.value.trim() : '');
+      });
+      card.querySelector('.btn-action-decision-no').addEventListener('click', () => {
+        handleUserDecision(item.id, 'NEIN', notesInput ? notesInput.value.trim() : '');
+      });
+      card.querySelector('.btn-action-decision-submit').addEventListener('click', () => {
+        const text = notesInput ? notesInput.value.trim() : '';
+        handleUserDecision(item.id, text || 'JA', text);
+      });
+      card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeActionCenterItem(item.id);
+      });
+
+    } else if (isPromptDecision) {
+      // 2. MODUS A: PROMPT_DECISION
+      const options = Array.isArray(item.data?.options) ? item.data.options : [];
+      const optionsHtml = options.length > 0 ? `
+        <div class="action-options-list">
+          ${options.map((opt, idx) => `
+            <div class="action-option-item">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px;">
+                <strong style="color:#38bdf8; font-size:12px;">Option ${idx + 1}: ${escapeHtml(opt.title || opt.name || 'Option')}</strong>
+                <button class="btn-action-decision-yes btn-select-opt" data-idx="${idx}" style="padding: 2px 8px; font-size: 11px;">Wählen</button>
+              </div>
+              <div style="font-size: 11px; color: #cbd5e1; margin: 4px 0;">${escapeHtml(opt.description || opt.summary || '')}</div>
+              ${(opt.impactYes || opt.impactNo || opt.impactAnalysis) ? `
+                <div class="action-impact-box">
+                  ${(opt.impactYes || opt.impactAnalysis?.impactYes) ? `<div class="action-impact-yes"><strong>Wenn JA:</strong> ${escapeHtml(opt.impactYes || opt.impactAnalysis.impactYes)}</div>` : ''}
+                  ${(opt.impactNo || opt.impactAnalysis?.impactNo) ? `<div class="action-impact-no"><strong>Wenn NEIN:</strong> ${escapeHtml(opt.impactNo || opt.impactAnalysis.impactNo)}</div>` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      ` : '';
+
+      card.innerHTML = `
+        <div class="action-item-header">
+          <span class="action-item-tag ${tagClass}">${tagText}</span>
+          <span style="font-size: 10px; color: var(--text-dim);">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="action-item-title">${escapeHtml(item.title)}</div>
+        <div class="action-item-msg">${escapeHtml(item.message)}</div>
+        ${optionsHtml}
+        <textarea class="action-item-notes" placeholder="Individuelle Anweisung / Präzisierung..." rows="2"></textarea>
+        <div class="action-item-actions">
+          <button class="history-btn btn-action-dismiss" title="Verwerfen">✕</button>
+          <button class="btn-action-decision-yes">✔ Vorschlag 1 annehmen</button>
+          <button class="btn-action-decision-no">✕ Ablehnen</button>
+          <button class="btn-action-decision-submit">Mit Anmerkung fortfahren</button>
+        </div>
+      `;
+
+      const notesInput = card.querySelector('.action-item-notes');
+      card.querySelectorAll('.btn-select-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          const opt = options[idx];
+          const choice = opt ? `Option ${idx + 1}: ${opt.title || ''}` : `Option ${idx + 1}`;
+          handleUserDecision(item.id, choice, notesInput ? notesInput.value.trim() : '');
+        });
+      });
+      card.querySelector('.btn-action-decision-yes').addEventListener('click', () => {
+        handleUserDecision(item.id, 'JA', notesInput ? notesInput.value.trim() : '');
+      });
+      card.querySelector('.btn-action-decision-no').addEventListener('click', () => {
+        handleUserDecision(item.id, 'NEIN', notesInput ? notesInput.value.trim() : '');
+      });
+      card.querySelector('.btn-action-decision-submit').addEventListener('click', () => {
+        const text = notesInput ? notesInput.value.trim() : '';
+        handleUserDecision(item.id, text || 'JA', text);
+      });
+      card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeActionCenterItem(item.id);
+      });
+
+    } else if (isImprovementAudit) {
+      // 3. MODUS B: IMPROVEMENT_AUDIT
+      const proposals = Array.isArray(item.data?.proposals) ? item.data.proposals : [];
+      const proposalsHtml = proposals.length > 0 ? `
+        <div class="action-proposal-group">
+          ${proposals.map((prop, idx) => `
+            <div class="action-option-item" style="margin-bottom: 6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:#38bdf8; font-size:12px;">[${escapeHtml(prop.department || prop.departmentName || 'Audit')}] ${escapeHtml(prop.title || 'Maßnahme ' + (idx + 1))}</strong>
+                <label style="display:flex; align-items:center; gap:4px; font-size:11px; cursor:pointer;">
+                  <input type="checkbox" class="audit-proposal-toggle" data-idx="${idx}" checked>
+                  <span style="color:#34d399;">Umsetzen</span>
+                </label>
+              </div>
+              <div style="font-size: 11px; color: #cbd5e1; margin: 4px 0;">${escapeHtml(prop.description || prop.finding || '')}</div>
+              ${(prop.impactYes || prop.impactNo) ? `
+                <div class="action-impact-box">
+                  ${prop.impactYes ? `<div class="action-impact-yes"><strong>Nutzen:</strong> ${escapeHtml(prop.impactYes)}</div>` : ''}
+                  ${prop.impactNo ? `<div class="action-impact-no"><strong>Risiko:</strong> ${escapeHtml(prop.impactNo)}</div>` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      ` : '';
+
+      card.innerHTML = `
+        <div class="action-item-header">
+          <span class="action-item-tag ${tagClass}">${tagText}</span>
+          <span style="font-size: 10px; color: var(--text-dim);">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="action-item-title">${escapeHtml(item.title)}</div>
+        <div class="action-item-msg">${escapeHtml(item.message)}</div>
+        ${proposalsHtml}
+        <textarea class="action-item-notes" placeholder="Optionale Anmerkungen zum Audit..." rows="2"></textarea>
+        <div class="action-item-actions">
+          <button class="history-btn btn-action-dismiss" title="Verwerfen">✕</button>
+          <button class="btn-action-decision-no">✕ Alle verwerfen</button>
+          <button class="btn-action-decision-submit">✔ Ausgewählte freigeben</button>
+        </div>
+      `;
+
+      const notesInput = card.querySelector('.action-item-notes');
+      card.querySelector('.btn-action-decision-submit').addEventListener('click', () => {
+        const approvedList = [];
+        card.querySelectorAll('.audit-proposal-toggle').forEach(t => {
+          if (t.checked) {
+            const idx = parseInt(t.dataset.idx, 10);
+            if (proposals[idx]) approvedList.push(proposals[idx]);
           }
+        });
+        handleUserDecision(item.id, approvedList, notesInput ? notesInput.value.trim() : '');
+      });
+      card.querySelector('.btn-action-decision-no').addEventListener('click', () => {
+        handleUserDecision(item.id, 'NEIN', notesInput ? notesInput.value.trim() : '');
+      });
+      card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeActionCenterItem(item.id);
+      });
+
+    } else if (isSolution) {
+      // 4. MODUS C: SOLUTION_READY
+      const solutionText = item.data?.solution || item.message || '';
+      card.innerHTML = `
+        <div class="action-item-header">
+          <span class="action-item-tag ${tagClass}">${tagText}</span>
+          <span style="font-size: 10px; color: var(--text-dim);">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="action-item-title">${escapeHtml(item.title)}</div>
+        <div class="action-item-msg">${escapeHtml(item.message)}</div>
+        <div class="action-solution-preview" style="max-height: 180px; overflow-y: auto; background: #0b1329; border: 1px solid rgba(56,189,248,0.25); border-radius: 6px; padding: 10px; font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; margin: 8px 0; color: #e2e8f0;">${escapeHtml(solutionText)}</div>
+        <div class="action-item-actions">
+          <button class="history-btn btn-action-dismiss" title="Schließen">✕</button>
+          <button class="btn-action-copy">📋 Lösung kopieren</button>
+          <button class="btn-action-export">💾 Als Datei exportieren</button>
+        </div>
+      `;
+
+      card.querySelector('.btn-action-copy').addEventListener('click', async () => {
+        const ok = await copyTextToClipboard(solutionText);
+        showActionToast('Kopiert', ok ? 'Lösung in die Zwischenablage kopiert!' : 'Konnte nicht kopiert werden', ok ? 'SUCCESS' : 'WARNING');
+      });
+
+      card.querySelector('.btn-action-export').addEventListener('click', async () => {
+        try {
+          const fname = `AI_SOLUTION_${Date.now()}.md`;
+          await exportTaskToLocalDisk(solutionText, fname);
+          showActionToast('Exportiert', `Lösung gespeichert als ${fname}`, 'SUCCESS');
+        } catch (expErr) {
+          console.warn('[Trevor App] Fehler beim Export:', expErr);
         }
-      } else {
+      });
+
+      card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeActionCenterItem(item.id);
+      });
+
+    } else {
+      // 5. STANDARD: APPROVAL_NEEDED
+      const btnText = '📋 Zur Checkliste';
+      card.innerHTML = `
+        <div class="action-item-header">
+          <span class="action-item-tag ${tagClass}">${tagText}</span>
+          <span style="font-size: 10px; color: var(--text-dim);">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="action-item-title">${escapeHtml(item.title)}</div>
+        <div class="action-item-msg">${escapeHtml(item.message)}</div>
+        <div class="action-item-actions">
+          <button class="history-btn btn-action-dismiss" title="Erledigt / Entfernen">✕</button>
+          <button class="btn-action-act">${btnText}</button>
+        </div>
+      `;
+
+      card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeActionCenterItem(item.id);
+      });
+
+      card.querySelector('.btn-action-act').addEventListener('click', () => {
+        closeActionCenter();
         const decSection = document.getElementById('section-decision');
         if (decSection) {
           decSection.style.display = 'flex';
           decSection.scrollIntoView({ behavior: 'smooth' });
         }
-      }
-    });
+      });
+    }
 
     list.appendChild(card);
   });
@@ -3505,6 +3928,10 @@ if (typeof window !== 'undefined') {
   window.saveInsightToCloudMemory = saveInsightToCloudMemory;
   window.getDepartmentCode = getDepartmentCode;
   window.searchCloudMemory = (q) => orchestrator.searchCloudMemory(q);
+  window.pendingTasksMap = window.pendingTasksMap || {};
+  window.processNextTaskInQueue = processNextTaskInQueue;
+  window.handleUserDecision = handleUserDecision;
+  window.copyTextToClipboard = copyTextToClipboard;
   if (!Array.isArray(window.selectedContextFiles)) {
     window.selectedContextFiles = [];
   }

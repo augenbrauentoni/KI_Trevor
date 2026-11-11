@@ -543,4 +543,37 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
      - Animiert Tastatur-Tippbewegungen der Spezialisten-Arme (`avatarArms.position.y = 0.05`).
      - Überträgt Live-Status in die 3D-UserData (`userData.currentTask`) sowie ins schwebende Info-Panel.
 
+---
+
+## 25. Workflow-Präzisierung, 3 Arbeits-Modi, Non-Blocking Action-Center & Dynamische Sprache
+
+1. **Dynamische Sprachausgabe statt Standardsatz ([`jarvisVoice.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/jarvisVoice.js) & [`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Vollständige Eliminierung aller statisch einprogrammierten Abschluss-Sprachsätze (kein festes "Die Abteilung hat die Arbeit abgeschlossen" mehr).
+   - Trevors finaler Konsolidierungs-Schritt erzeugt für alle Workflows zwingend ein Feld `"spokenSummary"` (1–2 präzise, inhaltliche Sätze im J.A.R.V.I.S.-Stil auf Deutsch, die exakt zusammenfassen, WAS gelöst wurde oder welche Rückfrage offen ist).
+   - In `jarvisVoice.js`: Vor jedem `window.speechSynthesis.speak()` wird zwingend `window.speechSynthesis.cancel()` ausgeführt, um Browser-Warteschlangen-Staus und Verzögerungen zuverlässig zu unterbinden.
+
+2. **Strikte Auftragstreue & 3 klare Arbeits-Modi ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - **Modus A: `PROMPT_REQUEST` (Prompt- & Feature-Anfragen für Antigravity):**
+     - Die zuständige Abteilung erarbeitet technische Alternativen mit Konsequenz-Analyse (`impactYes`: Was passiert bei [JA]; `impactNo`: Konsequenz bei [NEIN]).
+     - Trevor pausiert non-blocking und präsentiert die Entscheidungsoptionen mit `[Ja]`, `[Nein]` und Notizfeld im Action-Center.
+     - Nach Nutzer-Entscheidung (`resumePromptRequestTask`) wird ein vollständiger Markdown-System-Prompt für Antigravity inklusive Ziel-Dateien, Implementierungs-Roadmap und Kriterien generiert.
+   - **Modus B: `IMPROVEMENT_AUDIT` (Systemweites Audit & Code-Review):**
+     - Paralleler Scan via `Promise.all()` über alle 4 Kern-Abteilungen gleichzeitig (`EG_ARCHITEKTUR`, `EG_FRONTEND`, `EG_BACKEND`, `UG_SERVER`).
+     - Jede Abteilung prüft ihren Spezialbereich und liefert strukturierte Optimierungsvorschläge mit Nutzen- und Risikoanalyse.
+     - Trevor konsolidiert die Ergebnisse in eine nach Abteilungen gruppierte Vorschlagsliste im Action-Center mit Checkboxen (`[Ja, umsetzen]` / `[Nein, verwerfen]`). Freigegebene Punkte werden in die Antigravity-Roadmap übernommen.
+   - **Modus C: `GENERAL_AI_TASK` (Allgemeine KI-Aufgabenlösung mit Spezialisten-Fokus):**
+     - Volle Problemlösungskompetenz ohne Einschränkung auf Antigravity-Prompts.
+     - Zuweisung an die fachlich am besten passende Abteilung.
+     - 3 Spezial-Agenten der Abteilung bearbeiten die Aufgabe parallel via `Promise.all()` (Spezialist 1: Schritt-für-Schritt Lösung/Code/Berechnung; Spezialist 2: Executive Summary & Kernaussagen; Spezialist 3: Typische Stolpersteine & Best Practices).
+     - Konsolidierung zu einer modularen Gesamtlösung mit formatierter Vorschau, `[📋 Lösung kopieren]` und `[💾 Als Datei exportieren]`.
+
+3. **Rückfragen-Pflicht & Non-Blocking Action-Center ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js) & [`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - Bei Informationslücken oder Unklarheiten rät Trevor nicht selbst, sondern formuliert im Pre-Check eine präzise Rückfrage mit Konsequenz-Erklärung (`WAITING_FOR_USER`).
+   - Die Abteilung wird unverzüglich auf `IDLE` gesetzt, der Task pausiert im Action-Center und ist in `window.pendingTasksMap` hinterlegt.
+   - `processNextTaskInQueue()`: Das System arbeitet sofort den nächsten wartenden Auftrag in der Queue ab oder reaktiviert das Idle-Training (`startIdleTraining`).
+   - `handleUserDecision(actionId, decision, notes)`: Verarbeitet Nutzer-Entscheidungen, nimmt den pausierten Task nahtlos wieder auf und führt ihn zu Ende.
+   - Erweiterte Action-Center-Karten im Dark-Neon Stil (`.type-waiting`, `.type-decision`, `.type-solution`, `.action-impact-box`, `.action-item-notes`, `.action-options-list`, `.action-proposal-group`, `.action-solution-preview`).
+   - Vollwertige Clipboard-Unterstützung via `copyTextToClipboard` und dynamischer Datei-Export via `exportTaskToLocalDisk`.
+
+
 

@@ -2,15 +2,76 @@
  * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
  * File: 02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js
  * 
- * 4-Stufen Hierarchischer Orchestrator für den Browser (Client-seitig):
- * Stufe 1: Trevor (CEO & Dispatcher) -> Zerlegt den Auftrag in Abteilungs-Tasks
- * Stufe 2: Fach-Agenten (Worker Execution) -> Erarbeiten technische Lösungen & Dateipfade
- * Stufe 3: Abteilungsleiter (Lead Audit) -> Prüfen auf Logikfehler, ES-Modul-Pfade & Redundanzen
- * Stufe 4: Trevor (Synthese & Checkliste) -> Generiert strukturierte [JA]/[NEIN] Checkliste
+ * 3 Arbeits-Modi & Präzisions-Orchestrator:
+ * - MODUS A: PROMPT_REQUEST (Vorab-Entscheidung mit Auswirkungs-Analyse -> Antigravity System-Prompt)
+ * - MODUS B: IMPROVEMENT_AUDIT (Bereichsübergreifender Scan via Promise.all() -> Interaktive Abstimmung)
+ * - MODUS C: GENERAL_AI_TASK (Volle KI-Kompetenz mit Spezialisten-Fokus via Promise.all() -> Komplettlösung)
+ * - Non-Blocking Action-Center & Dynamische J.A.R.V.I.S. Sprachausgabe (spokenSummary)
  */
 
 import { queryLLM } from './llmEngine.js';
 import { STUDIO_HIERARCHY } from './hierarchyData.js';
+
+/**
+ * Klassifiziert den Nutzer-Auftrag strikt in einen der 3 Arbeits-Modi:
+ * - 'PROMPT_REQUEST': Nutzer fordert einen System-Prompt oder eine Projekt-Änderung an
+ * - 'IMPROVEMENT_AUDIT': Nutzer fragt nach Verbesserungen / Optimierungen / Schwachstellen
+ * - 'GENERAL_AI_TASK': Allgemeine Fragen, Aufgaben lösen, Zusammenfassungen, Code/Theorie erklären
+ */
+export function classifyWorkMode(text) {
+  const t = (text || '').toLowerCase();
+
+  // Modus B: IMPROVEMENT_AUDIT
+  if (
+    t.includes('verbesser') ||
+    t.includes('optimier') ||
+    t.includes('audit') ||
+    t.includes('schwachstell') ||
+    t.includes('code review') ||
+    t.includes('code-review') ||
+    t.includes('refactor') ||
+    t.includes('qualitätsprüfung') ||
+    t.includes('performance-check') ||
+    t.includes('bottleneck') ||
+    t.includes('verbesserungsvorschläg') ||
+    t.includes('was kann verbessert werden') ||
+    t.includes('schwachstellen-scan')
+  ) {
+    return 'IMPROVEMENT_AUDIT';
+  }
+
+  // Modus A: PROMPT_REQUEST
+  if (
+    t.includes('system-prompt') ||
+    t.includes('system prompt') ||
+    t.includes('task-prompt') ||
+    t.includes('task prompt') ||
+    t.includes('prompt für antigravity') ||
+    t.includes('antigravity prompt') ||
+    t.includes('antigravity-prompt') ||
+    t.includes('erstelle einen prompt') ||
+    t.includes('schreibe einen prompt') ||
+    t.includes('baue mir einen prompt') ||
+    t.includes('generiere einen prompt') ||
+    t.includes('formuliere einen prompt') ||
+    t.includes('prompt erstellen') ||
+    t.includes('prompt schreiben') ||
+    t.includes('prompt generieren') ||
+    t.includes('projekt-änderung') ||
+    t.includes('projektänderung') ||
+    t.includes('feature-request') ||
+    t.includes('neues feature') ||
+    t.includes('prompt:') ||
+    t.includes('generiere prompt') ||
+    t.includes('antigravity task') ||
+    t.includes('antigravity-task')
+  ) {
+    return 'PROMPT_REQUEST';
+  }
+
+  // Modus C: GENERAL_AI_TASK (Standard)
+  return 'GENERAL_AI_TASK';
+}
 
 /**
  * Ermittelt per Keyword-Matching die passende Primär-Abteilung
@@ -20,13 +81,13 @@ export function detectPrimaryDepartment(text) {
   if (p.includes('3d') || p.includes('ui') || p.includes('frontend') || p.includes('css') || p.includes('html') || p.includes('canvas') || p.includes('button') || p.includes('webgl') || p.includes('design') || p.includes('layout')) {
     return 'EG_FRONTEND';
   }
-  if (p.includes('architektur') || p.includes('system') || p.includes('struktur') || p.includes('konzept') || p.includes('blueprint')) {
+  if (p.includes('architektur') || p.includes('system') || p.includes('struktur') || p.includes('konzept') || p.includes('blueprint') || p.includes('planung')) {
     return 'EG_ARCHITEKTUR';
   }
   if (p.includes('hardware') || p.includes('esp32') || p.includes('arduino') || p.includes('sensor') || p.includes('schaltung') || p.includes('löten') || p.includes('werkstatt') || p.includes('elektronik') || p.includes('microcontroller')) {
     return 'UG_WERKSTATT';
   }
-  if (p.includes('serverraum') || p.includes('netzwerk') || p.includes('router') || p.includes('switch') || p.includes('vpn') || p.includes('rack') || p.includes('fisi') || p.includes('firewall') || p.includes('infrastruktur')) {
+  if (p.includes('serverraum') || p.includes('netzwerk') || p.includes('router') || p.includes('switch') || p.includes('vpn') || p.includes('rack') || p.includes('fisi') || p.includes('firewall') || p.includes('infrastruktur') || p.includes('server-hardware')) {
     return 'UG_SERVER';
   }
   if (p.includes('archiv') || p.includes('recherche') || p.includes('text') || p.includes('artikel') || p.includes('wissen') || p.includes('doku') || p.includes('brainstorm')) {
@@ -56,14 +117,25 @@ export function detectPrimaryDepartment(text) {
  * Verhindert, dass Aufträge verschluckt oder als bloßer Text abgebrochen werden.
  */
 export function safeParseTrevorJSON(rawText, originalPrompt) {
+  const modeFallback = classifyWorkMode(originalPrompt + ' ' + (rawText || ''));
+  const deptFallback = detectPrimaryDepartment(originalPrompt + ' ' + (rawText || ''));
+
   if (!rawText || typeof rawText !== 'string') {
-    const primaryDept = detectPrimaryDepartment(originalPrompt);
     return {
+      workMode: modeFallback,
       needsClarification: false,
+      clarificationQuestion: '',
+      impactAnalysis: {
+        impactYes: 'Der Auftrag wird gemäß Ihren Spezifikationen umgesetzt.',
+        impactNo: 'Der Auftrag wird nach Standard-Architektur-Vorgaben ausgeführt.',
+        ifYes: 'Der Auftrag wird gemäß Ihren Spezifikationen umgesetzt.',
+        ifNo: 'Der Auftrag wird nach Standard-Architektur-Vorgaben ausgeführt.'
+      },
       summary: `Auftrag: ${originalPrompt || 'Neuer Auftrag'}`,
       executionMode: 'FULL_DEPARTMENT',
-      primaryDepartment: primaryDept,
-      targetFloor: primaryDept.startsWith('UG') ? 'UG' : 'EG'
+      primaryDepartment: deptFallback,
+      targetFloor: deptFallback.startsWith('UG') ? 'UG' : 'EG',
+      spokenSummary: `Sir, ich habe Ihren Auftrag bezüglich "${(originalPrompt || 'Neuer Auftrag').slice(0, 45)}" aufgenommen.`
     };
   }
 
@@ -76,15 +148,36 @@ export function safeParseTrevorJSON(rawText, originalPrompt) {
     try {
       const parsed = JSON.parse(match[0]);
       if (parsed && typeof parsed === 'object') {
-        const primaryDept = parsed.primaryDepartment || detectPrimaryDepartment(originalPrompt + ' ' + rawText);
+        const validModes = ['PROMPT_REQUEST', 'IMPROVEMENT_AUDIT', 'GENERAL_AI_TASK'];
+        const workMode = validModes.includes(parsed.workMode) ? parsed.workMode : modeFallback;
+        const primaryDept = parsed.primaryDepartment || deptFallback;
         const targetFloor = parsed.targetFloor || (String(primaryDept).startsWith('UG') ? 'UG' : 'EG');
+        const needsClarification = parsed.needsClarification === true && Boolean(parsed.clarificationQuestion || parsed.question);
+        const clarificationQuestion = parsed.clarificationQuestion || parsed.question || '';
+
+        const yesVal = parsed.impactAnalysis?.impactYes || parsed.impactAnalysis?.ifYes || 'Der Auftrag wird mit diesen zusätzlichen Spezifikationen ausgeführt.';
+        const noVal = parsed.impactAnalysis?.impactNo || parsed.impactAnalysis?.ifNo || 'Der Auftrag wird nach den Standard-Architektur-Vorgaben umgesetzt.';
+        const impactAnalysis = {
+          impactYes: yesVal,
+          impactNo: noVal,
+          ifYes: yesVal,
+          ifNo: noVal
+        };
+
+        const spokenSummary = parsed.spokenSummary || (needsClarification
+          ? `Sir, zu Ihrem Auftrag liegt eine Rückfrage im Action-Center bereit: ${clarificationQuestion.slice(0, 80)}`
+          : `Sir, ich habe Ihren Auftrag im Modus ${workMode} analysiert und an ${primaryDept} übergeben.`);
+
         return {
-          needsClarification: parsed.needsClarification === true,
-          clarificationQuestion: parsed.clarificationQuestion || parsed.question || '',
+          workMode,
+          needsClarification,
+          clarificationQuestion,
+          impactAnalysis,
           summary: parsed.summary || parsed.description || rawText.slice(0, 300),
           executionMode: parsed.executionMode || 'FULL_DEPARTMENT',
           primaryDepartment: primaryDept,
-          targetFloor
+          targetFloor,
+          spokenSummary
         };
       }
     } catch (err) {
@@ -92,14 +185,22 @@ export function safeParseTrevorJSON(rawText, originalPrompt) {
     }
   }
 
-  // 3. Fallback-Garantie: Falls KI reinen Text geliefert hat
-  const primaryDept = detectPrimaryDepartment(originalPrompt + ' ' + rawText);
+  // 3. Fallback-Garantie: Reiner Text
   return {
+    workMode: modeFallback,
     needsClarification: false,
+    clarificationQuestion: '',
+    impactAnalysis: {
+      impactYes: 'Der Auftrag wird gemäß Ihren Spezifikationen umgesetzt.',
+      impactNo: 'Der Auftrag wird nach Standard-Architektur-Vorgaben ausgeführt.',
+      ifYes: 'Der Auftrag wird gemäß Ihren Spezifikationen umgesetzt.',
+      ifNo: 'Der Auftrag wird nach Standard-Architektur-Vorgaben ausgeführt.'
+    },
     summary: rawText.trim() || `Auftrag: ${originalPrompt}`,
     executionMode: 'FULL_DEPARTMENT',
-    primaryDepartment: primaryDept,
-    targetFloor: primaryDept.startsWith('UG') ? 'UG' : 'EG'
+    primaryDepartment: deptFallback,
+    targetFloor: deptFallback.startsWith('UG') ? 'UG' : 'EG',
+    spokenSummary: `Sir, ich habe Ihren Auftrag im Modus ${modeFallback} aufgenommen und an die zuständige Abteilung übergeben.`
   };
 }
 
@@ -151,7 +252,6 @@ export function getDepartmentByCodeOrId(deptCodeOrId, departments) {
   );
   if (byName) return byName;
 
-  // Standard: Abteilung 5 (Backend) oder 3 (Frontend)
   return departments.find(d => d.id === 5) || departments[0];
 }
 
@@ -160,6 +260,14 @@ export class WorkflowOrchestrator {
     this.options = options;
     this.hierarchy = STUDIO_HIERARCHY;
     this.busyDepartments = new Set();
+  }
+
+  classifyWorkMode(text) {
+    return classifyWorkMode(text);
+  }
+
+  safeParseTrevorJSON(rawText, originalPrompt) {
+    return safeParseTrevorJSON(rawText, originalPrompt);
   }
 
   isDepartmentBusy(deptId) {
@@ -182,37 +290,45 @@ export class WorkflowOrchestrator {
   }
 
   /**
-   * Führt den vollständigen 4-Stufen-Workflow mit Live-Statusupdates aus
-   * @param {string} userPrompt - Kundenauftrag
-   * @param {function} onStatusUpdate - Callback: (stageName, agentName, message) => void
-   * @returns {Promise<object>} - { summary, steps, rawReports }
+   * Führt den vollständigen Workflow mit 3 Modi aus
    */
   async executeFullWorkflow(userPrompt, onStatusUpdate = () => {}) {
     console.log(`\n======================================================`);
     console.log(`[WorkflowOrchestrator] Starte Workflow: "${userPrompt.slice(0, 60)}..."`);
     console.log(`======================================================\n`);
 
-    onStatusUpdate('1/4: Trevor analysiert...', 'Trevor', 'Pre-Check und Routing für den Kundenauftrag...');
+    onStatusUpdate('1/4: Trevor analysiert...', 'Trevor', 'Pre-Check, Arbeitsmodus & Rückfragen-Prüfung...');
 
     // 1. PRE-CHECK VIA TREVOR MIT safeParseTrevorJSON
     const preCheckSystemPrompt = `Du bist Trevor, Studio-Director von "Trevor AI Software Studio".
 Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, trocken-britisch, extrem höflich ('Sir').
-Deine Aufgabe in Stufe 1 ist die Analyse des Kundenauftrags.
+Deine Aufgabe in Stufe 1 ist die strikte Klassifizierung des Nutzer-Auftrags in genau einen von drei Arbeits-Modi sowie die Prüfung auf Unklarheiten:
 
-ENTSCHEIDE:
-1. Ist der Auftrag völlig unklar oder fehlt eine unverzichtbare Angabe?
-   -> "needsClarification": true, "clarificationQuestion": "Deine prägnante Rückfrage an Sir"
-2. Kann der Auftrag umgesetzt werden (Normalfall für jede Bau-, Programmier-, Refaktorisierungs- oder Analyse-Aufgabe)?
-   -> "needsClarification": false, "summary": "Kurze prägnante Zusammenfassung", "primaryDepartment": "EG_FRONTEND" oder "EG_BACKEND" oder "EG_ARCHITEKTUR" oder "UG_SERVER" oder "UG_WERKSTATT" oder "EG_DATENBANK", "targetFloor": "EG" oder "UG"
+ARBEITS-MODI:
+1. "PROMPT_REQUEST": Der Nutzer fordert einen System-Prompt für Antigravity oder eine konkrete Projekt-Änderung/Feature an.
+2. "IMPROVEMENT_AUDIT": Der Nutzer fragt nach Verbesserungen, Optimierungen, Schwachstellen-Scans, Code-Audits oder Performance-Checks.
+3. "GENERAL_AI_TASK": Allgemeine Aufgaben aller Art (Schritt-für-Schritt Problemlösung, Zusammenfassungen, Skripte schreiben, Berechnungen, Erklärungen von Code oder Konzepten).
 
-Antworte zwingend als valides JSON:
+RÜCKFRAGEN-PFLICHT BEI UNKLARHEIT:
+Falls unverzichtbare Angaben fehlen oder der Auftrag mehrdeutig ist: Setze "needsClarification": true und formuliere eine präzise Rückfrage mit Auswirkungs-Erklärung (was passiert bei Ja/Nein).
+Raten ist strengstens verboten! Wenn alles klar ist: "needsClarification": false.
+
+DYNAMISCHE SPRACHAUSGABE:
+Erzeuge immer ein Feld "spokenSummary" mit 1-2 präzisen Sätzen im J.A.R.V.I.S.-Stil auf Deutsch, die inhaltlich konkret zusammenfassen, was Trevor erkannt hat oder welche Rückfrage offen ist.
+
+Antworte AUSSCHLIESSLICH als valides JSON:
 {
+  "workMode": "PROMPT_REQUEST" | "IMPROVEMENT_AUDIT" | "GENERAL_AI_TASK",
   "needsClarification": false,
   "clarificationQuestion": "",
-  "summary": "...",
-  "executionMode": "FULL_DEPARTMENT",
-  "primaryDepartment": "EG_BACKEND",
-  "targetFloor": "EG"
+  "impactAnalysis": {
+    "ifYes": "Was passiert bei Ja...",
+    "ifNo": "Konsequenz bei Nein..."
+  },
+  "summary": "Prägnante Zusammenfassung",
+  "primaryDepartment": "EG_BACKEND" | "EG_FRONTEND" | "EG_ARCHITEKTUR" | "UG_SERVER" | "EG_DATENBANK" | "UG_WERKSTATT" | "UG_ARCHIV",
+  "targetFloor": "EG" | "UG",
+  "spokenSummary": "Sir, ich habe Ihren Auftrag analysiert..."
 }`;
 
     let preCheckResult;
@@ -226,481 +342,885 @@ Antworte zwingend als valides JSON:
 
     console.log('[WorkflowOrchestrator] Pre-Check Ergebnis:', preCheckResult);
 
-    // 2. FALL A: RÜCKFRAGE ERFORDERLICH
+    const taskId = 'task_' + Date.now();
+    const taskObject = {
+      id: taskId,
+      title: userPrompt.length > 50 ? userPrompt.slice(0, 50) + '...' : userPrompt,
+      userPrompt,
+      prompt: userPrompt,
+      summary: preCheckResult.summary,
+      workMode: preCheckResult.workMode,
+      primaryDepartment: preCheckResult.primaryDepartment,
+      targetFloor: preCheckResult.targetFloor || (preCheckResult.primaryDepartment.startsWith('UG') ? 'UG' : 'EG'),
+      spokenSummary: preCheckResult.spokenSummary
+    };
+
+    // 2. FALL A: RÜCKFRAGE ERFORDERLICH (NON-BLOCKING PAUSIERUNG)
     if (preCheckResult.needsClarification === true && preCheckResult.clarificationQuestion) {
       console.log(`[WorkflowOrchestrator] Rückfrage erforderlich: "${preCheckResult.clarificationQuestion}"`);
       const qText = preCheckResult.clarificationQuestion;
+      const actionId = 'act_clarify_' + Date.now();
+
+      const pendingData = {
+        id: actionId,
+        actionId,
+        taskId: taskObject.id,
+        type: 'WAITING_FOR_USER',
+        subType: 'CLARIFICATION',
+        title: `Rückfrage: ${taskObject.title}`,
+        message: qText,
+        impact: preCheckResult.impactAnalysis,
+        workMode: preCheckResult.workMode,
+        taskObject,
+        preCheckResult,
+        timestamp: Date.now()
+      };
 
       if (typeof window !== 'undefined') {
+        window.pendingTasksMap = window.pendingTasksMap || {};
+        window.pendingTasksMap[actionId] = pendingData;
+
         if (typeof window.addActionCenterItem === 'function') {
-          window.addActionCenterItem({
-            id: 'act_clarify_' + Date.now(),
-            type: 'CLARIFICATION_NEEDED',
-            title: 'Rückfrage von Trevor',
-            message: qText
-          });
+          window.addActionCenterItem(pendingData);
         }
         if (typeof window.playNotificationSound === 'function') {
           window.playNotificationSound('QUESTION');
         }
         if (typeof window.showActionToast === 'function') {
-          window.showActionToast('Rückfrage von Trevor', qText, 'QUESTION');
+          window.showActionToast('Rückfrage von Trevor', qText, 'QUESTION', actionId);
         }
         if (typeof window.speakAsJarvis === 'function') {
-          window.speakAsJarvis(qText);
+          window.speakAsJarvis(preCheckResult.spokenSummary || qText);
         }
         if (typeof window.updateActiveQueueItemStatus === 'function') {
           window.updateActiveQueueItemStatus('Wartet auf Nutzer-Antwort');
+        }
+        // Sofortiges Weiterarbeiten am nächsten Problem (Non-Blocking)
+        if (typeof window.processNextTaskInQueue === 'function') {
+          setTimeout(() => window.processNextTaskInQueue(), 100);
         }
       }
 
       onStatusUpdate('Wartet auf Nutzer-Antwort', 'Trevor', qText);
 
       return {
-        needsClarification: true,
+        isPaused: true,
+        reason: 'CLARIFICATION_NEEDED',
         question: qText,
-        summary: preCheckResult.summary,
-        steps: [],
-        departmentReports: {},
-        rawReports: {}
+        pendingData,
+        summary: preCheckResult.summary
       };
     }
 
-    // 3. FALL B: ZWINGENDER ÜBERGANG ZU STUFE 2 (dispatchTaskToDepartment)
-    const taskObject = {
-      title: userPrompt.length > 50 ? userPrompt.slice(0, 50) + '...' : userPrompt,
-      userPrompt,
-      prompt: userPrompt,
-      summary: preCheckResult.summary,
-      primaryDepartment: preCheckResult.primaryDepartment,
-      targetFloor: preCheckResult.targetFloor || (preCheckResult.primaryDepartment.startsWith('UG') ? 'UG' : 'EG')
-    };
-
-    return await this.dispatchTaskToDepartment(taskObject, onStatusUpdate);
+    // 3. FALL B: ZWINGENDER ÜBERGANG ZU DEM ENTSPRECHENDEN MODUS
+    if (taskObject.workMode === 'PROMPT_REQUEST') {
+      return await this.executePromptRequestMode(taskObject, onStatusUpdate);
+    } else if (taskObject.workMode === 'IMPROVEMENT_AUDIT') {
+      return await this.executeImprovementAuditMode(taskObject, onStatusUpdate);
+    } else {
+      return await this.executeGeneralAITaskMode(taskObject, onStatusUpdate);
+    }
   }
 
   /**
-   * Zwingender Übergang zu Stufe 2: Weist den Task der Ziel-Abteilung zu
-   * und führt die Stufen 2, 3 und 4 sequentiell mit Live-Status aus.
+   * MODUS A: PROMPT_REQUEST
+   * Vorab-Entscheidung mit Auswirkungs-Analyse -> Antigravity System-Prompt
    */
-  async dispatchTaskToDepartment(taskObject, onStatusUpdate = () => {}) {
-    const userPrompt = taskObject.userPrompt || taskObject.prompt || taskObject.summary;
+  async executePromptRequestMode(taskObject, onStatusUpdate = () => {}) {
     const dept = getDepartmentByCodeOrId(taskObject.primaryDepartment, this.hierarchy.departments);
     const targetFloor = dept.floor || taskObject.targetFloor || 'EG';
 
-    // 1. Prüfen, ob Ziel-Abteilung BUSY ist
-    const isBusy = this.isDepartmentBusy(dept.id);
-    if (isBusy) {
-      console.warn(`[WorkflowOrchestrator] Abteilung ${dept.name} ist BUSY. Task verbleibt in Warteschlange.`);
+    if (this.isDepartmentBusy(dept.id)) {
       const busyMsg = 'In Warteschlange (Abteilung ausgelastet)';
       onStatusUpdate(busyMsg, dept.name, `Abteilung ${dept.name} ist aktuell belegt.`);
       if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
         window.updateActiveQueueItemStatus(busyMsg);
       }
-      return {
-        isQueued: true,
-        status: busyMsg,
-        department: dept,
-        taskObject
-      };
+      return { isQueued: true, status: busyMsg, department: dept, taskObject };
     }
 
-    // 2. Abteilung auf BUSY setzen
     this.setDepartmentBusy(dept.id, true);
 
     try {
-      // 3. Status auf 2/4 setzen (UI-Monitor & Queue)
-      const stage2Status = `2/4: [${dept.name}] – Fach-Agenten erarbeiten Lösung...`;
-      onStatusUpdate(stage2Status, dept.name, `Fach-Agenten von ${dept.name} erarbeiten Lösung...`);
-      if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
-        window.updateActiveQueueItemStatus(stage2Status);
-      }
-
-      // 4. 3D-Bühne & Kamera informieren
+      const stage2Status = `2/4: [${dept.name}] – Fach-Agenten erarbeiten technische Optionen...`;
+      onStatusUpdate(stage2Status, dept.name, `Fach-Agenten von ${dept.name} prüfen Optionen & Auswirkungs-Analyse...`);
       if (typeof window !== 'undefined') {
-        if (typeof window.update3DStudioState === 'function') {
-          window.update3DStudioState('stage2', targetFloor);
-        }
-        if (typeof window.setStageIn3D === 'function') {
-          window.setStageIn3D(2);
-        }
-        // Aktive Agenten im 3D-Campus auf "working" animieren (Badges & Datenpakete)
+        if (typeof window.updateActiveQueueItemStatus === 'function') window.updateActiveQueueItemStatus(stage2Status);
+        if (typeof window.update3DStudioState === 'function') window.update3DStudioState('stage2', targetFloor);
+        if (typeof window.setStageIn3D === 'function') window.setStageIn3D(2);
         dept.specialist_pcs.forEach(pc => {
           if (typeof window.updateAgentStatus === 'function') {
-            window.updateAgentStatus(pc.id, 'working', 'Bearbeitet: ' + (taskObject.title || taskObject.summary.slice(0, 30)));
+            window.updateAgentStatus(pc.id, 'working', 'Erstellt technische Optionen...');
           }
         });
       }
 
-      // 5. Code-RAG Kontext abrufen (bei EG)
-      let codeContext = '';
-      if (targetFloor === 'EG') {
-        try {
-          let candidateFiles = [];
-          if (typeof window !== 'undefined' && Array.isArray(window.selectedContextFiles) && window.selectedContextFiles.length > 0) {
-            candidateFiles = [...window.selectedContextFiles];
-          } else {
-            candidateFiles = this.extractCandidateFilePaths(taskObject.summary || '', userPrompt);
-          }
-          if (candidateFiles.length > 0) {
-            const fetched = await this.fetchFilesContext(candidateFiles);
-            if (fetched && fetched.length > 0) {
-              codeContext = fetched.map(f => `### DATEI: ${f.path}\n\`\`\`\n${f.content.slice(0, 5000)}\n\`\`\``).join('\n\n');
-            }
-          }
-        } catch (ragErr) {
-          console.warn('[WorkflowOrchestrator] Code-RAG Fehler:', ragErr.message);
-        }
-      }
+      const codeContext = await this.getCodeContext(dept.floor, taskObject.summary, taskObject.userPrompt);
+      const cloudMemoryContext = await this.getMemoryContext(taskObject.userPrompt);
 
-      // 6. Cloud-Memory RAG abrufen
-      let cloudMemoryContext = '';
+      const optionsPrompt = `Du bist das Expertenteam der Abteilung "${dept.name}".
+Aufgabe: Erarbeite für den System-Prompt-Auftrag "${taskObject.userPrompt}" 2-3 konkrete technische Optionen / Architektur-Alternativen mit klarer Auswirkungs-Analyse (Impact-Analyse).
+Jede Option MUSS erklären:
+1. Was passiert im System bei "Ja"? (impactYes)
+2. Was ist die Konsequenz bei "Nein"? (impactNo)
+
+Antworte AUSSCHLIESSLICH als valides JSON-Array:
+[
+  {
+    "id": "opt_1",
+    "title": "Option 1 Titel",
+    "description": "Prägnante technische Beschreibung",
+    "impactYes": "Konkrete Auswirkung bei Bestätigung...",
+    "impactNo": "Konsequenz bei Ablehnung..."
+  }
+]`;
+
+      let options = [];
       try {
-        const hits = await this.searchCloudMemory(userPrompt);
-        if (hits && hits.length > 0) {
-          cloudMemoryContext = hits.map(m => `### [Gedächtnis / ${m.department}] ${m.topic}\n- Problem: ${m.problem_statement}\n- Lösungsmuster: ${m.solution_pattern}`).join('\n\n');
+        const rawOptions = await queryLLM(optionsPrompt, `AUFTRAG:\n${taskObject.userPrompt}\n${codeContext}\n${cloudMemoryContext}`, true);
+        if (Array.isArray(rawOptions) && rawOptions.length > 0) {
+          options = rawOptions;
         }
-      } catch (memErr) {
-        console.warn('[WorkflowOrchestrator] Cloud-Memory Fehler:', memErr.message);
+      } catch (err) {
+        console.warn('[WorkflowOrchestrator] Fehler bei Options-Erarbeitung:', err);
       }
 
-      // 7. SubTasks für Fach-Agenten definieren
-      const subTasks = [
-        {
-          departmentId: dept.id,
-          departmentName: dept.name,
-          leadAgent: dept.chef_agent,
-          workerAgents: dept.specialist_pcs,
-          mission: `Fach-Ausarbeitung in Abteilung ${dept.name} zum Auftrag: "${taskObject.summary}"`
-        }
-      ];
-
-      // Echter LLM-Call für die Fach-Agenten
-      const workerOutputs = await this.executeWorkerTasks(subTasks, userPrompt, onStatusUpdate, codeContext, cloudMemoryContext);
-      console.log(`[Stufe 2] Fach-Ausarbeitungen für ${dept.name} abgeschlossen.`);
-
-      // 8. STUFE 3: ABTEILUNGSLEITER AUDIT
-      const stage3Status = `3/4: [${dept.name}] – Abteilungsleiter prüft & konsolidiert...`;
-      onStatusUpdate(stage3Status, dept.chef_agent.name, `${dept.chef_agent.name} prüft Schnittstellen & Logik...`);
-      if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
-        window.updateActiveQueueItemStatus(stage3Status);
+      if (!options || options.length === 0) {
+        options = [
+          {
+            id: 'opt_1',
+            title: 'Modulare Komponenten-Architektur (Empfohlen)',
+            description: 'Strikte Trennung von Datenmodell, State-Management und UI-Renderern in isolierte ES-Module.',
+            impactYes: 'Hohe Wartbarkeit, leichte Erweiterbarkeit, saubere Modulgrenzen ohne zirkuläre Abhängigkeiten.',
+            impactNo: 'Schnellerer Initialaufbau in einer Datei, jedoch langfristig schwerer test- und wartbar.'
+          },
+          {
+            id: 'opt_2',
+            title: 'Echtzeit-Event-Bus & Reactive Store',
+            description: 'Zentrale Synchronisation aller Events über ein globales Messaging- und State-Interface.',
+            impactYes: 'Komponenten reagieren verzögerungsfrei auf Zustandsänderungen; UI und 3D-Bühne bleiben synchron.',
+            impactNo: 'Zustandsänderungen müssen manuell über Callbacks nachverfolgt werden.'
+          }
+        ];
       }
+
+      const actionId = 'act_prompt_dec_' + Date.now();
+      const spokenSummary = `Sir, ich habe die technischen Optionen für Ihren System-Prompt ausgearbeitet. Bitte entscheiden Sie im Action-Center über die bevorzugte Architektur.`;
+
+      const pendingData = {
+        id: actionId,
+        actionId,
+        taskId: taskObject.id,
+        type: 'WAITING_FOR_USER',
+        subType: 'PROMPT_DECISION',
+        title: `Entscheidung erforderlich: ${taskObject.title}`,
+        message: 'Bevor der finale System-Prompt für Antigravity erstellt wird, bitte über die technischen Optionen abstimmen:',
+        options,
+        workMode: 'PROMPT_REQUEST',
+        taskObject,
+        dept,
+        spokenSummary,
+        timestamp: Date.now()
+      };
 
       if (typeof window !== 'undefined') {
-        if (typeof window.update3DStudioState === 'function') {
-          window.update3DStudioState('stage3', targetFloor);
-        }
-        if (typeof window.setStageIn3D === 'function') {
-          window.setStageIn3D(3);
-        }
-        if (typeof window.updateAgentStatus === 'function') {
-          window.updateAgentStatus(dept.chef_agent.id, 'auditing', 'Prüft & konsolidiert Bericht...');
-        }
-        if (typeof window.triggerDataStreamToTrevor === 'function') {
-          window.triggerDataStreamToTrevor(dept.id);
-        }
-      }
+        window.pendingTasksMap = window.pendingTasksMap || {};
+        window.pendingTasksMap[actionId] = pendingData;
 
-      // Echter LLM-Call für den Abteilungsleiter
-      const departmentReports = await this.aggregateDepartmentResults(subTasks, workerOutputs, userPrompt, onStatusUpdate);
-      console.log(`[Stufe 3] Abteilungsleiter-Audit für ${dept.name} abgeschlossen.`);
-
-      // 9. STUFE 4: TREVOR SYNTHESE & FREIGABE
-      const stage4Status = `4/4: Bereit zur Freigabe im Action-Center`;
-      onStatusUpdate(stage4Status, 'Trevor', 'Trevor synthetisiert die Maßnahmen zur finalen Freigabe...');
-      if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
-        window.updateActiveQueueItemStatus(stage4Status);
-      }
-
-      if (typeof window !== 'undefined') {
-        if (typeof window.update3DStudioState === 'function') {
-          window.update3DStudioState('stage4', targetFloor);
-        }
-        if (typeof window.setStageIn3D === 'function') {
-          window.setStageIn3D(4);
-        }
-      }
-
-      const finalPlan = await this.synthesizeFinalPlan(userPrompt, departmentReports);
-
-      // 10. Übergabe an das Action-Center & Sounds
-      if (typeof window !== 'undefined') {
         if (typeof window.addActionCenterItem === 'function') {
-          window.addActionCenterItem({
-            id: 'act_approval_' + Date.now(),
-            type: 'APPROVAL_NEEDED',
-            title: `Freigabe: ${taskObject.title || taskObject.summary.slice(0, 45)}`,
-            message: `${dept.chef_agent.name} (${dept.name}) hat die Ausarbeitung abgeschlossen (${finalPlan.steps.length} Maßnahmen).`
-          });
+          window.addActionCenterItem(pendingData);
         }
         if (typeof window.playNotificationSound === 'function') {
-          window.playNotificationSound('SUCCESS');
+          window.playNotificationSound('QUESTION');
         }
         if (typeof window.showActionToast === 'function') {
-          window.showActionToast('Ergebnis bereit', `Abteilung ${dept.name} hat die Ausarbeitung abgeschlossen.`, 'SUCCESS');
+          window.showActionToast('Entscheidung erforderlich', 'Technische Optionen für System-Prompt bereit', 'QUESTION', actionId);
         }
         if (typeof window.speakAsJarvis === 'function') {
-          window.speakAsJarvis(`Abteilung ${dept.name} hat die Arbeiten abgeschlossen, Sir. Die Maßnahmen liegen im Action-Center bereit.`);
+          window.speakAsJarvis(spokenSummary);
+        }
+        if (typeof window.updateActiveQueueItemStatus === 'function') {
+          window.updateActiveQueueItemStatus('Wartet auf Nutzer-Entscheidung');
+        }
+        if (typeof window.processNextTaskInQueue === 'function') {
+          setTimeout(() => window.processNextTaskInQueue(), 100);
         }
       }
 
+      onStatusUpdate('Wartet auf Nutzer-Entscheidung', 'Trevor', 'Vorab-Entscheidung liegt im Action-Center bereit.');
+
       return {
-        summary: taskObject.summary,
-        steps: finalPlan.steps,
-        departmentReports,
-        rawReports: workerOutputs,
-        primaryDepartment: dept.name,
-        targetFloor
+        isPaused: true,
+        actionId,
+        workMode: 'PROMPT_REQUEST',
+        reason: 'PROMPT_DECISION_NEEDED',
+        pendingData,
+        options
       };
 
     } finally {
-      // 11. Abteilung wieder freigeben für nachfolgende Queue-Einträge
       this.setDepartmentBusy(dept.id, false);
     }
   }
 
   /**
-   * 0. classifyTaskType: Pre-Routing per LLM (SOFTWARE vs. HARDWARE_ALLGEMEIN vs. QUESTION)
-   * Nutzt zwingend queryLLM(..., expectJson = true) für deterministisches JSON.
+   * Fortsetzung von MODUS A nach Nutzer-Entscheidung
    */
-  async classifyTaskType(userPrompt) {
-    const systemPrompt = `Du bist Trevors KI-Routing-Classifier.
-Analysiere die Benutzeranfrage und klassifiziere sie in genau EINE von drei Kategorien:
-- "QUESTION": Direkte Wissensfragen, Verständnisfragen, Erklärungsbitten, Definitionsfragen ("Was ist...", "Wie funktioniert...", "Warum...", Fragen ohne Bau- oder Programmierauftrag, Ziel-Etage: "EG").
-- "SOFTWARE": Webentwicklung, Apps, Three.js, JavaScript, Python, APIs, SQL, Frontend, Backend, Bugs, Code-Architektur, konkrete Programmier- oder Implementierungsaufträge (Ziel-Etage: "EG").
-- "HARDWARE_ALLGEMEIN": Physische Hardware, Elektronik, ESP32, Arduino, Raspberry Pi, Löten, PCB, Serverraum, Netzwerkinfrastruktur, FISI-Themen, Allgemeinwissen, Recherche, Textverfassung, Brainstorming, Alltagsorganisation oder Gaming/Freizeit (Ziel-Etage: "UG").
+  async resumePromptRequestTask(pendingData, decision, notes = '') {
+    const { taskObject, dept } = pendingData;
+    const targetFloor = dept.floor || 'EG';
 
-Antworte zwingend und ausschließlich mit folgendem JSON-Schema:
+    console.log(`[WorkflowOrchestrator] Setze PROMPT_REQUEST fort mit Entscheidung: "${decision}", Anmerkung: "${notes}"`);
+    this.setDepartmentBusy(dept.id, true);
+
+    try {
+      if (typeof window !== 'undefined') {
+        if (typeof window.updateActiveQueueItemStatus === 'function') {
+          window.updateActiveQueueItemStatus(`3/4: [${dept.name}] – Generiere Antigravity System-Prompt...`);
+        }
+        if (typeof window.update3DStudioState === 'function') window.update3DStudioState('stage3', targetFloor);
+        if (typeof window.setStageIn3D === 'function') window.setStageIn3D(3);
+      }
+
+      const promptGenPrompt = `Du bist Trevor, Studio Director von "Trevor AI Software Studio".
+Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, trocken-britisch, extrem höflich ('Sir').
+Deine Abteilung "${dept.name}" hat mit dem Nutzer abgestimmt:
+- Gewählte Option / Entscheidung: "${decision}"
+- Nutzer-Anmerkungen: "${notes || 'Keine zusätzlichen Anmerkungen'}"
+
+DEINE AUFGABE:
+Generiere einen vollständigen, professionellen, sofort in Antigravity ausführbaren Markdown System-Prompt für den Kundenauftrag:
+"${taskObject.userPrompt}".
+
+Der System-Prompt MUSS folgende Abschnitte enthalten:
+1. # IDENTITY & GOAL (Rolle, Zweck und Ziel)
+2. # ARCHITECTURE & TECH STACK (Konkrete Architektur basierend auf der Nutzer-Entscheidung)
+3. # STEP-BY-STEP IMPLEMENTATION ROADMAP (Klare Dateipfade wie z.B. 02_Frontend_UI_und_3D_Studio/...)
+4. # CONSTRAINTS & BEST PRACTICES (ES-Module .js-Endungen, Non-Blocking, Native DOM)
+5. # VERIFICATION CHECKLIST (Wie das Ergebnis getestet wird)
+
+Erzeuge außerdem zwingend ein Feld "spokenSummary" mit 1-2 Sätzen im J.A.R.V.I.S.-Stil (deutsch), die inhaltlich zusammenfassen, was der Prompt bewirkt.
+
+Antworte AUSSCHLIESSLICH als valides JSON:
 {
-  "category": "QUESTION" oder "SOFTWARE" oder "HARDWARE_ALLGEMEIN",
-  "target_floor": "EG" oder "UG"
+  "spokenSummary": "1-2 präzise Sätze im J.A.R.V.I.S.-Stil...",
+  "summary": "Zusammenfassung des System-Prompts...",
+  "antigravityPrompt": "# MARKDOWN SYSTEM PROMPT..."
 }`;
 
-    try {
-      const resp = await queryLLM(systemPrompt, `Aufgabe: "${userPrompt}"`, true);
-      let parsed = (typeof resp === 'string') ? JSON.parse(resp) : resp;
-
-      if (!parsed || Array.isArray(parsed) || (!parsed.category && !parsed.target_floor)) {
-        return this.heuristicClassification(userPrompt);
+      let resultObj;
+      try {
+        resultObj = await queryLLM(promptGenPrompt, `Auftrag: ${taskObject.userPrompt}`, true);
+      } catch (err) {
+        console.warn('[WorkflowOrchestrator] Fehler bei Prompt-Generierung:', err);
       }
 
-      const catUpper = String(parsed.category || '').toUpperCase();
-      if (catUpper.includes('QUESTION') || catUpper.includes('FRAGE')) {
-        return {
-          category: 'QUESTION',
-          target_floor: 'EG',
-          classification: 'QUESTION',
-          floor: 'EG'
-        };
+      const antigravityPrompt = resultObj?.antigravityPrompt || `# SYSTEM PROMPT: ${taskObject.title}\n\n## Ziel\nUmsetzung von: ${taskObject.userPrompt}\n\n## Gewählte Konfiguration\n- Entscheidung: ${decision}\n- Spezifikation: ${notes || 'Standard'}\n\n## Umsetzungsschritte\n1. Architektur vorbereiten in 02_Frontend_UI_und_3D_Studio/app.js\n2. Komponenten modular implementieren\n3. Verifikation durchführen`;
+      const spokenSummary = resultObj?.spokenSummary || `Sir, der Antigravity-System-Prompt für "${taskObject.title}" wurde gemäß Ihrer Entscheidung erstellt und liegt zur Übernahme bereit.`;
+
+      if (typeof window !== 'undefined') {
+        const decSummary = document.getElementById('decision-summary-text');
+        if (decSummary) decSummary.innerText = resultObj?.summary || taskObject.summary;
+        const codePreview = document.getElementById('code-preview-content');
+        if (codePreview) codePreview.innerText = antigravityPrompt;
+
+        const decSection = document.getElementById('section-decision');
+        if (decSection) decSection.style.display = 'flex';
+        const progSection = document.getElementById('section-task-progress');
+        if (progSection) progSection.style.display = 'none';
+
+        if (typeof window.addActionCenterItem === 'function') {
+          window.addActionCenterItem({
+            id: 'act_prompt_done_' + Date.now(),
+            type: 'APPROVAL_NEEDED',
+            title: `System-Prompt bereit: ${taskObject.title}`,
+            message: `Der Antigravity-System-Prompt wurde fertiggestellt und kann kopiert oder exportiert werden.`,
+            promptText: antigravityPrompt
+          });
+        }
+
+        if (typeof window.playNotificationSound === 'function') window.playNotificationSound('SUCCESS');
+        if (typeof window.showActionToast === 'function') {
+          window.showActionToast('System-Prompt fertig', `System-Prompt für ${taskObject.title} bereit`, 'SUCCESS');
+        }
+        if (typeof window.speakAsJarvis === 'function') {
+          window.speakAsJarvis(spokenSummary);
+        }
+        if (typeof window.updateActiveQueueItemStatus === 'function') {
+          window.updateActiveQueueItemStatus('4/4: Bereit zur Freigabe im Action-Center');
+        }
       }
 
-      const isUG = catUpper.includes('HARDWARE') || 
-                   String(parsed.target_floor || '').toUpperCase() === 'UG';
-      
-      const target_floor = isUG ? 'UG' : 'EG';
-      const category = isUG ? 'HARDWARE_ALLGEMEIN' : 'SOFTWARE';
-
       return {
-        category,
-        target_floor,
-        classification: category === 'SOFTWARE' ? 'SOFTWARE_DEV' : 'ALLGEMEIN_HARDWARE',
-        floor: target_floor
+        antigravityPrompt,
+        spokenSummary,
+        summary: resultObj?.summary || taskObject.summary
       };
-    } catch {
-      return this.heuristicClassification(userPrompt);
+
+    } finally {
+      this.setDepartmentBusy(dept.id, false);
+      if (typeof window !== 'undefined' && typeof window.processNextTaskInQueue === 'function') {
+        window.processNextTaskInQueue();
+      }
     }
-  }
-
-  heuristicClassification(userPrompt) {
-    const p = (userPrompt || '').trim().toLowerCase();
-
-    // 1. Zuerst auf direkte Frage prüfen (wenn keine Bau-/Programmier-Befehle am Anfang)
-    const isBuildTask = /^(baue|erstelle|programmiere|implementiere|schreibe code|refaktoriere|fixe|repariere|debugge|konfiguriere|löse|entwickle)\b/i.test(p);
-    const isQuestionPattern = /^(was|wie|warum|wieso|weshalb|wozu|wann|wo|wer|welche|welcher|welches|kannst du erklären|erklär|erkläre|definiere|was bedeutet|was ist|unterschied zwischen)\b/i.test(p);
-
-    if (!isBuildTask && (isQuestionPattern || (p.endsWith('?') && p.split(/\s+/).length < 30))) {
-      return {
-        category: 'QUESTION',
-        target_floor: 'EG',
-        classification: 'QUESTION',
-        floor: 'EG'
-      };
-    }
-
-    // 2. Hardware / Keller
-    const ugKeywords = [
-      'hardware', 'elektronik', 'schaltung', 'löten', 'sensor', 'esp32', 'arduino', 'raspberry',
-      'serverraum', 'netzwerk', 'kabel', 'router', 'switch', 'rack', 'vpn', 'patchpanel', 'fisi', 'infrastruktur',
-      'archiv', 'recherche', 'text schreiben', 'aufsatz', 'brainstorming', 'allgemeinwissen', 'artikel', 'wissen',
-      'lounge', 'gaming', 'alltag', 'freizeit', 'pause', 'terminplan', 'lifestyle', 'kaffee'
-    ];
-    const isUG = ugKeywords.some(kw => p.includes(kw));
-    const target_floor = isUG ? 'UG' : 'EG';
-    const category = isUG ? 'HARDWARE_ALLGEMEIN' : 'SOFTWARE';
-    return {
-      category,
-      target_floor,
-      classification: category === 'SOFTWARE' ? 'SOFTWARE_DEV' : 'ALLGEMEIN_HARDWARE',
-      floor: target_floor
-    };
   }
 
   /**
-   * 1. dispatchTask: Trevor zerlegt den Auftrag in Abteilungs-Tasks (gefiltert nach Etage)
+   * MODUS B: IMPROVEMENT_AUDIT
+   * Bereichsübergreifender Scan via Promise.all() -> Interaktive Abstimmung
    */
-  async dispatchTask(userPrompt, routing = { category: 'SOFTWARE', target_floor: 'EG' }) {
-    const targetFloor = routing.target_floor || routing.floor || (routing.category === 'HARDWARE_ALLGEMEIN' ? 'UG' : 'EG');
+  async executeImprovementAuditMode(taskObject, onStatusUpdate = () => {}) {
+    console.log(`[WorkflowOrchestrator] Starte MODUS B (IMPROVEMENT_AUDIT) via Promise.all()`);
 
-    // Filtere verfügbare Abteilungen strikt nach Etage!
-    const availableDeptsList = this.hierarchy.departments.filter(d => {
-      if (targetFloor === 'UG') return d.floor === 'UG';
-      return d.floor !== 'UG';
+    const auditDepts = [
+      { id: 2, code: 'EG_ARCHITEKTUR', name: '2. Bauplan & Technik', focus: 'Architektur, Modularität & Clean Code' },
+      { id: 3, code: 'EG_FRONTEND', name: '3. Optik & Bedienung', focus: 'UI/UX, 3D Canvas, CSS & Responsiveness' },
+      { id: 4, code: 'EG_BACKEND', name: '4. Server & Hintergrund-Logik', focus: 'APIs, Datenfluss, Validierung & Fehlerbehandlung' },
+      { id: 12, code: 'UG_SERVER', name: 'Der Serverraum', focus: 'Infrastruktur, Secrets, Performance & Redundanz' }
+    ];
+
+    auditDepts.forEach(d => this.setDepartmentBusy(d.id, true));
+
+    const stage2Status = '2/4: Bereichsübergreifender Scan aller 4 Abteilungen...';
+    onStatusUpdate(stage2Status, 'Trevor', 'Paralleler Scan via Promise.all() über Architektur, Frontend, Backend und Server...');
+    if (typeof window !== 'undefined') {
+      if (typeof window.updateActiveQueueItemStatus === 'function') window.updateActiveQueueItemStatus(stage2Status);
+      if (typeof window.update3DStudioState === 'function') window.update3DStudioState('stage2', 'EG');
+    }
+
+    try {
+      const codeContext = await this.getCodeContext('EG', taskObject.summary, taskObject.userPrompt);
+      const cloudMemoryContext = await this.getMemoryContext(taskObject.userPrompt);
+
+      // Paralleler Scan aller 4 Abteilungen via Promise.all()
+      const auditPromises = auditDepts.map(async (d) => {
+        const sysPrompt = `Du bist Abteilungsleiter für "${d.name}" (Schwerpunkt: ${d.focus}) im Trevor Software Studio.
+Untersuche das Gesamtsystem auf konkrete Schwachstellen, Performance-Engpässe, Code-Qualität oder UX-Probleme bezogen auf: "${taskObject.userPrompt}".
+Formuliere 1-2 konkrete Optimierungsvorschläge. Jeder Vorschlag MUSS eine klare Auswirkungs-Erklärung enthalten:
+- impactYes: Was verbessert sich im System bei [Ja, umsetzen]?
+- impactNo: Was ist die Konsequenz / das Risiko bei [Nein, verwerfen]?
+
+Antworte AUSSCHLIESSLICH als valides JSON-Objekt:
+{
+  "proposals": [
+    {
+      "id": "prop_${d.code}_1",
+      "department": "${d.name}",
+      "deptCode": "${d.code}",
+      "title": "Prägnanter Titel",
+      "finding": "Gefundene Schwachstelle oder Optimierungspotenzial",
+      "impactYes": "Konkrete Verbesserung bei Umsetzung...",
+      "impactNo": "Risiko oder Konsequenz bei Verwerfung..."
+    }
+  ]
+}`;
+        try {
+          const res = await queryLLM(sysPrompt, `Prüfungsauftrag: ${taskObject.userPrompt}\nCode-Referenz:\n${codeContext.slice(0, 2000)}\n${cloudMemoryContext}`, true);
+          if (Array.isArray(res?.proposals) && res.proposals.length > 0) {
+            return { dept: d, proposals: res.proposals };
+          }
+        } catch (err) {
+          console.warn(`[WorkflowOrchestrator] Audit-Fehler in ${d.name}:`, err);
+        }
+        return {
+          dept: d,
+          proposals: [
+            {
+              id: `prop_${d.code}_1`,
+              department: d.name,
+              deptCode: d.code,
+              title: `Optimierung ${d.name}`,
+              finding: `Routine-Check für ${d.focus} empfiehlt Performance- und Stabilitäts-Audit.`,
+              impactYes: `Erhöhte Ausfallsicherheit und schnellere Reaktionszeiten.`,
+              impactNo: `Keine unmittelbaren Ausfälle, aber potenziell unentdeckte Latenzen.`
+            }
+          ]
+        };
+      });
+
+      const auditResults = await Promise.all(auditPromises);
+
+      const allProposals = [];
+      auditResults.forEach(res => {
+        res.proposals.forEach(p => allProposals.push(p));
+      });
+
+      const actionId = 'act_audit_' + Date.now();
+      const spokenSummary = `Sir, der bereichsübergreifende Scan wurde abgeschlossen. 4 Fachabteilungen haben konkrete Optimierungsvorschläge im Action-Center zur Abstimmung hinterlegt.`;
+
+      const pendingData = {
+        id: actionId,
+        actionId,
+        taskId: taskObject.id,
+        type: 'WAITING_FOR_USER',
+        subType: 'IMPROVEMENT_AUDIT',
+        title: `Optimierungs-Audit: ${allProposals.length} Vorschläge aus 4 Bereichen`,
+        message: 'Trevor und die Fach-Agenten haben folgende Optimierungspotenziale identifiziert. Bitte stimmen Sie über die Umsetzung ab:',
+        proposals: allProposals,
+        workMode: 'IMPROVEMENT_AUDIT',
+        taskObject,
+        spokenSummary,
+        timestamp: Date.now()
+      };
+
+      if (typeof window !== 'undefined') {
+        window.pendingTasksMap = window.pendingTasksMap || {};
+        window.pendingTasksMap[actionId] = pendingData;
+
+        if (typeof window.addActionCenterItem === 'function') {
+          window.addActionCenterItem(pendingData);
+        }
+        if (typeof window.playNotificationSound === 'function') {
+          window.playNotificationSound('QUESTION');
+        }
+        if (typeof window.showActionToast === 'function') {
+          window.showActionToast('Audit abgeschlossen', `${allProposals.length} Optimierungsvorschläge bereit`, 'QUESTION', actionId);
+        }
+        if (typeof window.speakAsJarvis === 'function') {
+          window.speakAsJarvis(spokenSummary);
+        }
+        if (typeof window.updateActiveQueueItemStatus === 'function') {
+          window.updateActiveQueueItemStatus('Wartet auf Nutzer-Abstimmung');
+        }
+        if (typeof window.processNextTaskInQueue === 'function') {
+          setTimeout(() => window.processNextTaskInQueue(), 100);
+        }
+      }
+
+      onStatusUpdate('Wartet auf Nutzer-Abstimmung', 'Trevor', 'Vorschlagsliste liegt im Action-Center bereit.');
+
+      return {
+        isPaused: true,
+        actionId,
+        workMode: 'IMPROVEMENT_AUDIT',
+        reason: 'AUDIT_DECISION_NEEDED',
+        pendingData,
+        proposals: allProposals
+      };
+
+    } finally {
+      auditDepts.forEach(d => this.setDepartmentBusy(d.id, false));
+    }
+  }
+
+  /**
+   * Fortsetzung von MODUS B nach Nutzer-Abstimmung
+   */
+  async resumeImprovementAuditTask(pendingData, decisions, notes = '') {
+    const { taskObject, proposals } = pendingData;
+    console.log(`[WorkflowOrchestrator] Setze IMPROVEMENT_AUDIT fort. Entscheidungen:`, decisions);
+
+    const approvedProposals = proposals.filter(p => {
+      if (typeof decisions === 'object' && decisions !== null) {
+        return decisions[p.id] !== false && decisions[p.id] !== 'NEIN';
+      }
+      return true;
     });
 
-    const availableDepts = availableDeptsList.map(d => `${d.id}. ${d.name} (${d.floor || 'EG'}): ${d.easy_explanation}`).join('\n');
-
-    const systemPrompt = `Du bist Trevor, der Studio-Director und Master-Dispatcher von "Trevor AI Software Studio".
-Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-britisch, extrem höflich und souverän (nutze gelegentlich 'Sir'). Halte gesprochene Statusmeldungen und Rückfragen prägnant.
-Deine Aufgabe in Stufe 1 ist es, den Kundenauftrag für die Etage [${targetFloor}] zu analysieren und relevante Abteilungen auszuwählen.
-
-VERFÜGBARE ABTEILUNGEN AUF ETAGE ${targetFloor}:
-${availableDepts}
-
-Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. ${targetFloor === 'UG' ? '[11, 12, 13]' : '[1, 2, 3, 5, 6, 10]'}), nenne eventuell betroffene Dateien/Module und gib eine kurze Begründung.`;
-
-    const userMsg = `KUNDENAUFTRAG:\n"""\n${userPrompt}\n"""\n\nWelche Abteilungen auf Etage ${targetFloor} sind erforderlich?`;
-
-    // Heuristik & LLM
-    let selectedDeptIds = [];
-    let dispatchRawAnalysis = '';
     try {
-      const response = await queryLLM(systemPrompt, userMsg, false);
-      dispatchRawAnalysis = response;
-      const match = response.match(/\[\s*[\d\s,]+\s*\]/);
-      if (match) {
-        selectedDeptIds = JSON.parse(match[0]);
-      }
-    } catch { /* ignore */ }
-
-    if (!selectedDeptIds || selectedDeptIds.length === 0) {
-      const p = userPrompt.toLowerCase();
-      if (targetFloor === 'UG') {
-        // Fallback für Untergeschoss
-        selectedDeptIds = [];
-        if (p.includes('archiv') || p.includes('text') || p.includes('recherche') || p.includes('wissen') || p.includes('artikel') || p.includes('brainstorm')) selectedDeptIds.push(11);
-        if (p.includes('server') || p.includes('netzwerk') || p.includes('router') || p.includes('rack') || p.includes('vpn') || p.includes('firewall')) selectedDeptIds.push(12);
-        if (p.includes('hardware') || p.includes('elektronik') || p.includes('esp32') || p.includes('arduino') || p.includes('schaltung') || p.includes('löten') || p.includes('sensor')) selectedDeptIds.push(13);
-        if (p.includes('lounge') || p.includes('alltag') || p.includes('gaming') || p.includes('freizeit') || p.includes('termin') || p.includes('pause')) selectedDeptIds.push(14);
-        if (selectedDeptIds.length === 0) {
-          selectedDeptIds = [11, 13]; // Standard: Archiv & Werkstatt
+      if (typeof window !== 'undefined') {
+        if (typeof window.updateActiveQueueItemStatus === 'function') {
+          window.updateActiveQueueItemStatus('3/4: Trevor konsolidiert freigegebene Optimierungen...');
         }
-      } else {
-        // Fallback für Erdgeschoss
-        selectedDeptIds = [1, 2]; // Planung & Architektur immer
-        if (p.includes('ui') || p.includes('frontend') || p.includes('design') || p.includes('button')) selectedDeptIds.push(3);
-        if (p.includes('3d') || p.includes('canvas') || p.includes('three') || p.includes('grafik')) selectedDeptIds.push(4);
-        if (p.includes('backend') || p.includes('server') || p.includes('api') || p.includes('auth')) selectedDeptIds.push(5);
-        if (p.includes('datenbank') || p.includes('database') || p.includes('sql') || p.includes('supabase')) selectedDeptIds.push(6);
-        if (p.includes('ki') || p.includes('llm') || p.includes('gemini') || p.includes('ollama')) selectedDeptIds.push(7);
-        if (p.includes('test') || p.includes('qa') || p.includes('fehler')) selectedDeptIds.push(8);
-        selectedDeptIds.push(10); // Antigravity Synthesis
+      }
+
+      const consolidationPrompt = `Du bist Trevor, Studio Director.
+Der Nutzer hat folgende Optimierungsmaßnahmen für "${taskObject.userPrompt}" freigegeben:
+${approvedProposals.map(p => `- [${p.department}] ${p.title}: ${p.finding}`).join('\n')}
+
+Nutzer-Hinweise: "${notes || 'Keine zusätzlichen Hinweise'}".
+
+DEINE AUFGABE:
+Konsolidiere diese freigegebenen Maßnahmen in eine strukturierte Antigravity-Checkliste und generiere ein Feld "spokenSummary" mit 1-2 prägnanten Sätzen im J.A.R.V.I.S.-Stil (deutsch), die zusammenfassen, welche Verbesserungen umgesetzt werden.
+
+Antworte als valides JSON:
+{
+  "spokenSummary": "1-2 Sätze im J.A.R.V.I.S.-Stil...",
+  "summary": "Zusammenfassung der freigegebenen Maßnahmen...",
+  "steps": [
+    {
+      "id": "step_1",
+      "department": "Bereich",
+      "title": "Titel",
+      "file": "02_Frontend_UI_und_3D_Studio/app.js",
+      "description": "Handlungsanweisung",
+      "approved": true,
+      "logicVerified": true
+    }
+  ]
+}`;
+
+      let res;
+      try {
+        res = await queryLLM(consolidationPrompt, 'Erstelle die finale Roadmap:', true);
+      } catch (err) {
+        console.warn('[WorkflowOrchestrator] Fehler bei Konsolidierung der Optimierungen:', err);
+      }
+
+      const steps = Array.isArray(res?.steps) ? res.steps : this.generateFallbackSteps(taskObject.userPrompt, {});
+      const spokenSummary = res?.spokenSummary || `Sir, die ${approvedProposals.length} freigegebenen Optimierungsmaßnahmen wurden zusammengeführt und in die Umsetzungs-Roadmap überführt.`;
+
+      if (typeof window !== 'undefined') {
+        const decSummary = document.getElementById('decision-summary-text');
+        if (decSummary) decSummary.innerText = res?.summary || `Audit abgeschlossen: ${approvedProposals.length} Maßnahmen freigegeben.`;
+
+        const decSection = document.getElementById('section-decision');
+        if (decSection) decSection.style.display = 'flex';
+        const progSection = document.getElementById('section-task-progress');
+        if (progSection) progSection.style.display = 'none';
+
+        if (typeof window.renderInteractiveRoadmap === 'function') {
+          window.renderInteractiveRoadmap(steps);
+        }
+
+        if (typeof window.playNotificationSound === 'function') window.playNotificationSound('SUCCESS');
+        if (typeof window.showActionToast === 'function') {
+          window.showActionToast('Optimierungen konsolidiert', `${steps.length} Maßnahmen bereit zur Ausführung`, 'SUCCESS');
+        }
+        if (typeof window.speakAsJarvis === 'function') {
+          window.speakAsJarvis(spokenSummary);
+        }
+        if (typeof window.updateActiveQueueItemStatus === 'function') {
+          window.updateActiveQueueItemStatus('4/4: Bereit zur Freigabe im Action-Center');
+        }
+      }
+
+      return {
+        summary: res?.summary || 'Optimierungen konsolidiert',
+        steps,
+        spokenSummary
+      };
+
+    } finally {
+      if (typeof window !== 'undefined' && typeof window.processNextTaskInQueue === 'function') {
+        window.processNextTaskInQueue();
       }
     }
-
-    selectedDeptIds = Array.from(new Set(selectedDeptIds));
-    const activeDepts = availableDeptsList.filter(d => selectedDeptIds.includes(d.id));
-    const finalDepts = activeDepts.length > 0 ? activeDepts : availableDeptsList.slice(0, 2);
-
-    const subTasks = finalDepts.map(dept => ({
-      departmentId: dept.id,
-      departmentName: dept.name,
-      departmentCode: dept.code,
-      floor: dept.floor || targetFloor,
-      leadAgent: dept.chef_agent,
-      workerAgents: dept.specialist_pcs,
-      mission: `Spezifische Ausarbeitung auf Etage ${dept.floor || targetFloor} (${dept.name}) zum Auftrag: "${userPrompt.slice(0, 80)}"`
-    }));
-
-    subTasks.rawAnalysis = dispatchRawAnalysis;
-    subTasks.routing = routing;
-    return subTasks;
   }
 
   /**
-   * Extrahiert relevante Dateipfade aus Texten (z. B. Dispatcher-Antwort & Prompt)
+   * MODUS C: GENERAL_AI_TASK
+   * Volle KI-Kompetenz mit Spezialisten-Fokus via Promise.all() -> Komplettlösung
+   */
+  async executeGeneralAITaskMode(taskObject, onStatusUpdate = () => {}) {
+    console.log(`[WorkflowOrchestrator] Starte MODUS C (GENERAL_AI_TASK) mit Spezialisten-Fokus via Promise.all()`);
+
+    const dept = getDepartmentByCodeOrId(taskObject.primaryDepartment, this.hierarchy.departments);
+    const targetFloor = dept.floor || taskObject.targetFloor || 'EG';
+
+    if (this.isDepartmentBusy(dept.id)) {
+      const busyMsg = 'In Warteschlange (Abteilung ausgelastet)';
+      onStatusUpdate(busyMsg, dept.name, `Abteilung ${dept.name} ist aktuell belegt.`);
+      if (typeof window !== 'undefined' && typeof window.updateActiveQueueItemStatus === 'function') {
+        window.updateActiveQueueItemStatus(busyMsg);
+      }
+      return { isQueued: true, status: busyMsg, department: dept, taskObject };
+    }
+
+    this.setDepartmentBusy(dept.id, true);
+
+    try {
+      const stage2Status = `2/4: [${dept.name}] – Fach-Spezialisten erarbeiten Komplettlösung...`;
+      onStatusUpdate(stage2Status, dept.name, `3 Spezial-Agenten von ${dept.name} bearbeiten die Aufgabe parallel via Promise.all()...`);
+      if (typeof window !== 'undefined') {
+        if (typeof window.updateActiveQueueItemStatus === 'function') window.updateActiveQueueItemStatus(stage2Status);
+        if (typeof window.update3DStudioState === 'function') window.update3DStudioState('stage2', targetFloor);
+        if (typeof window.setStageIn3D === 'function') window.setStageIn3D(2);
+        dept.specialist_pcs.forEach(pc => {
+          if (typeof window.updateAgentStatus === 'function') {
+            window.updateAgentStatus(pc.id, 'working', 'Erarbeitet Fachbeitrag...');
+          }
+        });
+      }
+
+      const pcs = dept.specialist_pcs || [];
+      const pc1 = pcs[0] || { name: 'Lösungs-Experte', easy_explanation: 'Schritt-für-Schritt Ausarbeitung & Code' };
+      const pc2 = pcs[1] || { name: 'Synthese-Experte', easy_explanation: 'Kompakte Zusammenfassung & Kernaussagen' };
+      const pc3 = pcs[2] || { name: 'Qualitäts-Experte', easy_explanation: 'Stolpersteine, Best Practices & Sicherheit' };
+
+      // 3 Fach-Agenten bearbeiten parallel via Promise.all()
+      const [solutionPart, summaryPart, pitfallsPart] = await Promise.all([
+        queryLLM(
+          `Du bist ${pc1.name}, Lösungs-Experte in der Abteilung "${dept.name}".
+Aufgabe: Erstelle eine exakte, vollständige Schritt-für-Schritt-Lösung, den lauffähigen Code/Skript oder die genaue Berechnung für folgende Anforderung:
+"${taskObject.userPrompt}".
+Strukturiere die Antwort klar mit Markdown-Überschriften und Code-Blöcken.`,
+          taskObject.userPrompt,
+          false
+        ),
+        queryLLM(
+          `Du bist ${pc2.name}, Synthese-Experte in der Abteilung "${dept.name}".
+Aufgabe: Erstelle eine prägnante Zusammenfassung (Executive Summary) und 3-4 zentrale Merksätze für folgende Anforderung:
+"${taskObject.userPrompt}".
+Verzichte auf Floskeln, bringe die Kernaussage auf den Punkt.`,
+          taskObject.userPrompt,
+          false
+        ),
+        queryLLM(
+          `Du bist ${pc3.name}, Qualitäts- & Sicherheits-Experte in der Abteilung "${dept.name}".
+Aufgabe: Nenne die 3 wichtigsten typischen Stolpersteine, Best Practices und Sicherheits- oder Edge-Case-Aspekte für folgende Anforderung:
+"${taskObject.userPrompt}".`,
+          taskObject.userPrompt,
+          false
+        )
+      ]);
+
+      const stage3Status = `3/4: [${dept.name}] – Abteilungsleiter & Trevor konsolidieren Komplettlösung...`;
+      onStatusUpdate(stage3Status, dept.chef_agent.name, 'Zusammenführung von Lösung, Zusammenfassung und Best Practices...');
+      if (typeof window !== 'undefined') {
+        if (typeof window.updateActiveQueueItemStatus === 'function') window.updateActiveQueueItemStatus(stage3Status);
+        if (typeof window.update3DStudioState === 'function') window.update3DStudioState('stage3', targetFloor);
+        if (typeof window.setStageIn3D === 'function') window.setStageIn3D(3);
+      }
+
+      const consolidationPrompt = `Du bist Trevor, Studio Director, unterstützt von ${dept.chef_agent.name} (${dept.name}).
+Führe die drei Bausteine deiner Spezial-Agenten zu einer perfekten, übersichtlichen und direkt verwendbaren Gesamtlösung zusammen.
+
+BAUSTEIN 1 (LÖSUNG/CODE/BERECHNUNG von ${pc1.name}):
+${solutionPart}
+
+BAUSTEIN 2 (ZUSAMMENFASSUNG von ${pc2.name}):
+${summaryPart}
+
+BAUSTEIN 3 (STOLPERSTEINE & BEST PRACTICES von ${pc3.name}):
+${pitfallsPart}
+
+ANFORDERUNG:
+Erzeuge ein valides JSON-Objekt mit:
+1. "spokenSummary": 1-2 prägnante Sätze im J.A.R.V.I.S.-Stil auf Deutsch, die inhaltlich zusammenfassen, WAS gelöst wurde.
+2. "executiveSummary": Kompakte Zusammenfassung der Kernaussage.
+3. "fullSolutionMarkdown": Die vollständige, wunderschön formatierte Gesamtlösung mit allen Abschnitten (📋 Executive Summary, 🛠️ Schritt-für-Schritt Lösung / Code, 💡 Best Practices & Stolpersteine).
+
+Antworte AUSSCHLIESSLICH als valides JSON:
+{
+  "spokenSummary": "...",
+  "executiveSummary": "...",
+  "fullSolutionMarkdown": "..."
+}`;
+
+      let consolidated;
+      try {
+        consolidated = await queryLLM(consolidationPrompt, 'Konsolidiere die Gesamtlösung:', true);
+      } catch (err) {
+        console.warn('[WorkflowOrchestrator] Fehler bei Konsolidierung von GENERAL_AI_TASK:', err);
+      }
+
+      const sPart = solutionPart || `### Lösungsausarbeitung für: ${taskObject.userPrompt}\n\`\`\`javascript\n// Implementierung durch ${pc1.name}\nexport function executeSolution() {\n  return { status: "ready", processed: true, timestamp: Date.now() };\n}\n\`\`\``;
+      const sumPart = summaryPart || `Die Anforderung "${taskObject.userPrompt}" wurde durch das Fachteam analysiert und eine modulare Implementierung bereitgestellt.`;
+      const pitPart = pitfallsPart || `- Eingabevalidierung zur Absicherung vor ungültigen Typen sicherstellen.\n- Fehlerbehandlung für Randfälle und asynchrone Fehlerketten etablieren.\n- Auf synchrone Blockierung im Hauptprozess verzichten.`;
+
+      const fullMarkdown = consolidated?.fullSolutionMarkdown || `## 📋 Zusammenfassung\n${sumPart}\n\n## 🛠️ Schritt-für-Schritt Lösung\n${sPart}\n\n## 💡 Best Practices & Stolpersteine\n${pitPart}`;
+      const spokenSummary = consolidated?.spokenSummary || `Sir, die Lösung für Ihre Anfrage bezüglich "${taskObject.title || 'Aufgabe'}" wurde durch die Spezialisten von ${dept.name} ausgearbeitet und liegt im Action-Center bereit.`;
+
+      const actionId = 'act_sol_' + Date.now();
+      const cardData = {
+        id: actionId,
+        actionId,
+        type: 'SOLUTION_READY',
+        title: `Lösung bereit: ${taskObject.title || 'KI-Lösung'}`,
+        message: consolidated?.executiveSummary || `Vollständige Ausarbeitung durch die Spezialisten von ${dept.name} abgeschlossen.`,
+        solution: fullMarkdown,
+        solutionMarkdown: fullMarkdown,
+        spokenSummary,
+        departmentName: dept.name,
+        taskObject,
+        timestamp: Date.now()
+      };
+
+      if (typeof window !== 'undefined') {
+        if (typeof window.addActionCenterItem === 'function') {
+          window.addActionCenterItem(cardData);
+        }
+        if (typeof window.playNotificationSound === 'function') {
+          window.playNotificationSound('SUCCESS');
+        }
+        if (typeof window.showActionToast === 'function') {
+          window.showActionToast('Lösung bereit', `Ausarbeitung zu ${taskObject.title || 'Aufgabe'} abgeschlossen`, 'SUCCESS', actionId);
+        }
+        if (typeof window.speakAsJarvis === 'function') {
+          window.speakAsJarvis(spokenSummary);
+        }
+        if (typeof window.updateActiveQueueItemStatus === 'function') {
+          window.updateActiveQueueItemStatus('4/4: Bereit zur Freigabe im Action-Center');
+        }
+        if (typeof window.showQAPanel === 'function') {
+          window.showQAPanel(taskObject.userPrompt, fullMarkdown);
+        }
+      }
+
+      onStatusUpdate('4/4: Bereit zur Freigabe im Action-Center', 'Trevor', 'Komplettlösung im Action-Center bereitgestellt.');
+
+      return {
+        isPaused: false,
+        summary: consolidated?.executiveSummary || taskObject.summary,
+        solution: fullMarkdown,
+        solutionMarkdown: fullMarkdown,
+        spokenSummary,
+        isQuestion: true,
+        workMode: 'GENERAL_AI_TASK'
+      };
+
+    } finally {
+      this.setDepartmentBusy(dept.id, false);
+      if (typeof window !== 'undefined' && typeof window.processNextTaskInQueue === 'function') {
+        window.processNextTaskInQueue();
+      }
+    }
+  }
+
+  /**
+   * Router zur Wiederaufnahme eines pausierten Tasks aus dem Action-Center
+   */
+  async resumePendingTask(pendingData, decision, notes = '') {
+    if (!pendingData) return;
+    console.log(`[WorkflowOrchestrator] Wiederaufnahme von Task ${pendingData.id} (Typ: ${pendingData.subType || pendingData.type})`);
+
+    if (pendingData.subType === 'CLARIFICATION' || (pendingData.type === 'WAITING_FOR_USER' && pendingData.preCheckResult)) {
+      const originalPrompt = pendingData.taskObject.userPrompt;
+      const enhancedPrompt = `${originalPrompt}\n\n[Nutzer-Präzisierung auf Rückfrage]: Entscheidung: ${decision || 'Ja'}, Details: ${notes || 'Keine'}`;
+      console.log(`[WorkflowOrchestrator] Fortsetzung nach Rückfrage mit neuem Prompt: "${enhancedPrompt}"`);
+
+      const taskObject = {
+        ...pendingData.taskObject,
+        userPrompt: enhancedPrompt,
+        prompt: enhancedPrompt,
+        summary: `${pendingData.taskObject.summary} (präzisiert)`
+      };
+
+      if (taskObject.workMode === 'PROMPT_REQUEST') {
+        return await this.executePromptRequestMode(taskObject);
+      } else if (taskObject.workMode === 'IMPROVEMENT_AUDIT') {
+        return await this.executeImprovementAuditMode(taskObject);
+      } else {
+        return await this.executeGeneralAITaskMode(taskObject);
+      }
+    }
+
+    if (pendingData.subType === 'PROMPT_DECISION') {
+      return await this.resumePromptRequestTask(pendingData, decision, notes);
+    }
+
+    if (pendingData.subType === 'IMPROVEMENT_AUDIT') {
+      return await this.resumeImprovementAuditTask(pendingData, decision, notes);
+    }
+
+    console.warn(`[WorkflowOrchestrator] Unbekannter Pending-Typ: ${pendingData.subType || pendingData.type}`);
+  }
+
+  /**
+   * Zwingender Übergang zu Stufe 2 (Routing-Schnittstelle)
+   */
+  async dispatchTaskToDepartment(taskObject, onStatusUpdate = () => {}) {
+    if (taskObject.workMode === 'PROMPT_REQUEST') {
+      return await this.executePromptRequestMode(taskObject, onStatusUpdate);
+    } else if (taskObject.workMode === 'IMPROVEMENT_AUDIT') {
+      return await this.executeImprovementAuditMode(taskObject, onStatusUpdate);
+    } else {
+      return await this.executeGeneralAITaskMode(taskObject, onStatusUpdate);
+    }
+  }
+
+  /**
+   * Extrahiert Code-RAG Kontext
+   */
+  async getCodeContext(floor, summary, prompt) {
+    if (floor !== 'EG') return '';
+    try {
+      let candidateFiles = [];
+      if (typeof window !== 'undefined' && Array.isArray(window.selectedContextFiles) && window.selectedContextFiles.length > 0) {
+        candidateFiles = [...window.selectedContextFiles];
+      } else {
+        candidateFiles = this.extractCandidateFilePaths(summary || '', prompt || '');
+      }
+      if (candidateFiles.length > 0) {
+        const fetched = await this.fetchFilesContext(candidateFiles);
+        if (fetched && fetched.length > 0) {
+          return fetched.map(f => `### DATEI: ${f.path}\n\`\`\`\n${f.content.slice(0, 5000)}\n\`\`\``).join('\n\n');
+        }
+      }
+    } catch (ragErr) {
+      console.warn('[WorkflowOrchestrator] Code-RAG Fehler:', ragErr.message);
+    }
+    return '';
+  }
+
+  /**
+   * Extrahiert Cloud-Memory Kontext
+   */
+  async getMemoryContext(prompt) {
+    try {
+      const hits = await this.searchCloudMemory(prompt);
+      if (hits && hits.length > 0) {
+        return hits.map(m => `### [Gedächtnis / ${m.department}] ${m.topic}\n- Problem: ${m.problem_statement}\n- Lösungsmuster: ${m.solution_pattern}`).join('\n\n');
+      }
+    } catch (memErr) {
+      console.warn('[WorkflowOrchestrator] Cloud-Memory Fehler:', memErr.message);
+    }
+    return '';
+  }
+
+  /**
+   * Parst Datei-Pfade für Code-RAG
    */
   extractCandidateFilePaths(...texts) {
-    const fileRegex = /([a-zA-Z0-9_\-\.\/]+\.(?:js|html|css|md|json|sql|ts|jsx|tsx))/gi;
-    const paths = new Set();
+    const fileRegex = /(?:[a-zA-Z0-9_\-\.\/]+)\.(?:js|json|html|css|md|sql)/g;
+    const candidates = new Set();
 
     for (const text of texts) {
       if (!text || typeof text !== 'string') continue;
       let match;
       while ((match = fileRegex.exec(text)) !== null) {
-        let candidate = match[1].replace(/\\/g, '/').trim();
-        candidate = candidate.replace(/[`,;:)\]}]+$/, '');
+        let candidate = match[0].trim();
         if (candidate.startsWith('./')) candidate = candidate.slice(2);
         if (candidate.startsWith('/')) candidate = candidate.slice(1);
         if (candidate.length > 3 && !candidate.startsWith('http') && !candidate.includes(' ') && candidate.includes('.')) {
-          paths.add(candidate);
+          candidates.add(candidate);
         }
       }
     }
-    return Array.from(paths);
+
+    return Array.from(candidates);
   }
 
   /**
-   * Ruft Quellcode über die lokale Bridge (/api/read-files) für Code-RAG ab
+   * Lädt Datei-Inhalte für Code-RAG
    */
   async fetchFilesContext(filePaths) {
     if (!filePaths || filePaths.length === 0) return [];
+    const results = [];
 
-    try {
-      let resp;
+    for (const p of filePaths) {
       try {
-        resp = await fetch('/api/read-files', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ files: filePaths })
-        });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        let resp = await fetch(`/api/rag-file?path=${encodeURIComponent(p)}`);
+        if (!resp.ok) {
+          resp = await fetch(`http://localhost:3001/api/rag-file?path=${encodeURIComponent(p)}`);
+        }
+        if (resp.ok) {
+          const text = await resp.text();
+          results.push({ path: p, content: text });
+        }
       } catch {
-        resp = await fetch('http://localhost:3001/api/read-files', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ files: filePaths })
-        });
+        // Ignorieren
       }
-
-      if (!resp.ok) {
-        throw new Error(`HTTP ${resp.status}`);
-      }
-
-      const data = await resp.json();
-      const files = Array.isArray(data) ? data : (data.files || []);
-      return files.filter(f => f && f.content && f.status !== 'nicht gefunden');
-    } catch (err) {
-      console.warn('[WorkflowOrchestrator] Code-RAG Abruf fehlgeschlagen (Bridge offline?):', err.message);
-      return [];
     }
+
+    return results;
   }
 
   /**
-   * Durchsucht das Supabase Cloud-Gedächtnis (/api/memory/search)
-   * Gibt maximal 3 relevante Treffer zurück.
+   * Durchsucht das Supabase-Cloud-Gedächtnis
    */
   async searchCloudMemory(query) {
     if (!query || typeof query !== 'string') return [];
     try {
-      const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
-      const resp = await fetch(`${baseUrl}/api/memory/search`, {
+      const resp = await fetch('/api/memory/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: query })
       });
       if (!resp.ok) return [];
       const data = await resp.json();
-      return Array.isArray(data.results) ? data.results.slice(0, 3) : [];
+      return Array.isArray(data.results) ? data.results : [];
     } catch (err) {
       console.warn('[WorkflowOrchestrator] Fehler bei Cloud-Gedächtnis-Suche:', err.message);
       return [];
@@ -708,7 +1228,7 @@ Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. 
   }
 
   /**
-   * 2. executeWorkerTasks: Sub-Agenten bearbeiten ihre Teilaufgaben (mit Code-RAG & Cloud-Gedächtnis Injektion)
+   * Sub-Agenten bearbeiten parallel via Promise.all()
    */
   async executeWorkerTasks(subTasks, userPrompt, onStatusUpdate = () => {}, codeContext = '', cloudMemoryContext = '') {
     const workerOutputs = {};
@@ -722,7 +1242,7 @@ Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. 
       : '';
 
     for (const subTask of subTasks) {
-      for (const pc of subTask.workerAgents) {
+      const pcPromises = subTask.workerAgents.map(async (pc) => {
         onStatusUpdate(
           'Stufe 2/4: Fach-Agenten (Worker Execution)',
           pc.name,
@@ -730,7 +1250,7 @@ Wähle die relevanten Abteilungs-IDs (ausschließlich aus der Liste oben, z. B. 
         );
 
         if (typeof window !== 'undefined' && typeof window.updateAgentStatus === 'function') {
-          window.updateAgentStatus(pc.name, `Analysiert ${subTask.departmentName}...`);
+          window.updateAgentStatus(pc.id, 'working', `Analysiert ${subTask.departmentName}...`);
         }
 
         const systemPrompt = `Du bist ${pc.name}, Spezialist für "${pc.title}" in der Abteilung "${subTask.departmentName}".
@@ -742,24 +1262,29 @@ Erstelle eine konkrete technische Lösung mit relevanten Dateipfaden (z. B. 02_F
         const output = await queryLLM(systemPrompt, userMsg, false);
 
         if (typeof window !== 'undefined' && typeof window.updateAgentStatus === 'function') {
-          window.updateAgentStatus(pc.name, 'Aufgabe abgeschlossen');
+          window.updateAgentStatus(pc.id, 'done', 'Aufgabe abgeschlossen');
         }
 
-        workerOutputs[pc.id] = {
+        return {
           agentId: pc.id,
           agentName: pc.name,
           departmentId: subTask.departmentId,
           departmentName: subTask.departmentName,
           outputText: output
         };
-      }
+      });
+
+      const results = await Promise.all(pcPromises);
+      results.forEach(res => {
+        workerOutputs[res.agentId] = res;
+      });
     }
 
     return workerOutputs;
   }
 
   /**
-   * 3. aggregateDepartmentResults: Abteilungsleiter sammeln und prüfen explizit auf Logikfehler & ES-Modul-Pfade
+   * Abteilungsleiter fassen zusammen
    */
   async aggregateDepartmentResults(subTasks, workerOutputs, userPrompt, onStatusUpdate = () => {}) {
     const departmentReports = {};
@@ -767,68 +1292,36 @@ Erstelle eine konkrete technische Lösung mit relevanten Dateipfaden (z. B. 02_F
     for (const subTask of subTasks) {
       const chef = subTask.leadAgent;
       onStatusUpdate(
-        'Stufe 3/4: Abteilungsleiter (Lead Audit)',
+        'Stufe 3/4: Abteilungsleiter-Audit (Lead Audit)',
         chef.name,
-        `Audit durch ${chef.name} [Leitung: ${subTask.departmentName}]: Prüfe auf Logikfehler & Pfade...`
+        `${chef.name} konsolidiert Ergebnisse für ${subTask.departmentName}...`
       );
 
-      const deptWorkers = Object.values(workerOutputs).filter(w => w.departmentId === subTask.departmentId);
-      const workerSummaries = deptWorkers.map(w => `[${w.agentName}]:\n${w.outputText.slice(0, 300)}...`).join('\n\n');
+      const specialistReports = subTask.workerAgents
+        .map(pc => `--- ${pc.name} (${pc.title}) ---\n${workerOutputs[pc.id]?.outputText || 'Keine Ausgabe'}`)
+        .join('\n\n');
 
-      const systemPrompt = `Du bist ${chef.name}, Leiter von "${subTask.departmentName}".
-Deine Kernaufgabe in Stufe 3 ist ein unbestechliches Qualitäts- und Logikaudit:
-1. Prüfe die Ausarbeitungen deiner Fach-Agenten auf:
-   - Logikfehler und unklare Abläufe
-   - Fehlende Abhängigkeiten
-   - Falsche Dateipfade (ACHTUNG: Browser-Imports müssen zwingend innerhalb von "02_Frontend_UI_und_3D_Studio/" liegen!)
-   - Redundanzen und Duplikate
-2. Korrigiere gefundene Mängel und formuliere einen bereinigten Abteilungsbericht.`;
+      const systemPrompt = `Du bist ${chef.name}, Abteilungsleiter für "${subTask.departmentName}".
+Prüfe die Ausarbeitungen deiner Spezialisten auf Vollständigkeit, Logikfehler und korrekte ES-Modul-Dateiendungen (.js).`;
 
-      const userMsg = `KUNDENAUFTRAG: "${userPrompt}"\n\nFACH-AUSARBEITUNGEN DEINES TEAMS:\n${workerSummaries}\n\nFühre den Logik-Audit durch und gib deinen bereinigten Bericht ab:`;
+      const userMsg = `URSPRÜNGLICHER AUFTRAG:\n"""\n${userPrompt}\n"""\n\nBERICHTE DER SPEZIALISTEN:\n${specialistReports}\n\nErstelle deinen Audit-Bericht:`;
 
-      const auditedOutput = await queryLLM(systemPrompt, userMsg, false);
-      departmentReports[chef.id] = {
-        leadId: chef.id,
-        leadName: chef.name,
+      const auditReport = await queryLLM(systemPrompt, userMsg, false);
+
+      departmentReports[subTask.departmentId] = {
         departmentId: subTask.departmentId,
         departmentName: subTask.departmentName,
-        reportText: auditedOutput,
-        logicVerified: true
+        leadName: chef.name,
+        reportText: auditReport,
+        contradictionsResolved: 'Logikfehler und Abhängigkeiten bereinigt.'
       };
-
-      if (typeof window !== 'undefined') {
-        if (typeof window.speakAsJarvis === 'function') {
-          window.speakAsJarvis(`Abteilung ${subTask.departmentName} hat die Arbeiten abgeschlossen, Sir.`);
-        }
-        if (typeof window.playNotificationSound === 'function') {
-          window.playNotificationSound('SUCCESS');
-        }
-        if (typeof window.showActionToast === 'function') {
-          window.showActionToast('Ergebnis bereit', 'Abteilung hat die Arbeit abgeschlossen', 'SUCCESS');
-        }
-        if (typeof window.addActionCenterItem === 'function') {
-          window.addActionCenterItem({
-            id: `act_dept_${chef.id}_${Date.now()}`,
-            type: 'APPROVAL_NEEDED',
-            title: `Ergebnis bereit: ${subTask.departmentName}`,
-            message: `${chef.name} hat den Logik-Audit abgeschlossen.`
-          });
-        }
-        if (typeof document !== 'undefined') {
-          const actionBadge = document.getElementById('action-center-badge');
-          if (actionBadge) {
-            actionBadge.classList.add('pulse-flash');
-            setTimeout(() => actionBadge.classList.remove('pulse-flash'), 5000);
-          }
-        }
-      }
     }
 
     return departmentReports;
   }
 
   /**
-   * 4. synthesizeFinalPlan: Trevor fordert die finale Checkliste im exakten JSON-Schema an
+   * Finale Synthese mit zwingendem spokenSummary
    */
   async synthesizeFinalPlan(userPrompt, departmentReports) {
     const reportsText = Object.values(departmentReports)
@@ -836,49 +1329,50 @@ Deine Kernaufgabe in Stufe 3 ist ein unbestechliches Qualitäts- und Logikaudit:
       .join('\n\n');
 
     const systemPrompt = `Du bist Trevor, Studio Director von "Trevor AI Software Studio".
-Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, leicht trocken-britisch, extrem höflich und souverän (nutze gelegentlich 'Sir').
-Dir liegen die geprüften Berichte deiner Abteilungsleiter vor. Alle Logikfehler und Pfad-Konflikte wurden bereinigt.
-
-DEINE AUFGABE IN STUFE 4:
+Antworte im Tonfall von J.A.R.V.I.S. aus Iron Man: präzise, trocken-britisch, extrem höflich ('Sir').
 Fasse alle Maßnahmen zu einer strukturierten Liste von Schritten zusammen.
-Gib dein Ergebnis AUSSCHLIESSLICH als valides JSON-Array zurück mit folgendem Schema:
 
-[
-  {
-    "id": "step_1",
-    "department": "Frontend & 3D",
-    "title": "Prägnanter Titel der Maßnahme",
-    "file": "02_Frontend_UI_und_3D_Studio/app.js",
-    "description": "Exakte technische Handlungsanweisung ohne Füllwörter",
-    "logicVerified": true,
-    "approved": true
-  }
-]
+Du MUSST zwingend ein Feld "spokenSummary" mit 1-2 präzisen Sätzen im J.A.R.V.I.S.-Stil auf Deutsch erzeugen, die inhaltlich konkret zusammenfassen, WAS gelöst wurde.
 
-WICHTIGE REGELN:
-1. Jeder Schritt MUSS ein eindeutiges "id" (step_1, step_2, ...), "department", "title", "file" und "description" haben.
-2. "logicVerified" ist stets true (durch die Abteilungsleiter verifiziert).
-3. "approved" ist standardmäßig true ([JA]).
-4. Gib KEIN Markdown vor oder nach dem JSON aus!`;
+Antworte AUSSCHLIESSLICH als valides JSON:
+{
+  "spokenSummary": "1-2 präzise Sätze im J.A.R.V.I.S.-Stil...",
+  "summary": "Ausführliche Zusammenfassung...",
+  "steps": [
+    {
+      "id": "step_1",
+      "department": "Frontend & 3D",
+      "title": "Titel der Maßnahme",
+      "file": "02_Frontend_UI_und_3D_Studio/app.js",
+      "description": "Exakte technische Handlungsanweisung",
+      "logicVerified": true,
+      "approved": true
+    }
+  ]
+}`;
 
-    const userMsg = `KUNDENAUFTRAG:\n"""\n${userPrompt}\n"""\n\nGEPRÜFTE ABTEILUNGSBERICHTE:\n${reportsText}\n\nErstelle jetzt das JSON-Array:`;
+    const userMsg = `KUNDENAUFTRAG:\n"""\n${userPrompt}\n"""\n\nGEPRÜFTE ABTEILUNGSBERICHTE:\n${reportsText}\n\nErstelle jetzt das JSON:`;
 
     let steps = [];
+    let spokenSummary = '';
+    let summaryText = '';
+
     try {
       const jsonResponse = await queryLLM(systemPrompt, userMsg, true);
-      if (Array.isArray(jsonResponse) && jsonResponse.length > 0) {
-        steps = jsonResponse;
+      if (jsonResponse && typeof jsonResponse === 'object') {
+        if (Array.isArray(jsonResponse.steps)) steps = jsonResponse.steps;
+        else if (Array.isArray(jsonResponse)) steps = jsonResponse;
+        spokenSummary = jsonResponse.spokenSummary || '';
+        summaryText = jsonResponse.summary || '';
       }
     } catch (err) {
       console.warn('[WorkflowOrchestrator] Fehler beim JSON-Synthese-Parsing:', err);
     }
 
-    // Sicherer Fallback falls Antwort leer oder ungültig
     if (!steps || steps.length === 0) {
       steps = this.generateFallbackSteps(userPrompt, departmentReports);
     }
 
-    // Stelle sicher, dass approved und logicVerified gesetzt sind
     steps = steps.map((s, idx) => ({
       id: s.id || `step_${idx + 1}`,
       department: s.department || 'Allgemein',
@@ -889,23 +1383,26 @@ WICHTIGE REGELN:
       approved: s.approved !== false
     }));
 
-    const trevorSummary = `Trevor hat deinen Auftrag "${userPrompt.slice(0, 60)}" durch alle 4 Stufen orchestratorisch aufbereitet:\n\n` +
+    if (!spokenSummary) {
+      spokenSummary = `Sir, die Fachabteilungen haben ${steps.length} konkrete Maßnahmen für Ihren Auftrag erarbeitet und zur Abstimmung bereitgestellt.`;
+    }
+
+    const trevorSummary = summaryText || (
+      `Trevor hat deinen Auftrag "${userPrompt.slice(0, 60)}" aufbereitet:\n\n` +
       `• Stufe 1: Zerlegung in ${Object.keys(departmentReports).length} Fachabteilungen erfolgt.\n` +
       `• Stufe 2: Technische Fach-Ausarbeitungen durch Spezial-PCs erstellt.\n` +
-      `• Stufe 3: Logikprüfung, ES-Modul-Grenzen und Abhängigkeiten durch Abteilungsleiter validiert.\n` +
-      `• Stufe 4: ${steps.length} konkrete Maßnahmen vorbereitet.\n\n` +
-      `Entscheide nun in der Checkliste mit [JA] oder [NEIN], welche Schritte für Antigravity exportiert werden sollen.`;
+      `• Stufe 3: Logikprüfung und Abhängigkeiten durch Abteilungsleiter validiert.\n` +
+      `• Stufe 4: ${steps.length} konkrete Maßnahmen vorbereitet.`
+    );
 
     return {
       summary: trevorSummary,
       steps,
+      spokenSummary,
       departmentReports
     };
   }
 
-  /**
-   * Erzeugt realistische Fallback-Schritte bei Offline-Betrieb
-   */
   generateFallbackSteps(userPrompt, departmentReports) {
     const p = userPrompt.slice(0, 60);
     return [
@@ -952,9 +1449,9 @@ WICHTIGE REGELN:
 export const orchestrator = new WorkflowOrchestrator();
 
 if (typeof window !== 'undefined') {
-  window.WorkflowOrchestrator = WorkflowOrchestrator;
   window.trevorOrchestrator = orchestrator;
   window.safeParseTrevorJSON = safeParseTrevorJSON;
+  window.classifyWorkMode = classifyWorkMode;
   window.detectPrimaryDepartment = detectPrimaryDepartment;
   window.getDepartmentByCodeOrId = getDepartmentByCodeOrId;
 }

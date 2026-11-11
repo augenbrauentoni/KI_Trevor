@@ -172,6 +172,11 @@ export function speakAsJarvis(rawText) {
     endSpeech();
   };
 
+  // Browser-Queue vor speak zwingend leeren, um Stau zu verhindern
+  try {
+    window.speechSynthesis.cancel();
+  } catch {}
+
   window.speechSynthesis.speak(utterance);
 }
 
