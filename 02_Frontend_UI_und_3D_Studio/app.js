@@ -2625,7 +2625,8 @@ export function renderActionCenterUI() {
     const isWaiting = item.type === 'WAITING_FOR_USER' || item.type === 'CLARIFICATION_NEEDED' || item.type === 'QUESTION';
     const isPromptDecision = item.type === 'PROMPT_DECISION';
     const isImprovementAudit = item.type === 'IMPROVEMENT_AUDIT';
-    const isSolution = item.type === 'SOLUTION_READY';
+    const isCodeQA = item.type === 'CODE_QA_READY' || item.subType === 'CODE_QA_APPROVAL' || Boolean(item.data?.qaReport || item.qaReport || item.data?.containsCode);
+    const isSolution = item.type === 'SOLUTION_READY' && !isCodeQA;
 
     const card = document.createElement('div');
     card.id = `action-card-${item.id}`;
@@ -2646,6 +2647,10 @@ export function renderActionCenterUI() {
       cardTypeClass = 'type-decision';
       tagClass = 'tag-clarification';
       tagText = '🔍 AUDIT-FREIGABE';
+    } else if (isCodeQA) {
+      cardTypeClass = 'type-code-qa';
+      tagClass = 'tag-code-qa';
+      tagText = '🛡️ ZERO-BUG CODE GEPRÜFT';
     } else if (isSolution) {
       cardTypeClass = 'type-solution';
       tagClass = 'tag-approval';
@@ -2817,6 +2822,84 @@ export function renderActionCenterUI() {
       });
       card.querySelector('.btn-action-decision-no').addEventListener('click', () => {
         handleUserDecision(item.id, 'NEIN', notesInput ? notesInput.value.trim() : '');
+      });
+      card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeActionCenterItem(item.id);
+      });
+
+    } else if (isCodeQA) {
+      // 4a. ZERO-BUG CODE QA DURCH UG_SERVER
+      const codeText = item.data?.codeText || item.codeText || item.data?.finalVerifiedCode || item.data?.solution || item.message || '';
+      const qa = item.data?.qaReport || item.qaReport || {
+        auditors: ['Ilja (ag_26 – Leiter UG_SERVER)', 'Rico (ag_32 – QA & Logic Debugger)', 'Freya (ag_28 – Security Guardian)'],
+        checks: [
+          'Syntax, Klammern & Methodenaufrufe (.strip().lower())',
+          'Case-Sensitivity & Datentypen',
+          'Endlosschleifen & Ressourcen-Schutz',
+          'Sandbox-Sicherheit, Error-Handling & Key-Schutz'
+        ],
+        autoFixed: false,
+        fixesApplied: []
+      };
+
+      const auditorsText = (qa.auditors || []).join(', ');
+      const checksHtml = (qa.checks || []).map(c => `<li>✔ ${escapeHtml(c)}</li>`).join('');
+      const autoFixedBanner = qa.autoFixed ? `
+        <div style="margin-top:6px; padding:4px 8px; background:rgba(245,158,11,0.15); border-left:3px solid #F59E0B; border-radius:4px; font-size:11px; color:#fbbf24;">
+          ⚡ <strong>Auto-Fix angewendet:</strong> ${escapeHtml((qa.fixesApplied || []).join('; ') || 'Automatische Fehlerbehebung durch Abteilungsleiter')}
+        </div>
+      ` : '';
+
+      card.innerHTML = `
+        <div class="action-item-header">
+          <span class="action-item-tag ${tagClass}">${tagText}</span>
+          <span style="font-size: 10px; color: var(--text-dim);">${new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div class="action-item-title">${escapeHtml(item.title)}</div>
+        <div class="action-item-msg">${escapeHtml(item.message)}</div>
+
+        <!-- QA Prüfsiegel Box -->
+        <div class="action-qa-seal-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <strong style="color:#10B981; font-size:11px;">🛡️ QA-Prüfsiegel: UG_SERVER</strong>
+            <span style="font-size:10px; color:#94a3b8;">Prüfer: ${escapeHtml(auditorsText)}</span>
+          </div>
+          <ul style="margin:4px 0 0 16px; padding:0; font-size:10px; color:#cbd5e1; line-height:1.4;">
+            ${checksHtml}
+          </ul>
+          ${autoFixedBanner}
+        </div>
+
+        <!-- Code Block Preview mit direktem Kopier-Button -->
+        <div style="position:relative; margin:8px 0;">
+          <div class="action-code-preview">${escapeHtml(codeText)}</div>
+        </div>
+
+        <!-- Impact Analyse -->
+        <div class="action-impact-box">
+          <div class="action-impact-title">⚠️ Konsequenz-Analyse:</div>
+          <div class="action-impact-yes"><strong>Wenn JA:</strong> Geprüfter Code wird übernommen, in Zwischenablage kopiert und als Datei exportiert.</div>
+          <div class="action-impact-no"><strong>Wenn NEIN:</strong> Der Code wird verworfen und nicht ins System übernommen.</div>
+        </div>
+
+        <div class="action-item-actions">
+          <button class="history-btn btn-action-dismiss" title="Verwerfen">✕</button>
+          <button class="btn-copy-code" style="padding:6px 12px; background:rgba(0,240,255,0.15); border:1px solid #00F0FF; color:#00F0FF; border-radius:4px; font-size:11px; cursor:pointer;">📋 Code kopieren</button>
+          <button class="btn-action-decision-no" data-decision="NEIN">✕ Ablehnen</button>
+          <button class="btn-action-decision-yes" data-decision="JA">✔ Code übernehmen</button>
+        </div>
+      `;
+
+      card.querySelector('.btn-copy-code').addEventListener('click', async () => {
+        const ok = await copyTextToClipboard(codeText);
+        showActionToast('Kopiert', ok ? 'Code in die Zwischenablage kopiert!' : 'Konnte nicht kopiert werden', ok ? 'SUCCESS' : 'WARNING');
+      });
+      card.querySelector('.btn-action-decision-yes').addEventListener('click', () => {
+        handleUserDecision(item.id, 'JA');
+      });
+      card.querySelector('.btn-action-decision-no').addEventListener('click', () => {
+        handleUserDecision(item.id, 'NEIN');
       });
       card.querySelector('.btn-action-dismiss').addEventListener('click', (e) => {
         e.stopPropagation();

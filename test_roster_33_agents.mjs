@@ -192,9 +192,9 @@ console.log('[PASS] Test 4: app.js drawer agents list and globals verified.');
 console.log('\n--- Test 5: Cache Version in index.html ---');
 const indexCode = fs.readFileSync('02_Frontend_UI_und_3D_Studio/index.html', 'utf8');
 
-assert(indexCode.includes('styles.css?v=10.0') || indexCode.includes('styles.css?v=7.0'), 'styles.css must have cache version');
-assert(indexCode.includes('style.css?v=10.0') || indexCode.includes('style.css?v=7.0'), 'style.css must have cache version');
-assert(indexCode.includes('app.js?v=10.0') || indexCode.includes('app.js?v=7.0'), 'app.js must have cache version');
+assert(indexCode.includes('styles.css?v=11.0') || indexCode.includes('styles.css?v=10.0') || indexCode.includes('styles.css?v=7.0'), 'styles.css must have cache version');
+assert(indexCode.includes('style.css?v=11.0') || indexCode.includes('style.css?v=10.0') || indexCode.includes('style.css?v=7.0'), 'style.css must have cache version');
+assert(indexCode.includes('app.js?v=11.0') || indexCode.includes('app.js?v=10.0') || indexCode.includes('app.js?v=7.0'), 'app.js must have cache version');
 
 console.log('[PASS] Test 5: Cache version in index.html verified.');
 

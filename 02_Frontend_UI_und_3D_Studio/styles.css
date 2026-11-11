@@ -578,6 +578,14 @@ body.slate-hud-body, body {
   border-left: 3px solid var(--arc-cyan);
 }
 
+.action-item-card.type-code-qa {
+  border-left: 3px solid #10b981;
+}
+
+.action-item-card.type-solution {
+  border-left: 3px solid var(--arc-cyan);
+}
+
 .action-item-header {
   display: flex;
   justify-content: space-between;
@@ -599,6 +607,42 @@ body.slate-hud-body, body {
 .tag-approval {
   background: rgba(0, 240, 255, 0.2);
   color: var(--arc-cyan);
+}
+
+.tag-code-qa {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.action-qa-seal-box {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 4px 0;
+}
+
+.action-code-preview {
+  max-height: 180px;
+  overflow-y: auto;
+  background: #070B14;
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #38bdf8;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.btn-copy-code {
+  transition: all 0.2s ease;
+}
+
+.btn-copy-code:hover {
+  background: rgba(0, 240, 255, 0.3) !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
 }
 
 .action-item-title {

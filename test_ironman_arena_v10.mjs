@@ -47,7 +47,7 @@ console.log('  -> OK: Alle 33 Agenten besitzen Namen, Rollen und individuelle id
 console.log('Test 2: Prüfe index.html auf Cache-Busting ?v=10.0 & #agent-hover-speech-bubble...');
 const indexHtml = fs.readFileSync(path.join(__dirname, '02_Frontend_UI_und_3D_Studio/index.html'), 'utf-8');
 
-assert.ok(indexHtml.includes('?v=10.0'), 'index.html muss Cache-Busting ?v=10.0 enthalten');
+assert.ok(indexHtml.includes('?v=11.0') || indexHtml.includes('?v=10.0'), 'index.html muss Cache-Busting ?v=11.0 oder ?v=10.0 enthalten');
 assert.ok(indexHtml.includes('id="agent-hover-speech-bubble"'), 'index.html muss #agent-hover-speech-bubble enthalten');
 assert.ok(indexHtml.includes('id="bubble-agent-name"'), 'index.html muss #bubble-agent-name enthalten');
 assert.ok(indexHtml.includes('id="bubble-dept-badge"'), 'index.html muss #bubble-dept-badge enthalten');

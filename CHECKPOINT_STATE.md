@@ -842,3 +842,46 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
 4. **Cache-Version & Verifikation:**
    - Cache-Version auf `?v=10.0` angehoben in `index.html`.
    - Alle Test-Suites (`test_ironman_arena_v10.mjs`, `test_roster_33_agents.mjs`, `test_arena_queue_sidebar.mjs`, `test_modes_and_nonblocking.mjs`, `test_workflow_execution_fix.mjs`) erfolgreich bestanden (0 Fehler).
+
+---
+
+## 31. Konfliktfreie Integration der Zero-Bug Code-QA-Pipeline & Codereste-Bereinigung (v11.0)
+
+1. **Automatische Code-Erkennung & Cross-Department QA ([`workflowOrchestrator.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js)):**
+   - **Trigger & Erkennung:** `detectCodeInText` und `extractCodeFromMarkdown` prüfen generierte Ausarbeitungen und System-Prompts auf Programmcode (Python, JS, HTML, CSS, SQL, PowerShell etc.).
+   - **Cross-Department QA durch `UG_SERVER`:** Sobald Code erkannt wird, schaltet der Orchestrator vollautomatisch und non-blocking die Experten aus dem Serverraum ein:
+     - **Rico (`ag_32` – QA & Logic Debugger):** Prüft den Code parallel via `Promise.all` auf Syntax, fehlende Methodenaufrufe/Klammern (z. B. `.strip().lower()` statt `.strip.lower`), Case-Sensitivity, Typen und Endlosschleifen.
+     - **Freya (`ag_28` – Security Guardian):** Prüft parallel auf ungeschützte User-Inputs, fehlende Exception-Handlings (`try/except`, `try/catch`), API-Keys/Secrets und Sandbox-Sicherheit.
+     - **Ilja (`ag_26` – Abteilungsleiter `UG_SERVER`):** Koordiniert das Prüfergebnis und vergibt das QA-Prüfsiegel.
+   - **Live 3D-Feedback:** Setzt die 3D-Zustände von Rico, Freya und Ilja auf `working` mit dynamischen Activity-Texten und aktiviert den Datenstrom via `triggerDataStreamToTrevor(12)`.
+   - **Auto-Fixing (strikt auf 1 Runde limitiert):** Werden Mängel gefunden, führt der Leiter der Quellabteilung genau eine Korrekturrunde durch, um `finalVerifiedCode` zu erzeugen, ohne Gefahr von Endlosschleifen oder API-Quota-Limits.
+   - **Non-blocking Flow:** In `finally` werden alle Spezialisten (`pc1`, `pc2`, `pc3`, Abteilungsleiter, Rico, Freya, Ilja) wieder auf `ready` zurückgesetzt und sofort `processNextTaskInQueue()` aufgerufen.
+
+2. **Action-Center Integration & Dark-Slate UI ([`app.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/app.js), [`style.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/style.css), [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css)):**
+   - **Neuer Kartentyp:** `.action-item-card.type-code-qa` mit smaragdgrünem Akzentrand (`#10B981`) und Tag `.tag-code-qa` (`🛡️ ZERO-BUG CODE GEPRÜFT`).
+   - **QA-Prüfsiegel-Box (`.action-qa-seal-box`):**
+     - Nennung der Auditoren (Ilja, Rico, Freya).
+     - Auflistung der durchgeführten Validierungen (Syntax, Klammern, Typen, Sandbox & Exception-Handling).
+     - Amberfarbenes Banner bei erfolgreichem Auto-Fixing mit Angabe der vorgenommenen Korrekturen.
+   - **Codeblock-Vorschau (`.action-code-preview`):** Monospace-Codeanzeige mit direktem `[Code kopieren]`-Button und Clipboard-Toast.
+   - **Konsequenz-Analyse (`.action-impact-box`):**
+     - *Wenn JA:* Code wird übernommen, ins Clipboard kopiert und als Datei exportiert.
+     - *Wenn NEIN:* Code wird verworfen und nicht ins System übernommen.
+   - **Funktionale Aktions-Buttons:** `[Ja] Code übernehmen` und `[Nein] Ablehnen` verdrahtet mit `window.handleUserDecision(actionId, 'JA'|'NEIN')`.
+   - **Dynamische Sprachausgabe:** Trevor spricht über `window.speakAsJarvis(task.spokenSummary)` die dynamisch generierte, fallbezogene Abschlussmeldung.
+
+3. **Radikale Bereinigung alter Codereste (Dead-Code-Cleanup):**
+   - Restlose Löschung der verwaisten Phase-7-Funktionen `executeWorkerTasks`, `aggregateDepartmentResults` und `synthesizeFinalPlan` in `workflowOrchestrator.js` (-176 Zeilen ungenutzter Legacy-Code).
+   - Behebung des `ReferenceError`-Risikos bei ungebundenem `pc1` in `resumePromptRequestTask` durch sichere Iteration über `dept.specialist_pcs`.
+   - Bereinigung doppelter und verwaister Event-Handler.
+
+4. **Cache-Version & Verifikation ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html)):**
+   - Cache-Version auf `?v=11.0` in `index.html` angehoben (CSS-Links und Script-Tag).
+   - Alle 6 Test-Suites erfolgreich bestanden:
+     - `test_zero_bug_qa_pipeline.mjs` (8/8 Prüfungen bestanden)
+     - `test_ironman_arena_v10.mjs` (Bestanden)
+     - `test_roster_33_agents.mjs` (Bestanden)
+     - `test_arena_queue_sidebar.mjs` (Bestanden)
+     - `test_modes_and_nonblocking.mjs` (37/37 bestanden)
+     - `test_workflow_execution_fix.mjs` (5/5 bestanden)
+
