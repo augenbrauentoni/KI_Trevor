@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TREVOR – AI Software Studio & Multi-Agent Command Center</title>
-  <!-- Cache-Busting Version v=7.0 laut Anforderung -->
-  <link rel="stylesheet" href="./styles.css?v=7.0">
-  <link rel="stylesheet" href="./style.css?v=7.0">
+  <!-- Cache-Busting Version v=10.0 laut Anforderung -->
+  <link rel="stylesheet" href="./styles.css?v=10.0">
+  <link rel="stylesheet" href="./style.css?v=10.0">
   <!-- Three.js & OrbitControls (Einziger autoritativer CDN-Import im <head>) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -995,7 +995,22 @@
     </div>
   </div>
 
-  <!-- Skripte mit defer-Absicherung gegen blockierte UI-Felder (Cache-Busting v=7.0) -->
-  <script defer type="module" src="./app.js?v=7.0"></script>
+  <!-- =========================================================================
+       INTERAKTIVE MAUS-HOVER-SPRECHBLASE FÜR DIE 33 AGENTEN (v10.0)
+       ========================================================================= -->
+  <div id="agent-hover-speech-bubble" class="agent-hover-speech-bubble" style="display: none;">
+    <div class="bubble-header">
+      <span class="bubble-agent-name" id="bubble-agent-name">Milan</span>
+      <span class="bubble-dept-badge" id="bubble-dept-badge">UG_SERVER</span>
+    </div>
+    <div class="bubble-role" id="bubble-role">Network &amp; Subnetting Engineer</div>
+    <div class="bubble-activity">
+      <span class="bubble-pulse-dot" id="bubble-pulse-dot"></span>
+      <span class="bubble-activity-text" id="bubble-activity-text">Überwache Subnetz-Routing &amp; Latenzzeiten...</span>
+    </div>
+  </div>
+
+  <!-- Skripte mit defer-Absicherung gegen blockierte UI-Felder (Cache-Busting v=10.0) -->
+  <script defer type="module" src="./app.js?v=10.0"></script>
 </body>
 </html>

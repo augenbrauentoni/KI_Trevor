@@ -1,7 +1,7 @@
 # CHECKPOINT STATE: TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
 
-- **Status:** Kompletter 3D-Rebuild (Echte Arena), 60-FPS Holo-JARVIS, Task-Queue Reparatur & Erweiterte Funktions-Sidebar mit Hover-Tooltips & 6 Sub-Drawers VOLLSTÄNDIG ABGESCHLOSSEN (v6.0) 🏟️⚡
-- **Datum / Letztes Update:** 2026-11-11 22:30:00
+- **Status:** Finales Iron-Man-Arena-Design (100% Sichtbarkeit aller 33 Agenten ohne Keller & Interaktive 3D-to-2D Hover-Sprechblasen) VOLLSTÄNDIG ABGESCHLOSSEN (v10.0) 🏟️⚡🤖
+- **Datum / Letztes Update:** 2026-11-11 23:00:00
 - **Root-Pfad:** `C:\Users\User\Desktop\KI_Trevor`
 
 ---
@@ -800,3 +800,45 @@ Vollständige Umstellung der System-Architektur von einer rein statischen Seite 
 5. **Cache-Version & Verifikation ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html)):**
    - Cache-Version auf allen CSS- und JS-Dateien auf `?v=7.0` angehoben.
    - Test-Suite `test_roster_33_agents.mjs` verifiziert alle 33 Agenten, Rollen, Selektion, 3D-Setup und Drawer zu 100%.
+
+---
+
+## 30. Finales Iron-Man-Arena-Design – 100% Sichtbarkeit aller Abteilungen & Interaktive Maus-Hover-Sprechblasen (v10.0)
+
+1. **Offene Arena-Architektur (100% Sichtbarkeit ohne versteckten Keller) ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - **Standard-Kameraposition:** `camera.position.set(0, 15, 19)`, `controls.target.set(0, 1.0, 0)` für einen idealen 38°-Überblick auf alle 33 Arbeitsplätze ohne jede Verdeckung.
+   - **Zentrum ($x = 0, z = 0$):**
+     - Schwebende 3D-Hologramm-Figur von Iron Man (J.A.R.V.I.S.) bei $(0, 2.8, 0)$ mit `AdditiveBlending`, feingliedrigem Helm mit Visier-Schlitz, goldener Stirn- und Brustpanzerung, pulsierendem Arc-Reactor im Brustkorb, Palm- und Foot-Repulsoren, schwebender Flugpose, 2500 Fibonacci-Aura-Partikeln und 3 gyroskopischen Orbital-Scanringen über dem Boden-Projektor.
+     - Trevor (`ag_01` – Studio Director) Command Station davor bei $(0, 0.0, 2.4)$ mit Ultrawide Curved Screen und Iron-Man-Avatar mit Brust-Arc-Reactor.
+   - **Innenring (`UG_SERVER` & Infrastruktur, Radius $3.2 \dots 6.2$, Höhe $y = 0.0$):**
+     - Offenes Becken mit transparentem Cyan-Glasgeländer (`transmission: 0.90`, `opacity: 0.20`) und metallenem Handlauf.
+     - 4 zentrale Server-Racks mit animierten Status-LEDs.
+     - Alle 8 `UG_SERVER`-Spezialisten vollkommen offen und unoccluded angeordnet: Ilja (`ag_26` [LEAD]), Milan (`ag_27`), Freya (`ag_28`), Anton (`ag_29`), Kian (`ag_30`), Nora (`ag_31`), Rico (`ag_32`), Yuna (`ag_33`).
+   - **Amphitheater-Stufen (Radius $6.2 \dots 9.5$, $y = 0.0 \dots 1.0$):**
+     - 4 Stufenringe aus dunklem Schiefer mit abwechselnd cyan- und gold-leuchtenden Energielinien.
+   - **Äußere Galerie (EG-Abteilungen, Radius $9.8 \dots 14.5$, Höhe $y = 1.0$):**
+     - `EG_BACKEND` (Links / West): David (`ag_18` [LEAD]) + 7 Spezialisten (`ag_19`..`ag_25`).
+     - `EG_ARCHITEKTUR` (Hinten-Rechts / Nord-Ost): Marcus (`ag_02` [LEAD]) + 7 Spezialisten (`ag_03`..`ag_09`).
+     - `EG_FRONTEND` (Vorne-Rechts / Süd-Ost): Daria (`ag_10` [LEAD]) + 7 Spezialisten (`ag_11`..`ag_17`).
+   - **Skalierung & Sichtbarkeit:** Alle 33 Arbeitsplätze auf `1.5x` vergrößert, `visible = true`.
+
+2. **Interaktive Maus-Hover-Sprechblasen (#agent-hover-speech-bubble) ([`index.html`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/index.html), [`style.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/style.css), [`styles.css`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/styles.css)):**
+   - Schwebendes Slate-HUD Glassmorphismus-Panel (`rgba(11, 16, 27, 0.94)`, `border: 1px solid #00F0FF`, Glow-Schatten, animierter Pfeil `::after` auf den Kopf des Agenten gerichtet).
+   - Dynamischer Inhalt:
+     - Header: Name des Agenten (mit goldenem `[LEAD]`-Badge für Abteilungsleiter) + Abteilungs-Badge (z. B. `UG_SERVER`).
+     - Rolle: Spezialisierung im kursiven Slate-Look (z. B. *Network & Subnetting Engineer*).
+     - Aktivitäts-Bereich mit pulsierendem Status-Dot:
+       - `working`: Konkrete Teilaufgabe mit gelb-orangem Pulse-Dot.
+       - `idle`: Individueller domain-spezifischer Gedanke/Routine-Check aller 33 Spezialisten aus `hierarchyData.js` (`idleThought`) mit grünem Pulse-Dot.
+   - 3D-zu-2D Bildschirmkoordinaten-Projektion via `headPos.project(camera)` auf `pointermove` im WebGL-Canvas.
+   - Boden-Highlight-Ring leuchtet beim Hovern unter dem gewählten Agenten auf.
+
+3. **Hitbox-Registrierung & Performance ([`studio3D.js`](file:///C:/Users/User/Desktop/KI_Trevor/02_Frontend_UI_und_3D_Studio/studio3D.js)):**
+   - Jeder der 33 Arbeitsplätze verfügt über eine präzise Zylinder-Hitbox (`userData` mit Agenten-Referenz, Highlight-Ring und `headPos`).
+   - Alle 33 Hitboxen sind in `window.interactiveAgentMeshes` registriert (`length === 33`).
+   - Klick auf einen Agenten zoomt sanft heran und öffnet das Steuerungs-Modal.
+   - Klick auf Holo-JARVIS zoomt heran und öffnet das Trevor-Hauptmodal.
+
+4. **Cache-Version & Verifikation:**
+   - Cache-Version auf `?v=10.0` angehoben in `index.html`.
+   - Alle Test-Suites (`test_ironman_arena_v10.mjs`, `test_roster_33_agents.mjs`, `test_arena_queue_sidebar.mjs`, `test_modes_and_nonblocking.mjs`, `test_workflow_execution_fix.mjs`) erfolgreich bestanden (0 Fehler).

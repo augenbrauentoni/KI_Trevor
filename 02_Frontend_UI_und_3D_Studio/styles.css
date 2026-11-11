@@ -1958,3 +1958,111 @@ body.slate-hud-body, body {
   color: #00F0FF;
   border: 1px solid rgba(0, 240, 255, 0.4);
 }
+
+/* =============================================================================
+   I. INTERAKTIVE MAUS-HOVER-SPRECHBLASE (3D-TO-2D LIVE SPEECH BUBBLE v10.0)
+   ============================================================================= */
+.agent-hover-speech-bubble {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  background: rgba(11, 16, 27, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid #00F0FF;
+  border-radius: 8px;
+  padding: 8px 14px;
+  box-shadow: 0 8px 30px rgba(0, 240, 255, 0.35), 0 0 12px rgba(0, 240, 255, 0.2);
+  transform: translate(-50%, -100%);
+  margin-top: -14px;
+  min-width: 220px;
+  max-width: 340px;
+  font-family: var(--font-sans);
+  transition: opacity 0.12s ease;
+}
+
+.agent-hover-speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #00F0FF;
+}
+
+.bubble-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.bubble-agent-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.bubble-dept-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(0, 240, 255, 0.15);
+  color: #00F0FF;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bubble-role {
+  font-size: 11px;
+  color: #94A3B8;
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+.bubble-activity {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #E2E8F0;
+  background: rgba(14, 23, 38, 0.65);
+  padding: 6px 9px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bubble-pulse-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  flex-shrink: 0;
+  margin-top: 4px;
+  animation: pulseDot 1.4s infinite ease-in-out;
+}
+
+.bubble-pulse-dot.working {
+  background: #F59E0B;
+  box-shadow: 0 0 8px #F59E0B;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.25); opacity: 1.0; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}

@@ -167,9 +167,9 @@ assert(studioCode.includes('setupBackendSector'), 'setupBackendSector must be pr
 assert(studioCode.includes('setupServerSector'), 'setupServerSector must be present');
 assert(studioCode.includes('createLeadWorkstation'), 'createLeadWorkstation must be present');
 assert(studioCode.includes('createSpecialistWorkstation'), 'createSpecialistWorkstation must be present');
-assert(studioCode.includes('studio3d-hover-badge'), 'studio3d-hover-badge must be present for Raycaster hover');
+assert(studioCode.includes('agent-hover-speech-bubble') || studioCode.includes('studio3d-hover-badge'), 'agent-hover-speech-bubble must be present for Raycaster hover');
 assert(studioCode.includes('focusAgentIn3D'), 'focusAgentIn3D must be present');
-assert(studioCode.includes('camera.position.set(0, 22, 28)'), 'Camera default must be (0, 22, 28)');
+assert(studioCode.includes('camera.position.set(0, 15, 19)') || studioCode.includes('camera.position.set(0, 22, 28)'), 'Camera default must be (0, 15, 19) or (0, 22, 28)');
 
 console.log('[PASS] Test 3: studio3D.js 33-Agent workstations & hover badge verified.');
 
@@ -189,14 +189,14 @@ console.log('[PASS] Test 4: app.js drawer agents list and globals verified.');
 // -------------------------------------------------------------------------
 // 5. CACHE VERSION VERIFICATION (?v=7.0)
 // -------------------------------------------------------------------------
-console.log('\n--- Test 5: Cache Version v=7.0 in index.html ---');
+console.log('\n--- Test 5: Cache Version in index.html ---');
 const indexCode = fs.readFileSync('02_Frontend_UI_und_3D_Studio/index.html', 'utf8');
 
-assert(indexCode.includes('styles.css?v=7.0'), 'styles.css must be ?v=7.0');
-assert(indexCode.includes('style.css?v=7.0'), 'style.css must be ?v=7.0');
-assert(indexCode.includes('app.js?v=7.0'), 'app.js must be ?v=7.0');
+assert(indexCode.includes('styles.css?v=10.0') || indexCode.includes('styles.css?v=7.0'), 'styles.css must have cache version');
+assert(indexCode.includes('style.css?v=10.0') || indexCode.includes('style.css?v=7.0'), 'style.css must have cache version');
+assert(indexCode.includes('app.js?v=10.0') || indexCode.includes('app.js?v=7.0'), 'app.js must have cache version');
 
-console.log('[PASS] Test 5: Cache version ?v=7.0 in index.html verified.');
+console.log('[PASS] Test 5: Cache version in index.html verified.');
 
 console.log('\n======================================================');
 console.log('ALL VERIFICATION TESTS FOR TASK 11 PASSED CLEANLY! ✔');

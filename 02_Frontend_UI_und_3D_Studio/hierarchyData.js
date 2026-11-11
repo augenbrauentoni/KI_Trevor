@@ -35,6 +35,7 @@ export const TREVOR_AGENT_ROSTER = [
     color: '#00F0FF',
     accentColor: '#F59E0B',
     focus: 'Gesamtleitung, Pre-Check & Koordination',
+    idleThought: 'Koordiniere Studio-Ressourcen & überwache J.A.R.V.I.S.-Kern...',
     easy_explanation: 'Trevor leitet das 33-Agenten-Studio im Iron-Man-Look. Er analysiert deine Aufträge, verteilt Aufgaben an die richtigen Räume, bündelt Ergebnisse und legt dir am Ende die fertige Freigabe vor.'
   },
 
@@ -55,6 +56,7 @@ export const TREVOR_AGENT_ROSTER = [
     color: '#3B82F6',
     accentColor: '#F59E0B',
     focus: 'Systemdesign, Gesamtkonzept & Architekturentscheidungen',
+    idleThought: 'Auditiere Architektur-Standards & überprüfe System-Modularität...',
     easy_explanation: 'Leitet die Architektur-Abteilung, entwirft modulare System-Strukturen und überwacht die Einhaltung technischer Standards.'
   },
   {
@@ -70,6 +72,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-West (EG-Terrasse)',
     color: '#3B82F6',
     focus: 'Anforderungsanalyse, User Stories & Spezifikation',
+    idleThought: 'Strukturiere Anforderungs-Kataloge & verfeinere User Stories...',
     easy_explanation: 'Zerlegt komplexe Nutzeranforderungen in präzise, umsetzbare Spezifikationen und User Stories.'
   },
   {
@@ -85,6 +88,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-West (EG-Terrasse)',
     color: '#3B82F6',
     focus: 'Datenbank-Schemata, Entity-Relationship & Datenflüsse',
+    idleThought: 'Optimiere relationale Schemata & prüfe Fremdschlüssel-Integrität...',
     easy_explanation: 'Entwirft relationale und dokumentenorientierte Datenmodelle sowie konsistente Datenflüsse.'
   },
   {
@@ -100,6 +104,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-West (EG-Terrasse)',
     color: '#3B82F6',
     focus: 'Kalkulation, Netzplan, Aufwandsschätzung & Wirtschaftlichkeit',
+    idleThought: 'Kalkuliere Ressourcen-Kapazitäten & berechne Projekt-Netzpläne...',
     easy_explanation: 'Berechnet Projektaufwände, Ressourcen, Zeitpläne und wirtschaftliche Machbarkeit.'
   },
   {
@@ -115,6 +120,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-West (EG-Terrasse)',
     color: '#3B82F6',
     focus: 'Technologie-Auswahl, Frameworks & Schnittstellenarchitektur',
+    idleThought: 'Evaluiere moderne Framework-Releases & Schnittstellen-Standards...',
     easy_explanation: 'Wählt moderne, zukunftssichere Technologien, Frameworks und APIs für maximale Skalierbarkeit.'
   },
   {
@@ -130,6 +136,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-West (EG-Terrasse)',
     color: '#3B82F6',
     focus: 'Antigravity-System-Prompts, LLM-Instruktionen & Prompt-Chains',
+    idleThought: 'Halte Antigravity-Prompt-Templates & Rollen-Instruktionen bereit...',
     easy_explanation: 'Formuliert hocheffektive, rollenbasierte Prompts und Instruktionen für Antigravity- und Coding-Agenten.'
   },
   {
@@ -145,6 +152,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-West (EG-Terrasse)',
     color: '#3B82F6',
     focus: 'Folgenabschätzung, Risikoanalyse & Entscheidungs-Audits',
+    idleThought: 'Prüfe Risikomatrizen & Folgenabschätzungen für Architekturentscheidungen...',
     easy_explanation: 'Analysiert die direkten Vor- und Nachteile von Ja/Nein-Entscheidungen (impactYes / impactNo).'
   },
   {
@@ -160,6 +168,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-West (EG-Terrasse)',
     color: '#3B82F6',
     focus: 'Dokumentation, Checkpoints, Zusammenfassungen & Lernhilfen',
+    idleThought: 'Aktualisiere Dokumentations-Checkpoints & didaktische Leitfäden...',
     easy_explanation: 'Erstellt verständliche Dokumentationen, Zusammenfassungen und didaktische Leitfäden.'
   },
 
@@ -180,6 +189,7 @@ export const TREVOR_AGENT_ROSTER = [
     color: '#00F0FF',
     accentColor: '#F59E0B',
     focus: 'UI/UX-Leitung, Design-System & visuelle Qualität',
+    idleThought: 'Harmonisiere Design-Tokens & prüfe visuelle Konsistenz der Arena...',
     easy_explanation: 'Leitet das Frontend-Team, überwacht Designsysteme, Ergonomie und die ganzheitliche Benutzeroberfläche.'
   },
   {
@@ -195,6 +205,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-Ost (EG-Terrasse)',
     color: '#00F0FF',
     focus: 'Three.js 3D-Bühne, WebGL Shaders, Kamera-Führung & Lichteffekte',
+    idleThought: 'Optimiere WebGL-Shader & überprüfe 3D-Kamera-Damping...',
     easy_explanation: 'Baut interaktive 3D-Welten, optimiert Shader, Partikelsysteme und sorgt für cinematische Kamerafahrten.'
   },
   {
@@ -210,6 +221,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-Ost (EG-Terrasse)',
     color: '#00F0FF',
     focus: 'Slate J.A.R.V.I.S. Matte Farbpalette, Glassmorphismus & CSS Grid/Flexbox',
+    idleThought: 'Verfeinere Slate-HUD Glassmorphismus & Farbkombinationen...',
     easy_explanation: 'Stylt elegante Benutzeroberflächen mit Schiefer-Farben, Glassmorphismus und perfekten Kontrasten.'
   },
   {
@@ -225,6 +237,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-Ost (EG-Terrasse)',
     color: '#00F0FF',
     focus: 'DOM-Manipulation, HUD-Widgets, Queue-Events & Task-Rendering',
+    idleThought: 'Überwache DOM-Reaktivität & synchronisiere Task-Queue Widgets...',
     easy_explanation: 'Steuert reaktive DOM-Elemente, schwebende Fenster, Task-Listen und interaktive HUD-Panels.'
   },
   {
@@ -240,6 +253,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-Ost (EG-Terrasse)',
     color: '#00F0FF',
     focus: 'Delta-Animationsschleifen, 60 FPS Performance & Partikelsysteme',
+    idleThought: 'Kalibriere 60-FPS Delta-Loop & Partikel-Interpolation...',
     easy_explanation: 'Sorgt für butterweiche 60-FPS-Animationen ohne Ruckler mittels zeitbasiertem Delta-Timing.'
   },
   {
@@ -255,6 +269,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-Ost (EG-Terrasse)',
     color: '#00F0FF',
     focus: 'Web Audio API Synthesizer, SpeechSynthesis & Spracherkennung',
+    idleThought: 'Teste Web Audio Synthesizer-Oszillatoren & Sprachausgabe-Latenz...',
     easy_explanation: 'Integriert native Web-Audio-Synthesizer, J.A.R.V.I.S.-Stimmen und nahtloses akustisches Feedback.'
   },
   {
@@ -270,6 +285,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-Ost (EG-Terrasse)',
     color: '#00F0FF',
     focus: 'SVG-Icons, Pure CSS Tooltips, Sub-Menüs & Hover-Badges',
+    idleThought: 'Optimiere SVG-Vektorpfade & schärfe Tooltip-Pfeile...',
     easy_explanation: 'Entwirft pixelgenaue SVG-Vektor-Icons, schwebende Tooltips und visuell ansprechende Mikro-Badges.'
   },
   {
@@ -285,6 +301,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Nord-Ost (EG-Terrasse)',
     color: '#00F0FF',
     focus: 'UX Testing, Ergonomie, Barrierefreiheit & Kontrastprüfung',
+    idleThought: 'Führe Ergonomie-Tests durch & prüfe Klickpfad-Erreichbarkeit...',
     easy_explanation: 'Testet Bedienbarkeit, intuitive Klickpfade und sorgt dafür, dass kein UI-Element den Blick verdeckt.'
   },
 
@@ -305,6 +322,7 @@ export const TREVOR_AGENT_ROSTER = [
     color: '#10B981',
     accentColor: '#F59E0B',
     focus: 'Server-Architektur, API-Orchestrierung & Code-Konsolidierung',
+    idleThought: 'Harmonisiere API-Endpunkte & prüfe Backend-Konsolidierung...',
     easy_explanation: 'Leitet die Backend-Abteilung, koordiniert Serverlogik, führt Teilergebnisse zusammen und sichert Code-Qualität.'
   },
   {
@@ -320,6 +338,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Süd (EG-Terrasse)',
     color: '#10B981',
     focus: 'Node.js, Express, REST-APIs, Proxies & Streaming-Endpunkte',
+    idleThought: 'Überwache Node.js Express-Routen & Proxy-Middleware...',
     easy_explanation: 'Entwickelt performante HTTP-Server, Proxy-Routen und sichere Schnittstellen in Node.js.'
   },
   {
@@ -335,6 +354,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Süd (EG-Terrasse)',
     color: '#10B981',
     focus: 'Supabase, PostgreSQL, Vector-Search & persistentes Gedächtnis',
+    idleThought: 'Optimiere Supabase Vektor-Indizes & RAG-Archiv-Cache...',
     easy_explanation: 'Verwaltet das dauerhafte Cloud-Gedächtnis, Tabellen-Strukturen und schnelle semantische RAG-Suchen.'
   },
   {
@@ -350,6 +370,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Süd (EG-Terrasse)',
     color: '#10B981',
     focus: 'Python, Algorithmen, Datenverarbeitung, Sortierung & Mathematik',
+    idleThought: 'Optimiere Python-Algorithmen & mathematische Berechnungen im Hintergrund...',
     easy_explanation: 'Schreibt saubere Python-Skripte, mathematische Berechnungen und optimierte Sortier-Algorithmen.'
   },
   {
@@ -365,6 +386,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Süd (EG-Terrasse)',
     color: '#10B981',
     focus: 'Ollama Qwen 2.5 Coder, Google Gemini Flash/Pro & Dual-LLM Routing',
+    idleThought: 'Überwache Token-Limits & modelliere Dual-LLM Routing...',
     easy_explanation: 'Steuert lokale und Cloud-KI-Modelle, wählt das beste Modell je nach Aufgabe und überwacht Token-Limits.'
   },
   {
@@ -380,6 +402,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Süd (EG-Terrasse)',
     color: '#10B981',
     focus: 'Retrieval Augmented Generation, Code-Indexing & Kontext-Injektion',
+    idleThought: 'Indexiere Workspace-Dateien & bereite Code-Kontexte vor...',
     easy_explanation: 'Analysiert das gesamte Projektverzeichnis und liefert den perfekten Code-Kontext für präzise KI-Antworten.'
   },
   {
@@ -395,6 +418,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Süd (EG-Terrasse)',
     color: '#10B981',
     focus: 'Asynchrone Workflows, Promise.all Parallelisierung & Task-Queues',
+    idleThought: 'Prüfe asynchrone Promise.all-Pipelines auf Event-Loop-Freiheit...',
     easy_explanation: 'Konstruiert unterbrechungsfreie Task-Queues und parallele Agenten-Pipelines ohne Event-Loop-Blockaden.'
   },
   {
@@ -410,6 +434,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'Sektor Süd (EG-Terrasse)',
     color: '#10B981',
     focus: 'JSON-Parsing, Regex-Extraktion, Fallbacks & Error-Handling',
+    idleThought: 'Validiere JSON-Schemata & sichere Parser gegen Sonderzeichen ab...',
     easy_explanation: 'Garantiert fehlertolerantes JSON-Parsing, fängt Sonderzeichen ab und verhindert Task-Verluste bei Netzwerkfehlern.'
   },
 
@@ -430,6 +455,7 @@ export const TREVOR_AGENT_ROSTER = [
     color: '#F59E0B',
     accentColor: '#00F0FF',
     focus: 'Systemhärtung, Infrastruktur, Security & Integrationsprüfung',
+    idleThought: 'Überprüfe Firewall-Regeln & authorisiere System-Integrität...',
     easy_explanation: 'Leitet die Server- und Sicherheits-Abteilung im UG, überwacht Systemgrenzen und authorisiert kritische Deployments.'
   },
   {
@@ -445,6 +471,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'UG-Zentrum (Arena-Grube)',
     color: '#F59E0B',
     focus: 'IPv4, IPv6, CIDR, VLSM, VLAN, Subnetting & Routing-Tabellen',
+    idleThought: 'Überwache Subnetz-Routing, IPv6-Tunnel & Latenzzeiten...',
     easy_explanation: 'Berechnet Subnetze, plant VLAN-Segmentierungen und konfiguriert Routing- und Netzwerkprotokolle.'
   },
   {
@@ -460,6 +487,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'UG-Zentrum (Arena-Grube)',
     color: '#F59E0B',
     focus: 'PIN-Authentifizierung, Sandbox-Absicherung, OWASP & API-Schutz',
+    idleThought: 'Prüfe Sandbox-Integrität & API-Schutzrichtlinien...',
     easy_explanation: 'Schützt das Studio vor unbefugtem Zugriff, prüft PIN-Sicherheit und hält Sicherheitsrichtlinien ein.'
   },
   {
@@ -475,6 +503,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'UG-Zentrum (Arena-Grube)',
     color: '#F59E0B',
     focus: 'CI/CD, Git-Workflows, Render-Deployments & Build-Monitoring',
+    idleThought: 'Überwache CI/CD-Pipelines & Git-Render-Deployments...',
     easy_explanation: 'Automatisiert Build-Prozesse, Git-Pushes und sorgt für reibungslose Cloud-Deployments auf Render.'
   },
   {
@@ -490,6 +519,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'UG-Zentrum (Arena-Grube)',
     color: '#F59E0B',
     focus: 'Server-Hardware, Proxmox VE, VM-Management, RAM/CPU-Optimierung',
+    idleThought: 'Analysiere Proxmox-VM Auslastung, RAM & CPU-Verteilung...',
     easy_explanation: 'Überwacht physische und virtuelle Server-Ressourcen, Proxmox-Container und Hardware-Auslastung.'
   },
   {
@@ -505,6 +535,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'UG-Zentrum (Arena-Grube)',
     color: '#F59E0B',
     focus: 'Firewalls, WireGuard, Tailscale, Port-Forwarding & Verschlüsselung',
+    idleThought: 'Prüfe WireGuard-VPN-Handshakes & Tailscale-Mesh-Verschlüsselung...',
     easy_explanation: 'Richtet verschlüsselte VPN-Tunnel, WireGuard-Netzwerke und strenge Firewall-Regeln ein.'
   },
   {
@@ -520,6 +551,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'UG-Zentrum (Arena-Grube)',
     color: '#F59E0B',
     focus: 'QA, Test-Suites, Logik-Debugging, Randfälle & Regressions-Tests',
+    idleThought: 'Scanne Code auf Logikfehler & führe automatische Regressionstests durch...',
     easy_explanation: 'Führt strenge automatisierte Tests durch, findet versteckte Bugs und validiert Programmabläufe.'
   },
   {
@@ -535,6 +567,7 @@ export const TREVOR_AGENT_ROSTER = [
     sector: 'UG-Zentrum (Arena-Grube)',
     color: '#F59E0B',
     focus: 'Idle-Training, RAG-Optimierung, Continuous Learning & System-Audits',
+    idleThought: 'Führe kontinuierliche System-Audits durch & erweitere das Cloud-Gedächtnis...',
     easy_explanation: 'Nutzt Leerlaufzeiten zur Systemoptimierung, speichert gelernte Regeln im Cloud-Gedächtnis und trainiert KI-Antworten.'
   }
 ];

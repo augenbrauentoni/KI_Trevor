@@ -71,6 +71,7 @@ if (typeof window !== 'undefined') {
   window.isOrchestratorBusy = false;
   window.trevorTaskQueue = state.taskQueue;
   window.taskQueue = state.taskQueue;
+  window.interactiveAgentMeshes = window.interactiveAgentMeshes || [];
 }
 
 // =============================================================================
