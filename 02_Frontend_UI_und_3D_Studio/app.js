@@ -2155,14 +2155,17 @@ function setupAudioSystem() {
   }
 
   const soundBtn = document.getElementById('btn-toggle-sound');
+  const soundLabel = document.getElementById('sound-toggle-label');
   const updateSoundBtnUI = () => {
     if (!soundBtn) return;
     if (window.trevorAudio.enabled) {
-      soundBtn.innerText = '🔊 Sound: AN';
+      if (soundLabel) soundLabel.innerText = 'Sound: AN';
+      else soundBtn.innerText = 'Sound: AN';
       soundBtn.classList.remove('muted');
       soundBtn.title = 'Sound ist AN – Klicken zum Stummschalten';
     } else {
-      soundBtn.innerText = '🔇 Sound: AUS';
+      if (soundLabel) soundLabel.innerText = 'Sound: AUS';
+      else soundBtn.innerText = 'Sound: AUS';
       soundBtn.classList.add('muted');
       soundBtn.title = 'Sound ist AUS – Klicken zum Aktivieren';
     }
@@ -3235,6 +3238,28 @@ function updateTrackerStage(stageNum) {
     if (el) {
       if (i === stageNum) el.classList.add('active');
       else el.classList.remove('active');
+    }
+  }
+
+  // Live Hologram WIP Waveform Statusanzeige im Header aktualisieren
+  const holoWipText = document.getElementById('holo-wip-text');
+  const holoIndicator = document.getElementById('holo-wip-indicator');
+  if (holoWipText) {
+    if (stageNum === 1) {
+      holoWipText.innerText = 'STUFE 01: FACHTEAM ARBEITET...';
+      if (holoIndicator) holoIndicator.classList.add('active');
+    } else if (stageNum === 2) {
+      holoWipText.innerText = 'STUFE 02: CHEF-AUDIT & KONTROLLE...';
+      if (holoIndicator) holoIndicator.classList.add('active');
+    } else if (stageNum === 3) {
+      holoWipText.innerText = 'STUFE 03: TREVOR MASTER-SYNTHESE...';
+      if (holoIndicator) holoIndicator.classList.add('active');
+    } else if (stageNum === 4) {
+      holoWipText.innerText = 'STUFE 04: FREIGABE BEREIT (JA/NEIN)';
+      if (holoIndicator) holoIndicator.classList.add('active');
+    } else {
+      holoWipText.innerText = 'SYSTEM ONLINE · J.A.R.V.I.S. READY';
+      if (holoIndicator) holoIndicator.classList.remove('active');
     }
   }
 }
