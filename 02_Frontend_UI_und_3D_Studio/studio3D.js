@@ -176,40 +176,48 @@ function createScreenCanvasTexture(type = 'code', colorHex = '#00F0FF') {
 }
 
 /**
- * Erzeugt schwebende Sleek-HUD-Schilder für die Abteilungen
+ * Erzeugt schwebende Sleek-HUD-Schilder für die Abteilungen mit feiner vertikaler Boden-Verbindungslinie
  */
 function createSleekHudLabelSprite(text, colorHex = '#00F0FF') {
   const canvas = document.createElement('canvas');
-  canvas.width = 384;
-  canvas.height = 96;
+  canvas.width = 420;
+  canvas.height = 100;
   const ctx = canvas.getContext('2d');
 
-  // Glassmorphismus-Panel Hintergrund
-  ctx.fillStyle = 'rgba(11, 16, 27, 0.92)';
+  // Glassmorphismus-Panel Hintergrund (Dunkel schieferblau)
+  ctx.fillStyle = 'rgba(7, 11, 19, 0.94)';
   ctx.beginPath();
   if (ctx.roundRect) {
-    ctx.roundRect(4, 4, 376, 88, 12);
+    ctx.roundRect(4, 4, 412, 92, 10);
   } else {
-    ctx.rect(4, 4, 376, 88);
+    ctx.rect(4, 4, 412, 92);
   }
   ctx.fill();
 
-  // Akzentrahmen
+  // Feiner 1px Akzentrahmen im Original-Look
   ctx.strokeStyle = colorHex;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 2.0;
   ctx.stroke();
 
-  // Status-Dot
+  // Äußerer Glow-Ring des Status-Dots
+  ctx.fillStyle = colorHex;
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.arc(30, 50, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1.0;
+
+  // Kern des Status-Dots
   ctx.fillStyle = colorHex;
   ctx.beginPath();
-  ctx.arc(24, 48, 7, 0, Math.PI * 2);
+  ctx.arc(30, 50, 7, 0, Math.PI * 2);
   ctx.fill();
 
-  // Text
+  // Typografie mit feiner Linienführung
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, 42, 48);
+  ctx.fillText(text, 56, 50);
 
   const THREE = getTHREE();
   if (!THREE) return new (class { constructor() { this.position = { set: () => {} }; } })();
@@ -223,7 +231,7 @@ function createSleekHudLabelSprite(text, colorHex = '#00F0FF') {
     depthTest: false
   });
   const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(3.2, 0.8, 1);
+  sprite.scale.set(3.4, 0.82, 1);
   return sprite;
 }
 
@@ -853,6 +861,9 @@ function setupArenaWorkstations(THREE_LIB, hierarchyData) {
   setupFrontendSectors(THREE_LIB);
   setupBackendSectors(THREE_LIB);
 
+  // 4. SICHTBARE NETZWERK- & DATENFÄDEN (CONSTELLATION LINES)
+  setupConstellationNetwork(THREE_LIB);
+
   console.log(`[Studio 3D] Workstations aufgebaut: ${window.interactiveAgentMeshes.length} Agenten registriert`);
 }
 
@@ -984,6 +995,15 @@ function setupServerSector(THREE_LIB) {
   sectorGroup.add(hudSprite);
   deptHudSprites[12] = hudSprite;
 
+  // Feine vertikale Verbindungslinie zum Sektor-Boden
+  const stemGeo = new THREE_LIB.BufferGeometry().setFromPoints([
+    new THREE_LIB.Vector3(0, 0.0, -4.8),
+    new THREE_LIB.Vector3(0, 1.7, -4.8)
+  ]);
+  const stemMat = new THREE_LIB.LineBasicMaterial({ color: 0xF59E0B, transparent: true, opacity: 0.65 });
+  const stemLine = new THREE_LIB.Line(stemGeo, stemMat);
+  sectorGroup.add(stemLine);
+
   // Ilja [LEAD] (ag_26) bei x=0, z=-4.6
   const ilja = AGENT_ROSTER_BY_ID['ag_26'];
   const leadDesk = createLeadWorkstation(THREE_LIB, ilja, '#F59E0B', new THREE_LIB.Vector3(0, 0.0, -4.6));
@@ -1022,6 +1042,15 @@ function setupArchitectureSectors(THREE_LIB) {
   hudSprite.position.set(-6.5, 3.2, -9.5);
   group.add(hudSprite);
   deptHudSprites[2] = hudSprite;
+
+  // Feine vertikale Verbindungslinie zum Sektor-Boden
+  const stemGeo = new THREE_LIB.BufferGeometry().setFromPoints([
+    new THREE_LIB.Vector3(-6.5, 1.2, -9.5),
+    new THREE_LIB.Vector3(-6.5, 2.8, -9.5)
+  ]);
+  const stemMat = new THREE_LIB.LineBasicMaterial({ color: 0x38BDF8, transparent: true, opacity: 0.65 });
+  const stemLine = new THREE_LIB.Line(stemGeo, stemMat);
+  group.add(stemLine);
 
   // Marcus [LEAD] (ag_02)
   const marcus = AGENT_ROSTER_BY_ID['ag_02'];
@@ -1062,6 +1091,15 @@ function setupFrontendSectors(THREE_LIB) {
   group.add(hudSprite);
   deptHudSprites[3] = hudSprite;
 
+  // Feine vertikale Verbindungslinie zum Sektor-Boden
+  const stemGeo = new THREE_LIB.BufferGeometry().setFromPoints([
+    new THREE_LIB.Vector3(7.5, 1.2, -7.5),
+    new THREE_LIB.Vector3(7.5, 2.8, -7.5)
+  ]);
+  const stemMat = new THREE_LIB.LineBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.65 });
+  const stemLine = new THREE_LIB.Line(stemGeo, stemMat);
+  group.add(stemLine);
+
   // Daria [LEAD] (ag_10)
   const daria = AGENT_ROSTER_BY_ID['ag_10'];
   const leadDesk = createLeadWorkstation(THREE_LIB, daria, '#00F0FF', new THREE_LIB.Vector3(5.2, 1.2, -11.0));
@@ -1101,6 +1139,15 @@ function setupBackendSectors(THREE_LIB) {
   group.add(hudSprite);
   deptHudSprites[5] = hudSprite;
 
+  // Feine vertikale Verbindungslinie zum Sektor-Boden
+  const stemGeo = new THREE_LIB.BufferGeometry().setFromPoints([
+    new THREE_LIB.Vector3(-8.5, 1.2, 8.5),
+    new THREE_LIB.Vector3(-8.5, 2.8, 8.5)
+  ]);
+  const stemMat = new THREE_LIB.LineBasicMaterial({ color: 0x10B981, transparent: true, opacity: 0.65 });
+  const stemLine = new THREE_LIB.Line(stemGeo, stemMat);
+  group.add(stemLine);
+
   // David [LEAD] (ag_18)
   const david = AGENT_ROSTER_BY_ID['ag_18'];
   const leadDesk = createLeadWorkstation(THREE_LIB, david, '#10B981', new THREE_LIB.Vector3(-8.5, 1.2, 8.5));
@@ -1126,6 +1173,31 @@ function setupBackendSectors(THREE_LIB) {
 
   createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(-8.5, 1.4, 8.5), new THREE_LIB.Vector3(0, 1.8, 0), '#10B981');
   scene.add(group);
+}
+
+/**
+ * Sichtbare Netzwerk- & Datenfäden (Constellation Lines) zwischen Holo-JARVIS,
+ * dem inneren UG_SERVER-Ring und den äußeren EG-Galerie-Inseln
+ */
+function setupConstellationNetwork(THREE_LIB) {
+  const centerHoloPos = new THREE_LIB.Vector3(0, 1.8, 0);
+  const trevorPos = new THREE_LIB.Vector3(0, 0.4, 2.4);
+
+  // 1. Primärstrahlen vom Holo-JARVIS zur Zentrale und den Abteilungs-Inseln
+  createConnectionCurve(THREE_LIB, trevorPos, centerHoloPos, '#00F0FF');
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(0, 0.3, -4.6), centerHoloPos, '#F59E0B');
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(4.3, 0.3, 1.8), centerHoloPos, '#F59E0B');
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(-4.2, 0.3, 1.6), centerHoloPos, '#F59E0B');
+
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(-11.0, 1.4, -4.0), centerHoloPos, '#38BDF8');
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(5.2, 1.4, -11.0), centerHoloPos, '#00F0FF');
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(-8.5, 1.4, 8.5), centerHoloPos, '#10B981');
+
+  // 2. Inter-Sektor Netzwerk-Verbindungen (Constellation Mesh)
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(-6.5, 1.3, -9.5), new THREE_LIB.Vector3(7.5, 1.3, -7.5), '#00F0FF');
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(7.5, 1.3, -7.5), new THREE_LIB.Vector3(-8.5, 1.3, 8.5), '#38BDF8');
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(-8.5, 1.3, 8.5), new THREE_LIB.Vector3(0, 0.3, -4.6), '#F59E0B');
+  createConnectionCurve(THREE_LIB, new THREE_LIB.Vector3(-6.5, 1.3, -9.5), new THREE_LIB.Vector3(0, 0.3, -4.6), '#F59E0B');
 }
 
 /**
@@ -1199,6 +1271,27 @@ function createLeadWorkstation(THREE_LIB, agent, colorHex, position) {
   const orb = new THREE_LIB.Mesh(orbGeo, orbMat);
   orb.position.set(0.45, 0.60, 0.18);
   group.add(orb);
+
+  // Schreibtisch-Beleuchtung (PointLight für Arbeitsplatz)
+  if (typeof THREE_LIB.PointLight === 'function') {
+    const deskLight = new THREE_LIB.PointLight(parseInt(colorHex.replace('#', '0x'), 16) || 0x00F0FF, 0.9, 2.5);
+    deskLight.position.set(0, 0.85, 0.05);
+    group.add(deskLight);
+  }
+
+  // Ergonomischer Chefsessel
+  const chairGroup = new THREE_LIB.Group();
+  chairGroup.position.set(0, 0.0, 0.52);
+  const chairSeatGeo = new THREE_LIB.BoxGeometry(0.44, 0.06, 0.42);
+  const chairMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.35, metalness: 0.75 });
+  const chairSeat = new THREE_LIB.Mesh(chairSeatGeo, chairMat);
+  chairSeat.position.y = 0.30;
+  chairGroup.add(chairSeat);
+  const chairBackGeo = new THREE_LIB.BoxGeometry(0.42, 0.50, 0.05);
+  const chairBack = new THREE_LIB.Mesh(chairBackGeo, chairMat);
+  chairBack.position.set(0, 0.56, 0.18);
+  chairGroup.add(chairBack);
+  group.add(chairGroup);
 
   // Lead-Avatar mit Gold/Cyan-Schulterring
   const avatar = createStylizedDeveloperAvatar(THREE_LIB, colorHex, true, false);
@@ -1334,6 +1427,27 @@ function createSpecialistWorkstation(THREE_LIB, agent, colorHex, position, rotY 
   const orb = new THREE_LIB.Mesh(orbGeo, orbMat);
   orb.position.set(0.34, 0.56, 0.15);
   group.add(orb);
+
+  // Schreibtisch-Beleuchtung (PointLight für Arbeitsplatz)
+  if (typeof THREE_LIB.PointLight === 'function') {
+    const deskLight = new THREE_LIB.PointLight(parseInt(colorHex.replace('#', '0x'), 16) || 0x00F0FF, 0.75, 2.0);
+    deskLight.position.set(0, 0.75, 0.05);
+    group.add(deskLight);
+  }
+
+  // Ergonomischer Bürostuhl
+  const chairGroup = new THREE_LIB.Group();
+  chairGroup.position.set(0, 0.0, 0.46);
+  const chairSeatGeo = new THREE_LIB.BoxGeometry(0.38, 0.05, 0.36);
+  const chairMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.35, metalness: 0.75 });
+  const chairSeat = new THREE_LIB.Mesh(chairSeatGeo, chairMat);
+  chairSeat.position.y = 0.28;
+  chairGroup.add(chairSeat);
+  const chairBackGeo = new THREE_LIB.BoxGeometry(0.36, 0.42, 0.04);
+  const chairBack = new THREE_LIB.Mesh(chairBackGeo, chairMat);
+  chairBack.position.set(0, 0.50, 0.16);
+  chairGroup.add(chairBack);
+  group.add(chairGroup);
 
   // Avatar
   const avatar = createStylizedDeveloperAvatar(THREE_LIB, colorHex, false, false);

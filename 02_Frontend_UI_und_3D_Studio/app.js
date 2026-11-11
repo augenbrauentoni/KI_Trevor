@@ -24,11 +24,20 @@ import {
 import {
   startIdleTraining,
   stopIdleTraining,
+  isTrainingRunning,
+  toggleIdleTraining,
   getAgentCurrentActivity,
   getAgentLearnedInsights,
   getAllLearnedKnowledgeSummary,
   saveInsightToCloudMemory,
-  getDepartmentCode
+  getDepartmentCode,
+  getAllTrainingProjects,
+  getActiveTrainingProject,
+  setActiveTrainingProject,
+  addTrainingProject,
+  setTrainingFocusArea,
+  getTrainingFocusArea,
+  executeTrainingStep
 } from './idleTrainer.js';
 import { getLLMConfig, saveLLMConfig, queryLLM } from './llmEngine.js';
 import { WorkflowOrchestrator, orchestrator } from './workflowOrchestrator.js';
@@ -72,6 +81,100 @@ if (typeof window !== 'undefined') {
   window.trevorTaskQueue = state.taskQueue;
   window.taskQueue = state.taskQueue;
   window.interactiveAgentMeshes = window.interactiveAgentMeshes || [];
+}
+
+/**
+ * Initialisiert das 2D Canvas Waveform Rendering in der Dynamic Island Kapsel (Top HUD)
+ */
+export function initWaveformCanvas() {
+  const canvas = document.getElementById('jarvis-waveform-canvas');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  let time = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const isSpeaking = (typeof window !== 'undefined' && window.isJarvisSpeaking === true);
+    const isBusy = (state.activeTask && state.activeTask.status === 'running') ||
+                   (typeof window !== 'undefined' && window.isOrchestratorBusy === true);
+
+    const amp = isSpeaking ? 16 : (isBusy ? 10 : 3.5);
+    const speed = isSpeaking ? 0.08 : (isBusy ? 0.04 : 0.015);
+    time += speed;
+
+    const centerY = h / 2;
+
+    // 1. Welle: Hologramm-Cyan (#00F0FF)
+    ctx.beginPath();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#00F0FF';
+    ctx.shadowColor = '#00F0FF';
+    ctx.shadowBlur = isSpeaking ? 12 : 5;
+    for (let x = 0; x < w; x++) {
+      const envelope = Math.sin((x / w) * Math.PI);
+      const y = centerY + Math.sin(x * 0.035 + time * 2) * amp * envelope;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // 2. Welle: Eisweiß / Ice-Blue (Harmonische Oberwelle)
+    ctx.beginPath();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = isSpeaking ? 8 : 3;
+    for (let x = 0; x < w; x++) {
+      const envelope = Math.sin((x / w) * Math.PI);
+      const y = centerY + Math.sin(x * 0.055 - time * 1.5) * (amp * 0.7) * envelope;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // 3. Welle: Tech Amber (#F59E0B)
+    ctx.beginPath();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = isSpeaking ? 'rgba(245, 158, 11, 0.75)' : 'rgba(0, 240, 255, 0.3)';
+    ctx.shadowBlur = 0;
+    for (let x = 0; x < w; x++) {
+      const envelope = Math.sin((x / w) * Math.PI);
+      const y = centerY + Math.sin(x * 0.02 + time * 0.8) * (amp * 0.45) * envelope;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  animate();
+}
+
+/**
+ * Synchronisiert die Benutzeroberfläche des Trainings-Drawers
+ */
+export function initTrainingDrawerUI() {
+  const select = document.getElementById('training-project-select');
+  if (select && typeof getAllTrainingProjects === 'function') {
+    const projects = getAllTrainingProjects();
+    const active = typeof getActiveTrainingProject === 'function' ? getActiveTrainingProject() : null;
+    const activeId = active ? active.id : select.value;
+    select.innerHTML = projects.map(p => `
+      <option value="${p.id}" ${p.id === activeId ? 'selected' : ''}>${escapeHtml(p.name)}</option>
+    `).join('');
+  }
+  const statusLabel = document.getElementById('training-status-label');
+  const toggleBtn = document.getElementById('training-active-toggle-btn');
+  if (statusLabel && toggleBtn && typeof isTrainingRunning === 'function') {
+    const running = isTrainingRunning();
+    statusLabel.innerText = running ? 'Aktiv (Autonomer Zyklus)' : 'Aktuell pausiert';
+    statusLabel.style.color = running ? '#10B981' : '#94A3B8';
+    toggleBtn.innerText = running ? 'Pausieren' : 'Aktivieren';
+    toggleBtn.style.color = running ? '#EF4444' : '#F59E0B';
+  }
 }
 
 // =============================================================================
@@ -121,6 +224,14 @@ function bootTrevorApp() {
     updateVoiceToggleButtonUI();
   } catch (err) {
     console.warn('[Trevor App] Voice-Button UI Sync Warnung:', err);
+  }
+
+  // 6. Dynamic Island Audio-Waveform & Training-Drawer UI initialisieren
+  try {
+    initWaveformCanvas();
+    initTrainingDrawerUI();
+  } catch (err) {
+    console.warn('[Trevor App] Waveform/Training Init Warnung:', err);
   }
 }
 
@@ -2662,7 +2773,7 @@ export function renderActionCenterUI() {
     const impact = item.data?.impactAnalysis;
     const impactHtml = (impact && (impact.impactYes || impact.impactNo)) ? `
       <div class="action-impact-box">
-        <div class="action-impact-title">⚠️ Konsequenz-Analyse:</div>
+        <div class="action-impact-title">⚠️ Erklärung der Auswirkungen (Impact-Analyse):</div>
         ${impact.impactYes ? `<div class="action-impact-yes"><strong>Wenn JA:</strong> ${escapeHtml(impact.impactYes)}</div>` : ''}
         ${impact.impactNo ? `<div class="action-impact-no"><strong>Wenn NEIN:</strong> ${escapeHtml(impact.impactNo)}</div>` : ''}
       </div>
@@ -2878,7 +2989,7 @@ export function renderActionCenterUI() {
 
         <!-- Impact Analyse -->
         <div class="action-impact-box">
-          <div class="action-impact-title">⚠️ Konsequenz-Analyse:</div>
+          <div class="action-impact-title">⚠️ Erklärung der Auswirkungen (Impact-Analyse):</div>
           <div class="action-impact-yes"><strong>Wenn JA:</strong> Geprüfter Code wird übernommen, in Zwischenablage kopiert und als Datei exportiert.</div>
           <div class="action-impact-no"><strong>Wenn NEIN:</strong> Der Code wird verworfen und nicht ins System übernommen.</div>
         </div>
@@ -3418,6 +3529,20 @@ function updateTrackerStage(stageNum) {
       if (holoIndicator) holoIndicator.classList.remove('active');
     }
   }
+  const dynamicIslandText = document.getElementById('dynamic-island-text');
+  if (dynamicIslandText) {
+    if (stageNum === 1) {
+      dynamicIslandText.innerText = 'Live-Activity: Stufe 1 – Fachteam analysiert & arbeitet...';
+    } else if (stageNum === 2) {
+      dynamicIslandText.innerText = 'Live-Activity: Stufe 2 – Chef-Audit & Cross-Check...';
+    } else if (stageNum === 3) {
+      dynamicIslandText.innerText = 'Live-Activity: Stufe 3 – Trevor Master-Synthese...';
+    } else if (stageNum === 4) {
+      dynamicIslandText.innerText = 'Live-Activity: Stufe 4 – Bereit zur Freigabe im Action-Center';
+    } else {
+      dynamicIslandText.innerText = 'Live-Activity: Trevor bereit für neue Aufgaben...';
+    }
+  }
 }
 
 function setDeptDotStatus(deptId, status) {
@@ -3580,7 +3705,8 @@ const DRAWER_IDS = [
   'drawer-agents',
   'drawer-memory',
   'drawer-settings',
-  'drawer-camera'
+  'drawer-camera',
+  'drawer-training'
 ];
 
 export function closeAllDrawers() {
@@ -3765,6 +3891,13 @@ export function setupDrawerAndNavListeners() {
   const navCamera = document.getElementById('nav-camera');
   if (navCamera) {
     navCamera.addEventListener('click', () => toggleDrawer('drawer-camera', navCamera));
+  }
+  const navTraining = document.getElementById('nav-training');
+  if (navTraining) {
+    navTraining.addEventListener('click', () => {
+      initTrainingDrawerUI();
+      toggleDrawer('drawer-training', navTraining);
+    });
   }
 
   // 2. Generic Close Buttons on Drawers
@@ -3974,6 +4107,166 @@ export function setupDrawerAndNavListeners() {
   if (btnRotRight) btnRotRight.addEventListener('click', () => { if (typeof window !== 'undefined' && typeof window.rotate3DCamera === 'function') window.rotate3DCamera(-0.2); });
   const btnReset = document.getElementById('cam-btn-reset');
   if (btnReset) btnReset.addEventListener('click', () => { if (typeof window !== 'undefined' && typeof window.reset3DCamera === 'function') window.reset3DCamera(); });
+
+  // 9. Trainingsmodus & Freizeit-Projekte Drawer Controls
+  const trainingToggleBtn = document.getElementById('training-active-toggle-btn');
+  if (trainingToggleBtn) {
+    trainingToggleBtn.addEventListener('click', () => {
+      const running = toggleIdleTraining(state.hierarchy ? state.hierarchy.departments : null);
+      initTrainingDrawerUI();
+      if (typeof showActionToast === 'function') {
+        showActionToast(
+          'Trainingsmodus',
+          running ? 'Autonomes Hintergrund-Training aktiviert.' : 'Hintergrund-Training pausiert.',
+          running ? 'SUCCESS' : 'INFO'
+        );
+      }
+    });
+  }
+
+  const trainingProjectSelect = document.getElementById('training-project-select');
+  if (trainingProjectSelect) {
+    trainingProjectSelect.addEventListener('change', (e) => {
+      const projId = e.target.value;
+      const proj = setActiveTrainingProject(projId);
+      if (typeof showActionToast === 'function') {
+        showActionToast('Projekt gewechselt', `Trainingsfokus auf "${proj ? proj.name : projId}" gesetzt.`, 'INFO');
+      }
+    });
+  }
+
+  const btnToggleCustomForm = document.getElementById('btn-toggle-custom-project-form');
+  const customProjectForm = document.getElementById('custom-project-form');
+  if (btnToggleCustomForm && customProjectForm) {
+    btnToggleCustomForm.addEventListener('click', () => {
+      const isHidden = (customProjectForm.style.display === 'none' || !customProjectForm.style.display);
+      customProjectForm.style.display = isHidden ? 'flex' : 'none';
+      btnToggleCustomForm.innerText = isHidden ? '[- Ausblenden]' : '[+ Hinzufügen]';
+    });
+  }
+
+  const btnSaveCustomProject = document.getElementById('btn-save-custom-project');
+  if (btnSaveCustomProject) {
+    btnSaveCustomProject.addEventListener('click', () => {
+      const nameInput = document.getElementById('custom-project-name');
+      const domainInput = document.getElementById('custom-project-domain');
+      const name = (nameInput ? nameInput.value : '').trim();
+      const domain = (domainInput ? domainInput.value : '').trim();
+      if (!name) {
+        if (typeof showActionToast === 'function') showActionToast('Hinweis', 'Bitte Projektnamen eingeben.', 'WARNING');
+        return;
+      }
+      const newProj = addTrainingProject({ name, domain: domain || 'Software-Projekt' });
+      initTrainingDrawerUI();
+      if (trainingProjectSelect) trainingProjectSelect.value = newProj.id;
+      if (customProjectForm) customProjectForm.style.display = 'none';
+      if (btnToggleCustomForm) btnToggleCustomForm.innerText = '[+ Hinzufügen]';
+      if (nameInput) nameInput.value = '';
+      if (domainInput) domainInput.value = '';
+      if (typeof showActionToast === 'function') {
+        showActionToast('Projekt aufgenommen', `Neues Freizeit-Projekt "${newProj.name}" aufgenommen.`, 'SUCCESS');
+      }
+    });
+  }
+
+  const trainingFocusSelect = document.getElementById('training-focus-select');
+  if (trainingFocusSelect) {
+    trainingFocusSelect.addEventListener('change', (e) => {
+      setTrainingFocusArea(e.target.value);
+    });
+  }
+
+  const btnTriggerTrainingRun = document.getElementById('btn-trigger-training-run');
+  if (btnTriggerTrainingRun) {
+    btnTriggerTrainingRun.addEventListener('click', () => {
+      const step = executeTrainingStep(state.hierarchy ? state.hierarchy.departments : null);
+      if (step) {
+        const previewAgent = document.getElementById('training-preview-agent');
+        const previewTime = document.getElementById('training-preview-time');
+        const previewText = document.getElementById('training-preview-text');
+        if (previewAgent) previewAgent.innerText = `${step.agentName} (${step.department})`;
+        if (previewTime) previewTime.innerText = new Date(step.timestamp).toLocaleTimeString();
+        if (previewText) previewText.innerText = step.insight;
+      }
+      if (typeof showActionToast === 'function') {
+        showActionToast('Trainings-Durchlauf', 'Autonomer Optimierungs-Schritt abgeschlossen.', 'SUCCESS');
+      }
+    });
+  }
+
+  // 10. Top-Header & Task-Queue Floating Panels
+  const headerMenuToggle = document.getElementById('header-menu-toggle');
+  if (headerMenuToggle) {
+    headerMenuToggle.addEventListener('click', () => {
+      const navTaskQueue = document.getElementById('nav-task-queue');
+      toggleDrawer('drawer-task-queue', navTaskQueue);
+    });
+  }
+
+  const headerNotificationBtn = document.getElementById('header-notification-btn');
+  if (headerNotificationBtn) {
+    headerNotificationBtn.addEventListener('click', () => {
+      openActionCenter();
+    });
+  }
+
+  const headerDirectorAvatar = document.getElementById('header-director-avatar');
+  if (headerDirectorAvatar) {
+    headerDirectorAvatar.addEventListener('click', () => {
+      if (typeof window.focusAgentIn3D === 'function') {
+        window.focusAgentIn3D('ag_01');
+      }
+      openTrevorModal();
+    });
+  }
+
+  const btnLogoutReset = document.getElementById('btn-logout-reset');
+  if (btnLogoutReset) {
+    btnLogoutReset.addEventListener('click', () => {
+      try {
+        sessionStorage.removeItem('trevor_studio_unlocked');
+      } catch (e) {}
+      const loginOverlay = document.getElementById('login-screen') || document.getElementById('login-screen-overlay');
+      if (loginOverlay) {
+        loginOverlay.style.display = 'flex';
+        const pinInput = document.getElementById('login-pin-input');
+        if (pinInput) {
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      }
+      if (typeof showActionToast === 'function') {
+        showActionToast('Studio gesperrt', 'PIN-Authentifizierung erforderlich.', 'INFO');
+      }
+    });
+  }
+
+  const taskQueueCollapseBtn = document.getElementById('task-queue-collapse-btn');
+  if (taskQueueCollapseBtn) {
+    taskQueueCollapseBtn.addEventListener('click', () => {
+      const queueList = document.getElementById('task-queue-list');
+      const queuePlaceholder = document.getElementById('queue-empty-placeholder');
+      const isCollapsed = queueList && queueList.style.display === 'none';
+      if (queueList) queueList.style.display = isCollapsed ? 'flex' : 'none';
+      if (queuePlaceholder && state.taskQueue.length === 0) {
+        queuePlaceholder.style.display = isCollapsed ? 'block' : 'none';
+      }
+      taskQueueCollapseBtn.innerText = isCollapsed ? '⌄' : '⌃';
+      taskQueueCollapseBtn.title = isCollapsed ? 'Minimieren' : 'Maximieren';
+    });
+  }
+
+  // 11. Central Event Delegation für 100% Button-Funktion
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.classList.contains('btn-back-to-hub')) {
+      returnToHub();
+      if (typeof showActionToast === 'function') {
+        showActionToast('Zentrale', 'Kamera auf J.A.R.V.I.S. & Trevor ausgerichtet.', 'SUCCESS');
+      }
+    }
+  });
 }
 
 // =============================================================================

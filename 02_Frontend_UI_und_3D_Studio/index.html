@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TREVOR – AI Software Studio & Multi-Agent Command Center</title>
-  <!-- Cache-Busting Version v=12.0 laut Anforderung -->
-  <link rel="stylesheet" href="./styles.css?v=12.0">
-  <link rel="stylesheet" href="./style.css?v=12.0">
+  <!-- Cache-Busting Version v=14.0 laut Anforderung -->
+  <link rel="stylesheet" href="./styles.css?v=14.0">
+  <link rel="stylesheet" href="./style.css?v=14.0">
   <!-- Three.js Importmap für Three.js-Addons (Post-Processing & Controls) -->
   <script type="importmap">
     {
@@ -27,6 +27,37 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 </head>
 <body class="slate-hud-body">
+
+  <!-- =========================================================================
+       0a. TOP TECH-STRIPE (HÖHE 22px MIT SCHRÄGER SCHRAFFUR)
+       ========================================================================= -->
+  <div id="top-tech-stripe" class="top-tech-stripe">
+    <span class="tech-stripe-text">OPTIMIZING UI DESIGN...</span>
+  </div>
+
+  <!-- =========================================================================
+       0b. TOP HEADER-BAR (BRANDING & DIREKTOREN-AVATAR)
+       ========================================================================= -->
+  <header id="top-header-bar" class="top-header-bar">
+    <div class="header-brand-group">
+      <button id="header-menu-toggle" class="header-icon-btn" title="Menü umschalten">
+        <span class="hamburger-icon">≡</span>
+      </button>
+      <span class="header-brand-title">KI_Trevor</span>
+    </div>
+
+    <div class="header-right-group">
+      <button id="header-notification-btn" class="header-icon-btn badge-parent" title="Benachrichtigungen & Action-Center">
+        <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <span id="header-notif-badge" class="sidebar-badge-count">0</span>
+      </button>
+      <div class="header-director-avatar" id="header-director-avatar" title="Studio Director Trevor">
+        <div class="director-avatar-inner">
+          <span class="avatar-text">TR</span>
+        </div>
+      </div>
+    </div>
+  </header>
 
   <!-- =========================================================================
        0. SICHERHEITS-LOGIN SCREEN (OVERLAY PIN-ABFRAGE)
@@ -130,6 +161,11 @@
         <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
       </button>
 
+      <!-- 3b. Trainingsmodus & Freizeit-Projekte -->
+      <button id="nav-training" class="sidebar-icon-btn" data-tooltip="Trainingsmodus & Freizeit-Projekte" title="Trainingsmodus & Freizeit-Projekte">
+        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      </button>
+
       <!-- 4. Cloud-Gedächtnis & RAG -->
       <button id="nav-memory" class="sidebar-icon-btn" data-tooltip="Supabase Cloud-Gedächtnis & Code-Wissen" title="Supabase Cloud-Gedächtnis & Code-Wissen">
         <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
@@ -163,6 +199,11 @@
         <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
       </button>
 
+      <!-- Logout / Reset -->
+      <button id="btn-logout-reset" class="sidebar-icon-btn" data-tooltip="Studio sperren (Logout)" title="Studio sperren (Logout)">
+        <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </button>
+
       <!-- Kompatibilitäts-Elemente (Versteckt, verhindern NullPointer) -->
       <button id="btn-sidebar-open-trevor" style="display: none;"></button>
       <button id="ctrl-task-queue-toggle" style="display: none;"></button>
@@ -188,6 +229,7 @@
         <span>TASK-WARTESCHLANGE</span>
       </div>
       <div style="display: flex; gap: 6px; align-items: center;">
+        <button id="task-queue-collapse-btn" class="ctrl-btn panel-collapse-btn" title="Minimieren">⌄</button>
         <button class="btn-back-to-hub" title="Zurück zur Zentrale">
           <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
           <span>Zentrale</span>
@@ -448,24 +490,118 @@
   </div>
 
   <!-- =========================================================================
-       2. SLATE-HUD: OBEN MITTE – SCHWEBENDE STATUS-PILLE (J.A.R.V.I.S. WAVEFORM)
+       SUB-DRAWER 7: TRAININGSMODUS & FREIZEIT-PROJEKTE (#drawer-training)
        ========================================================================= -->
-  <div class="slate-top-hud">
-    <div class="holo-wip-pill" id="holo-wip-indicator" title="Live System-Status">
-      <div class="holo-waveform">
-        <span class="holo-bar"></span>
-        <span class="holo-bar"></span>
-        <span class="holo-bar"></span>
-        <span class="holo-bar"></span>
-        <span class="holo-bar"></span>
+  <div id="drawer-training" class="sub-drawer-panel" style="display: none;">
+    <div class="sub-drawer-header">
+      <div class="sub-drawer-title">
+        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        <span>TRAININGSMODUS & FREIZEIT-PROJEKTE</span>
       </div>
-      <span class="holo-wip-text" id="holo-wip-text">Live-Activity: SYSTEM ONLINE · J.A.R.V.I.S. READY</span>
+      <button class="sub-drawer-close" data-close-drawer="drawer-training" title="Schließen">✕</button>
+    </div>
+    <div class="sub-drawer-body">
+      <p class="sub-drawer-desc">Wenn kein Kundenauftrag läuft, optimieren die 33 Agenten autonom bestehende Software-Projekte im Leerlauf:</p>
+
+      <!-- Toggle Schalter -->
+      <div class="training-toggle-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span class="training-toggle-title">Hintergrund-Training:</span>
+            <div class="training-toggle-sub" id="training-status-label">Aktuell pausiert</div>
+          </div>
+          <button id="training-active-toggle-btn" class="ctrl-btn" style="padding: 4px 10px; font-weight: 700; font-size: 11px; border-color: rgba(245, 158, 11, 0.4); color: #F59E0B;">
+            Aktivieren
+          </button>
+        </div>
+      </div>
+
+      <!-- Projekt-Auswahl -->
+      <div class="drawer-memory-section" style="margin-top: 10px;">
+        <label class="sub-drawer-label">Freizeit-Projekt auswählen:</label>
+        <select id="training-project-select" class="search-input" style="width: 100%; margin-top: 4px;">
+          <option value="proj_ki_trevor">KI_Trevor</option>
+          <option value="proj_fussball">Fussballschulen-Manager</option>
+          <option value="proj_lernfeld">LernfeldTrainer</option>
+          <option value="proj_kart">Class Party / Class Kart GP</option>
+          <option value="proj_email">EMail-Worker</option>
+          <option value="proj_it_network">IT-Systemintegration & Netzwerke</option>
+        </select>
+      </div>
+
+      <!-- Neues Projekt hinzufügen Formular -->
+      <div class="drawer-memory-section" style="margin-top: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span class="sub-drawer-label">Eigenes Freizeit-Projekt:</span>
+          <button id="btn-toggle-custom-project-form" class="ctrl-btn ctrl-mini" style="font-size: 10px; padding: 2px 6px;">[+ Hinzufügen]</button>
+        </div>
+        <div id="custom-project-form" style="display: none; margin-top: 6px; flex-direction: column; gap: 6px;">
+          <input type="text" id="custom-project-name" class="search-input" placeholder="Projektname (z.B. CryptoWallet, Shop)..." />
+          <input type="text" id="custom-project-domain" class="search-input" placeholder="Domäne / Fachbereich..." />
+          <button id="btn-save-custom-project" class="btn-submit-task" style="width: 100%; justify-content: center; font-size: 11px; padding: 6px;">
+            Projekt in Katalog aufnehmen
+          </button>
+        </div>
+      </div>
+
+      <!-- Prüf-Schwerpunkt -->
+      <div class="drawer-memory-section" style="margin-top: 8px;">
+        <label class="sub-drawer-label">Prüf-Schwerpunkt:</label>
+        <select id="training-focus-select" class="search-input" style="width: 100%; margin-top: 4px;">
+          <option value="Alle Schwerpunkte">Alle Schwerpunkte (Ausgewogen)</option>
+          <option value="Three.js Performance">Three.js Performance & WebGL</option>
+          <option value="Security & RLS">Security & Row-Level-Security</option>
+          <option value="Offline-PWA & Cache">Offline-PWA & Caching</option>
+          <option value="Zero-Bug Code QA">Zero-Bug Code QA</option>
+        </select>
+      </div>
+
+      <!-- Sofort-Durchlauf starten -->
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+        <button id="btn-trigger-training-run" class="btn-submit-task" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>Jetzt Trainings-Durchlauf starten</span>
+        </button>
+        <button class="btn-back-to-hub" style="width: 100%; justify-content: center;">
+          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+          <span>Zurück zur Zentrale</span>
+        </button>
+      </div>
+
+      <!-- Live-Log der letzten Trainingserkenntnisse -->
+      <div class="training-live-log-section" style="margin-top: 12px;">
+        <div class="sub-drawer-label">Letzte Trainings-Erkenntnis:</div>
+        <div id="training-latest-insight-box" class="training-insight-preview-card">
+          <div class="insight-preview-header">
+            <span id="training-preview-agent" style="color: #00F0FF; font-weight: 700;">Marcus (Architektur)</span>
+            <span id="training-preview-time" style="color: #94A3B8; font-size: 10px;">Bereit</span>
+          </div>
+          <div id="training-preview-text" style="color: #E2E8F0; font-size: 11px; margin-top: 4px;">
+            Wartet auf autonomen Trainingszyklus oder Kundenauftrag.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       2. ZENTRALE AUDIO-WAVEFORM-KAPSEL (DYNAMIC ISLAND OBEN MITTE)
+       ========================================================================= -->
+  <div class="slate-top-hud" id="dynamic-island-container">
+    <div class="dynamic-island-capsule" id="dynamic-island-capsule">
+      <canvas id="jarvis-waveform-canvas" width="400" height="50"></canvas>
+    </div>
+    <div class="dynamic-island-bottom-bar" id="dynamic-island-bar">
+      <span class="dynamic-island-dot pulse"></span>
+      <span id="dynamic-island-text" class="dynamic-island-text">Live-Activity: Trevor bereit für neue Aufgaben...</span>
     </div>
 
-    <!-- Aktives KI-Badge neben der Status-Pille -->
-    <div id="active-ai-badge" class="active-ai-badge badge-gemini" title="Aktive Engine">
-      <span class="ai-badge-dot pulse"></span>
-      <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+    <!-- Versteckte Kompatibilitäts-Aliase -->
+    <div class="holo-wip-pill" id="holo-wip-indicator" style="display: none;">
+      <span class="holo-wip-text" id="holo-wip-text">Live-Activity: SYSTEM ONLINE · J.A.R.V.I.S. READY</span>
+    </div>
+    <div id="active-ai-badge" style="display: none;">
       <span id="active-ai-badge-text">Google Gemini 2.5 Flash</span>
     </div>
   </div>
@@ -525,25 +661,25 @@
        ========================================================================= -->
   <div id="slate-bottom-dock" class="canvas-controls-overlay">
     <!-- Mikrofon-Icon (Sprachsteuerung / STT) -->
-    <button id="ctrl-mic" class="ctrl-btn dock-mic-btn" title="Mit J.A.R.V.I.S. sprechen (Sprachsteuerung)">
+    <button id="ctrl-mic" class="ctrl-btn dock-mic-btn dock-square-btn" title="Mit J.A.R.V.I.S. sprechen (Sprachsteuerung)">
       <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
       <span>Sprechen</span>
     </button>
 
     <!-- Zentrale Navigation -->
-    <button id="ctrl-hub" class="btn-back-to-hub ctrl-btn" title="Kamera zurück zur Zentrale">
+    <button id="ctrl-hub" class="btn-back-to-hub ctrl-btn dock-square-btn" title="Kamera zurück zur Zentrale">
       <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
       <span>Zentrale</span>
     </button>
 
     <!-- EG Galerie -->
-    <button id="ctrl-floor-eg" class="ctrl-btn active" style="border-color: rgba(0, 240, 255, 0.4);" title="Kamera zu EG (Galerie-Terrasse)">
+    <button id="ctrl-floor-eg" class="ctrl-btn dock-square-btn active" style="border-color: rgba(0, 240, 255, 0.4);" title="Kamera zu EG (Galerie-Terrasse)">
       <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
       <span>EG</span>
     </button>
 
     <!-- UG Arena -->
-    <button id="ctrl-floor-ug" class="ctrl-btn" style="border-color: rgba(168, 85, 247, 0.4);" title="Kamera zu UG (Zentrale Sunken Arena)">
+    <button id="ctrl-floor-ug" class="ctrl-btn dock-square-btn" style="border-color: rgba(168, 85, 247, 0.4);" title="Kamera zu UG (Zentrale Sunken Arena)">
       <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
       <span>UG</span>
     </button>
@@ -1026,6 +1162,6 @@
   </div>
 
   <!-- Skripte mit defer-Absicherung gegen blockierte UI-Felder (Cache-Busting v=12.0) -->
-  <script defer type="module" src="./app.js?v=12.0"></script>
+  <script defer type="module" src="./app.js?v=14.0"></script>
 </body>
 </html>

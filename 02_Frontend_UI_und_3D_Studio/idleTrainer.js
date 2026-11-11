@@ -1,27 +1,30 @@
 /**
  * TREVOR – AI SOFTWARE STUDIO & MULTI-AGENT COMMAND CENTER
- * File: 04_KI_Engine_und_Bridges/idleTrainer.js
+ * File: 02_Frontend_UI_und_3D_Studio/idleTrainer.js
  * 
  * Autonomer Leerlauf-Trainings-Modus (Idle Training):
- * Wenn kein aktiver Kunden-Auftrag läuft, trainieren die 10 Abteilungen
- * und 33 Spezial-PCs automatisch an bestehenden Projekten:
+ * Wenn kein aktiver Kunden-Auftrag läuft, trainieren die 4 Abteilungen
+ * und 33 Spezial-PCs automatisch an bestehenden und frei wählbaren Projekten:
  * - KI_Trevor (Multi-Agent Architecture & 3D WebGL)
  * - Fussballschulen-Manager (Turnier-Planung, Spieler-Pässe & RLS-Auth)
  * - LernfeldTrainer (Prüfungsvorbereitung, Gamification & Offline-Sync)
- * - Class Kart GP (Physik-Engine, Canvas 2D/3D & Highscores)
+ * - Class Party / Class Kart GP (Physik-Engine, Canvas 2D/3D & Highscores)
+ * - EMail-Worker (Autonome Postfach-Verwaltung, Parsing & Mail-Klassifizierung)
+ * - IT-Systemintegration & Netzwerke (Subnetting, VPN, Firewall & Server-Audits)
+ * - Benutzerdefinierte Projekte (+ Eigenes Projekt hinzufügen)
  * 
  * Erkenntnisse werden als "learned_insights" gesichert und stehen
- * im Live-Klick-Inspektor sowie für neue Antigravity-Aufträge bereit.
+ * im Live-Klick-Inspektor, in den 3D-Hover-Sprechblasen sowie im Action-Center bereit.
  */
 
-// Autonomer Leerlauf-Trainings-Modus (Idle Training):
-// Wenn kein aktiver Kunden-Auftrag läuft, trainieren die 10 Abteilungen
-export const TRAINING_PROJECTS = [
+import { STUDIO_HIERARCHY } from './hierarchyData.js';
+
+export const DEFAULT_TRAINING_PROJECTS = [
   {
     id: "proj_ki_trevor",
-    name: "KI_Trevor Studio",
+    name: "KI_Trevor",
     domain: "Multi-Agent System & 3D WebGL",
-    focusAreas: ["Three.js Performance", "Anti-Limit Checkpoints", "Subagent Routing", "Dark-Slate UI"]
+    focusAreas: ["Three.js Performance", "Anti-Limit Checkpoints", "Subagent Routing", "Dark-Slate UI", "Zero-Bug Code QA"]
   },
   {
     id: "proj_fussball",
@@ -37,46 +40,159 @@ export const TRAINING_PROJECTS = [
   },
   {
     id: "proj_kart",
-    name: "Class Kart GP",
+    name: "Class Party / Class Kart GP",
     domain: "Klassen-Rennspiel & Gamification",
     focusAreas: ["Kollisions-Erkennung 60 FPS", "Highscore Anti-Cheat Validierung", "Gamepad API Support", "Sound-Synthese"]
+  },
+  {
+    id: "proj_email",
+    name: "EMail-Worker",
+    domain: "Postfach-Automatisierung & NLP",
+    focusAreas: ["IMAP/SMTP Mail Parsing", "Spam & Phishing Filter", "Auto-Responder Routing", "Mail-Queue Worker"]
+  },
+  {
+    id: "proj_it_network",
+    name: "IT-Systemintegration & Netzwerke",
+    domain: "Infrastruktur, Security & Netze",
+    focusAreas: ["IPv4/IPv6 Subnetting & CIDR", "WireGuard & OpenVPN Tunnel", "Firewall Rules & iptables", "Server-Health Monitoring"]
   }
 ];
+
+export let TRAINING_PROJECTS = [...DEFAULT_TRAINING_PROJECTS];
 
 // Gespeichertes antrainiertes Wissen (agentId -> Array of insights)
 let learnedInsightsMemory = {};
 let currentAgentActivities = {}; // agentId -> { project, focus, currentAction, insight, timestamp }
 let isTrainingActive = false;
 let trainingTimer = null;
+let activeProjectId = "proj_ki_trevor";
+let activeFocusArea = "Alle Schwerpunkte";
 
 // Initiales Laden aus dem lokalen Speicher
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
-    const saved = window.localStorage.getItem('trevor_learned_insights');
-    if (saved) learnedInsightsMemory = JSON.parse(saved);
+    const savedInsights = window.localStorage.getItem('trevor_learned_insights');
+    if (savedInsights) learnedInsightsMemory = JSON.parse(savedInsights);
+
+    const savedCustomProjects = window.localStorage.getItem('trevor_custom_training_projects');
+    if (savedCustomProjects) {
+      const customList = JSON.parse(savedCustomProjects);
+      if (Array.isArray(customList)) {
+        customList.forEach(cp => {
+          if (!TRAINING_PROJECTS.some(p => p.id === cp.id || p.name === cp.name)) {
+            TRAINING_PROJECTS.push(cp);
+          }
+        });
+      }
+    }
+
+    const savedActiveProject = window.localStorage.getItem('trevor_active_training_project');
+    if (savedActiveProject) activeProjectId = savedActiveProject;
   }
 } catch { /* ignore */ }
 
 /**
- * Mappt eine Abteilung auf einen standardisierten Code (z. B. EG_BACKEND, EG_FRONTEND)
+ * Holt alle verfügbaren Trainingsprojekte (inkl. benutzerdefinierter)
+ */
+export function getAllTrainingProjects() {
+  return TRAINING_PROJECTS;
+}
+
+/**
+ * Gibt das aktuell aktive Trainingsprojekt zurück
+ */
+export function getActiveTrainingProject() {
+  return TRAINING_PROJECTS.find(p => p.id === activeProjectId) || TRAINING_PROJECTS[0];
+}
+
+/**
+ * Setzt das aktive Trainingsprojekt
+ */
+export function setActiveTrainingProject(projectId) {
+  const proj = TRAINING_PROJECTS.find(p => p.id === projectId || p.name.toLowerCase() === String(projectId).toLowerCase());
+  if (proj) {
+    activeProjectId = proj.id;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('trevor_active_training_project', activeProjectId);
+      }
+    } catch { /* ignore */ }
+    console.log(`[IdleTrainer] Aktives Freizeit-Projekt gewechselt zu: "${proj.name}"`);
+    return proj;
+  }
+  return null;
+}
+
+/**
+ * Fügt ein neues benutzerdefiniertes Freizeit-Projekt hinzu
+ */
+export function addTrainingProject(nameOrObj, domain = "Software-Entwicklung", focusAreas = ["Architektur", "Clean Code", "Performance"]) {
+  let name = '';
+  let dom = domain;
+  let focus = focusAreas;
+  if (typeof nameOrObj === 'object' && nameOrObj !== null) {
+    name = nameOrObj.name || '';
+    dom = nameOrObj.domain || domain;
+    focus = nameOrObj.focusAreas || focusAreas;
+  } else if (typeof nameOrObj === 'string') {
+    name = nameOrObj;
+  }
+  if (!name || !name.trim()) return null;
+  const cleanName = name.trim();
+  const id = "proj_custom_" + Date.now();
+  const newProj = {
+    id,
+    name: cleanName,
+    domain: (typeof dom === 'string' ? dom.trim() : "Software-Projekt") || "Software-Projekt",
+    focusAreas: Array.isArray(focus) && focus.length > 0 ? focus : ["Architektur & Modularität", "Security & Error Handling", "Performance"]
+  };
+
+  TRAINING_PROJECTS.push(newProj);
+  activeProjectId = id;
+
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const customOnly = TRAINING_PROJECTS.filter(p => !DEFAULT_TRAINING_PROJECTS.some(dp => dp.id === p.id));
+      window.localStorage.setItem('trevor_custom_training_projects', JSON.stringify(customOnly));
+      window.localStorage.setItem('trevor_active_training_project', activeProjectId);
+    }
+  } catch { /* ignore */ }
+
+  console.log(`[IdleTrainer] Neues Freizeit-Projekt hinzugefügt: "${cleanName}"`);
+  return newProj;
+}
+
+/**
+ * Setzt den gewählten Prüf-Schwerpunkt
+ */
+export function setTrainingFocusArea(area) {
+  activeFocusArea = area || "Alle Schwerpunkte";
+}
+
+export function getTrainingFocusArea() {
+  return activeFocusArea;
+}
+
+/**
+ * Mappt eine Abteilung auf einen standardisierten Code (z. B. EG_BACKEND, EG_FRONTEND, UG_SERVER)
  */
 export function getDepartmentCode(dept) {
-  if (!dept) return 'EG_ALLGEMEIN';
+  if (!dept) return 'EG_ARCHITEKTUR';
   const idMap = {
-    1: 'EG_PLANUNG',
+    1: 'EG_ARCHITEKTUR',
     2: 'EG_ARCHITEKTUR',
     3: 'EG_FRONTEND',
-    4: 'EG_BACKEND',
-    5: 'EG_DATENBANK',
-    6: 'EG_TESTING',
-    7: 'EG_SECURITY',
-    8: 'EG_DEVOPS',
-    9: 'EG_UI_UX',
-    10: 'EG_DOKU',
-    11: 'UG_ARCHIV',
-    12: 'UG_SERVERRAUM',
-    13: 'UG_WERKSTATT',
-    14: 'UG_LOUNGE'
+    4: 'EG_FRONTEND',
+    5: 'EG_BACKEND',
+    6: 'EG_BACKEND',
+    7: 'UG_SERVER',
+    8: 'UG_SERVER',
+    9: 'UG_SERVER',
+    10: 'EG_ARCHITEKTUR',
+    11: 'UG_SERVER',
+    12: 'UG_SERVER',
+    13: 'UG_SERVER',
+    14: 'UG_SERVER'
   };
   if (idMap[dept.id]) return idMap[dept.id];
   const floor = dept.floor || 'EG';
@@ -86,8 +202,6 @@ export function getDepartmentCode(dept) {
 
 /**
  * Sendet eine Trainings-Erkenntnis nach dem exakten JSON-Schema an /api/memory/save
- * Nutzt relative URL (NICHT mehr an localhost) für zuverlässigen Online-/Cloud-Betrieb.
- * @param {object} memoryRecord 
  */
 export async function saveInsightToCloudMemory(memoryRecord) {
   if (!memoryRecord) return false;
@@ -127,10 +241,12 @@ export async function saveInsightToCloudMemory(memoryRecord) {
 
 /**
  * Generiert realistische, tiefgreifende Trainings-Erkenntnisse pro Agent
- * im exakten JSON-Schema für das Supabase Cloud-Gedächtnis.
  */
 function generateInsightForAgent(agent, department, project) {
-  const area = project.focusAreas[Math.floor(Math.random() * project.focusAreas.length)];
+  let area = activeFocusArea;
+  if (!area || area === "Alle Schwerpunkte" || !project.focusAreas.includes(area)) {
+    area = project.focusAreas[Math.floor(Math.random() * project.focusAreas.length)];
+  }
   const deptCode = getDepartmentCode(department);
 
   const structuredTemplates = [
@@ -138,17 +254,17 @@ function generateInsightForAgent(agent, department, project) {
       topic: 'Sichere Umgebungsvariablen',
       tags: ['nodejs', 'security', 'dotenv'],
       problem_statement: 'API-Keys waren im Frontend-Code ungeschützt sichtbar.',
-      solution_pattern: 'Auslagerung der Fetch-Calls in einen Node.js Proxy.',
+      solution_pattern: 'Auslagerung der Fetch-Calls in einen Node.js Proxy mit process.env.',
       reusable_code_snippet: 'const apiKey = process.env.GEMINI_API_KEY;',
       action: `Untersucht Sicherheits-Architektur von "${project.name}" auf ${area}`
     },
     {
-      topic: 'Three.js Render-Loop Stabilität',
-      tags: ['threejs', 'webgl', 'performance', 'lerp'],
-      problem_statement: 'Kamera-Sprünge führten zu Frame-Drops und inkonsistenten Animationen.',
-      solution_pattern: 'Verwendung von camera.position.lerp() innerhalb der animate()-Schleife ohne externe Bibliotheken.',
-      reusable_code_snippet: 'camera.position.lerp(targetCameraPosition, 0.08);',
-      action: `Optimiert 3D Render-Pipeline in "${project.name}" für ${area}`
+      topic: 'Three.js Render-Loop Stabilität & UnrealBloom',
+      tags: ['threejs', 'webgl', 'performance', 'lerp', 'bloom'],
+      problem_statement: 'Kamera-Sprünge führten zu Frame-Drops und Kollision mit OrbitControls.',
+      solution_pattern: 'Sanfter 0.06 Lerp mit Abbruch bei Pointerdown/Wheel-Events.',
+      reusable_code_snippet: 'camera.position.lerp(targetCameraPosition, 0.06);',
+      action: `Optimiert 3D Render-Pipeline & Bloom für "${project.name}" (${area})`
     },
     {
       topic: 'Supabase Row-Level-Security & Auth',
@@ -183,6 +299,14 @@ function generateInsightForAgent(agent, department, project) {
       action: `Analysiert Ausfallsicherheit und JSON-Parsing für ${area}`
     },
     {
+      topic: 'Netzwerk & Subnetting Resilienz',
+      tags: ['network', 'subnetting', 'cidr', 'firewall'],
+      problem_statement: 'Subnetz-Kollisionen bei VPN-Kopplung führten zu Paketverlusten.',
+      solution_pattern: 'Strikte CIDR-Berechnung mit /27 Segmentierung und automatischem Routing.',
+      reusable_code_snippet: 'const netMask = 0xffffffff << (32 - cidr);',
+      action: `Auditiert Routing-Tabellen und Paketfilter für "${project.name}"`
+    },
+    {
       topic: 'Web Audio Synthese ohne Assets',
       tags: ['webaudio', 'sound', 'synthesizer', 'browser-native'],
       problem_statement: 'Externe MP3-Dateien führten zu Ladeverzögerungen und Autoplay-Blockaden.',
@@ -202,7 +326,7 @@ function generateInsightForAgent(agent, department, project) {
     solution_pattern: choice.solution_pattern,
     reusable_code_snippet: choice.reusable_code_snippet,
 
-    // Runtime-Metadaten für UI-Inspektor:
+    // Runtime-Metadaten für UI-Inspektor & Sprechblasen:
     projectId: project.id,
     projectName: project.name,
     focusArea: area,
@@ -213,23 +337,32 @@ function generateInsightForAgent(agent, department, project) {
 }
 
 /**
- * Führt einen einzelnen autonomen Trainingsschritt für einen zufälligen Agenten aus
+ * Führt einen einzelnen autonomen Trainingsschritt für einen Agenten aus
  */
 export function executeTrainingStep(departments) {
-  if (!departments || departments.length === 0) return null;
+  const depts = (Array.isArray(departments) && departments.length > 0)
+    ? departments
+    : (STUDIO_HIERARCHY?.departments || []);
+  if (!depts || depts.length === 0) return null;
 
-  // Wähle zufälligen Raum
-  const dept = departments[Math.floor(Math.random() * departments.length)];
-  // Wähle zufälligen PC oder den Chef
-  const allUnits = [...dept.specialist_pcs, dept.chef_agent];
+  // Wähle zufällige Abteilung
+  const dept = depts[Math.floor(Math.random() * depts.length)];
+  const allUnits = [...(dept.specialist_pcs || []), dept.chef_agent || { id: 'ag_01', name: 'Trevor' }];
   const agent = allUnits[Math.floor(Math.random() * allUnits.length)];
-  // Wähle Trainingsprojekt
-  const project = TRAINING_PROJECTS[Math.floor(Math.random() * TRAINING_PROJECTS.length)];
+  const project = getActiveTrainingProject();
 
   const data = generateInsightForAgent(agent, dept, project);
 
   // Aktualisiere Live-Aktivität
   currentAgentActivities[agent.id] = data;
+
+  // Aktualisiere dynamische Sprechblasen-Aktivität im globalen Roster
+  if (typeof window !== 'undefined' && Array.isArray(window.TREVOR_AGENT_ROSTER)) {
+    const rAgent = window.TREVOR_AGENT_ROSTER.find(a => a.id === agent.id);
+    if (rAgent) {
+      rAgent.idleThought = data.currentAction;
+    }
+  }
 
   // Speichere in learnedInsightsMemory
   if (!learnedInsightsMemory[agent.id]) {
@@ -256,8 +389,13 @@ export function executeTrainingStep(departments) {
     }
   } catch { /* ignore */ }
 
-  // Zwingend: Asynchron an /api/memory/save senden (relativer Pfad)
+  // Asynchron an /api/memory/save senden
   saveInsightToCloudMemory(data).catch(() => {});
+
+  // Bei relevanten Erkenntnissen: Optionalen Vorschlag im Action-Center hinterlegen
+  if (typeof window !== 'undefined' && typeof window.recordTrainingAuditProposal === 'function') {
+    window.recordTrainingAuditProposal(agent, dept, project, data);
+  }
 
   return {
     agentId: agent.id,
@@ -273,7 +411,8 @@ export function executeTrainingStep(departments) {
 export function startIdleTraining(departments, intervalMs = 6000) {
   if (isTrainingActive) return;
   isTrainingActive = true;
-  console.log('[Trevor Trainer] Autonomes Leerlauf-Training gestartet (Trainiert an 4 bestehenden Projekten).');
+  const project = getActiveTrainingProject();
+  console.log(`[Trevor Trainer] Autonomes Leerlauf-Training gestartet (Trainiert an "${project.name}").`);
 
   // Sofort einen Schritt machen
   executeTrainingStep(departments);
@@ -293,17 +432,38 @@ export function stopIdleTraining() {
     clearInterval(trainingTimer);
     trainingTimer = null;
   }
-  console.log('[Trevor Trainer] Leerlauf-Training pausiert (Echter Auftrag aktiv).');
+  console.log('[Trevor Trainer] Leerlauf-Training pausiert.');
+}
+
+/**
+ * Prüft, ob das Training aktuell aktiv ist
+ */
+export function isTrainingRunning() {
+  return isTrainingActive;
+}
+
+/**
+ * Schaltet das Training um
+ */
+export function toggleIdleTraining(departments, intervalMs = 6000) {
+  if (isTrainingActive) {
+    stopIdleTraining();
+    return false;
+  } else {
+    startIdleTraining(departments, intervalMs);
+    return true;
+  }
 }
 
 /**
  * Liefert den aktuellen Trainings-Status eines Agenten für den Klick-Inspektor
  */
 export function getAgentCurrentActivity(agentId) {
+  const project = getActiveTrainingProject();
   return currentAgentActivities[agentId] || {
-    projectName: "Fussballschulen-Manager",
+    projectName: project.name,
     focusArea: "Code-Analyse & Performance",
-    currentAction: "🧠 Analysiert Architektur & bereitet Optimierungen vor",
+    currentAction: `🧠 Analysiert Architektur von "${project.name}" & bereitet Optimierungen vor`,
     insight: "Trainiert autonom im Leerlauf auf maximale Fehlerfreiheit.",
     timestamp: new Date().toISOString()
   };
@@ -327,4 +487,22 @@ export function getAllLearnedKnowledgeSummary() {
     }
   }
   return summary.slice(0, 10).join('\n');
+}
+
+// Global exposure
+if (typeof window !== 'undefined') {
+  window.TRAINING_PROJECTS = TRAINING_PROJECTS;
+  window.getAllTrainingProjects = getAllTrainingProjects;
+  window.getActiveTrainingProject = getActiveTrainingProject;
+  window.setActiveTrainingProject = setActiveTrainingProject;
+  window.addTrainingProject = addTrainingProject;
+  window.setTrainingFocusArea = setTrainingFocusArea;
+  window.getTrainingFocusArea = getTrainingFocusArea;
+  window.executeTrainingStep = executeTrainingStep;
+  window.startIdleTraining = startIdleTraining;
+  window.stopIdleTraining = stopIdleTraining;
+  window.isTrainingRunning = isTrainingRunning;
+  window.toggleIdleTraining = toggleIdleTraining;
+  window.getAgentCurrentActivity = getAgentCurrentActivity;
+  window.getAgentLearnedInsights = getAgentLearnedInsights;
 }
