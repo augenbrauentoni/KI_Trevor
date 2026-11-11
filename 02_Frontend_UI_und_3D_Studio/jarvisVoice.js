@@ -358,18 +358,24 @@ export function toggleVoiceRecognition() {
  * @param {boolean} active 
  */
 function updateMicButtonUI(active) {
-  const btn = document.getElementById('btn-mic-input');
-  if (!btn) return;
-
-  if (active) {
-    btn.classList.add('recording');
-    btn.innerHTML = '<span>🔴 Höre zu...</span>';
-    btn.title = 'Mikrofon aktiv – Klicken zum Beenden';
-  } else {
-    btn.classList.remove('recording');
-    btn.innerHTML = '<span>🎙️ Sprechen</span>';
-    btn.title = 'Mit Trevor sprechen (J.A.R.V.I.S. Voice)';
-  }
+  const btns = [document.getElementById('btn-mic-input'), document.getElementById('ctrl-mic')].filter(Boolean);
+  btns.forEach(btn => {
+    if (active) {
+      btn.classList.add('recording');
+      btn.innerHTML = `
+        <svg class="ui-icon ui-icon-amber" style="animation: pulse 1s infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6"></circle></svg>
+        <span>Höre zu...</span>
+      `;
+      btn.title = 'Mikrofon aktiv – Klicken zum Beenden';
+    } else {
+      btn.classList.remove('recording');
+      btn.innerHTML = `
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        <span>Sprechen</span>
+      `;
+      btn.title = 'Mit Trevor sprechen (J.A.R.V.I.S. Voice)';
+    }
+  });
 }
 
 /**

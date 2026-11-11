@@ -1646,11 +1646,11 @@ function showExportNotification(message, type = 'success') {
   }
 
   // Toast für globale Anzeige im Canvas / Studio
-  let container = document.getElementById('trevor-toast-container');
+  let container = document.getElementById('toast-container');
   if (!container) {
     container = document.createElement('div');
-    container.id = 'trevor-toast-container';
-    container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    container.id = 'toast-container';
+    container.className = 'toast-container';
     document.body.appendChild(container);
   }
 
@@ -2004,10 +2004,19 @@ export function renderTaskQueueUI() {
       <div class="task-queue-ctrl-row">
         <span style="font-size: 10px; color: var(--text-dim);">${item.createdAt || ''}</span>
         <div class="task-queue-btn-group">
-          <button class="btn-queue-ctrl btn-queue-run" data-action="run" data-index="${idx}" title="Diesen Auftrag sofort ausführen">▶ Start</button>
-          <button class="btn-queue-ctrl btn-queue-up" data-action="up" data-index="${idx}" title="Nach oben verschieben" ${idx === 0 ? 'disabled' : ''}>▲</button>
-          <button class="btn-queue-ctrl btn-queue-down" data-action="down" data-index="${idx}" title="Nach unten verschieben" ${idx === count - 1 ? 'disabled' : ''}>▼</button>
-          <button class="btn-queue-ctrl btn-queue-delete" data-action="delete" data-index="${idx}" title="Löschen">✕</button>
+          <button class="btn-queue-ctrl btn-queue-run" data-action="run" data-index="${idx}" title="Diesen Auftrag sofort ausführen">
+            <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>Start</span>
+          </button>
+          <button class="btn-queue-ctrl btn-queue-up" data-action="up" data-index="${idx}" title="Nach oben verschieben" ${idx === 0 ? 'disabled' : ''}>
+            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
+          </button>
+          <button class="btn-queue-ctrl btn-queue-down" data-action="down" data-index="${idx}" title="Nach unten verschieben" ${idx === count - 1 ? 'disabled' : ''}>
+            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <button class="btn-queue-ctrl btn-queue-delete" data-action="delete" data-index="${idx}" title="Löschen">
+            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
       </div>
     </li>
@@ -2222,10 +2231,14 @@ export function showActionToast(title, message, type = 'QUESTION', actionId = nu
   toast.className = `action-toast ${typeClass}`;
   toast.setAttribute('role', 'alert');
 
-  const icon = isQuestion ? '❓' : (isSuccess ? '⚡' : '⚠️');
+  const iconSvg = isQuestion 
+    ? '<svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>'
+    : (isSuccess 
+      ? '<svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>' 
+      : '<svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>');
 
   toast.innerHTML = `
-    <span class="toast-icon">${icon}</span>
+    <span class="toast-icon">${iconSvg}</span>
     <div class="toast-content">
       <span class="toast-title">${escapeHtml(title)}</span>
       <span class="toast-message">${escapeHtml(message)}</span>
@@ -3383,7 +3396,7 @@ function setupLoginScreen() {
     } else {
       if (errorMsg) {
         errorMsg.style.display = 'block';
-        errorMsg.textContent = '❌ Ungültige PIN. Zugriff verweigert! (PIN: 2026)';
+        errorMsg.textContent = 'Ungültige PIN. Zugriff verweigert! (PIN: 2026)';
       }
       if (pinInput) {
         pinInput.value = '';
@@ -3458,33 +3471,46 @@ function setupEventListeners() {
   const canvas3D = document.getElementById('threejs-canvas-container');
   const grid2D = document.getElementById('workstations-grid-container');
 
-  btn3D.addEventListener('click', () => {
-    state.activeView = '3d';
-    btn3D.classList.add('active');
-    btnGrid.classList.remove('active');
-    canvas3D.style.display = 'block';
-    grid2D.style.display = 'none';
-  });
+  if (btn3D) {
+    btn3D.addEventListener('click', () => {
+      state.activeView = '3d';
+      btn3D.classList.add('active');
+      if (btnGrid) btnGrid.classList.remove('active');
+      if (canvas3D) canvas3D.style.display = 'block';
+      if (grid2D) grid2D.style.display = 'none';
+    });
+  }
 
-  btnGrid.addEventListener('click', () => {
-    state.activeView = 'grid';
-    btnGrid.classList.add('active');
-    btn3D.classList.remove('active');
-    canvas3D.style.display = 'none';
-    grid2D.style.display = 'grid';
-  });
+  if (btnGrid) {
+    btnGrid.addEventListener('click', () => {
+      state.activeView = 'grid';
+      btnGrid.classList.add('active');
+      if (btn3D) btn3D.classList.remove('active');
+      if (canvas3D) canvas3D.style.display = 'none';
+      if (grid2D) grid2D.style.display = 'grid';
+    });
+  }
 
   // Sidebar- & Modal-Buttons
-  document.getElementById('btn-sidebar-open-trevor').addEventListener('click', openTrevorModal);
-  document.getElementById('btn-sidebar-trevor-terminal').addEventListener('click', openTrevorModal);
-  document.getElementById('btn-sidebar-chef-reports').addEventListener('click', openChefReportsModal);
-  document.getElementById('btn-resume-limit').addEventListener('click', resumePausedTask);
-  document.getElementById('btn-dispatch-task').addEventListener('click', dispatchNewTask);
+  const btnSidebarOpen = document.getElementById('btn-sidebar-open-trevor');
+  if (btnSidebarOpen) btnSidebarOpen.addEventListener('click', openTrevorModal);
+  const btnSidebarTerm = document.getElementById('btn-sidebar-trevor-terminal');
+  if (btnSidebarTerm) btnSidebarTerm.addEventListener('click', openTrevorModal);
+  const btnSidebarChef = document.getElementById('btn-sidebar-chef-reports');
+  if (btnSidebarChef) btnSidebarChef.addEventListener('click', openChefReportsModal);
+  const btnResumeLim = document.getElementById('btn-resume-limit');
+  if (btnResumeLim) btnResumeLim.addEventListener('click', resumePausedTask);
+  const btnDispatch = document.getElementById('btn-dispatch-task');
+  if (btnDispatch) btnDispatch.addEventListener('click', dispatchNewTask);
 
   // J.A.R.V.I.S. Voice Controls
   const btnMic = document.getElementById('btn-mic-input');
   if (btnMic) {
     btnMic.addEventListener('click', toggleVoiceRecognition);
+  }
+  const btnCtrlMic = document.getElementById('ctrl-mic');
+  if (btnCtrlMic) {
+    btnCtrlMic.addEventListener('click', toggleVoiceRecognition);
   }
 
   const btnVoiceToggle = document.getElementById('btn-toggle-jarvis-voice');
@@ -3547,17 +3573,22 @@ function setupEventListeners() {
   const btnRefreshHist = document.getElementById('btn-refresh-history');
   if (btnRefreshHist) btnRefreshHist.addEventListener('click', loadTaskHistory);
 
-  document.getElementById('btn-toggle-prompt-preview').addEventListener('click', () => {
-    const content = document.getElementById('code-preview-content');
-    const indicator = document.getElementById('code-preview-indicator');
-    if (content.style.display === 'none') {
-      content.style.display = 'block';
-      indicator.innerText = '▲ Zuklappen';
-    } else {
-      content.style.display = 'none';
-      indicator.innerText = '▼ Aufklappen';
-    }
-  });
+  const btnTogglePrompt = document.getElementById('btn-toggle-prompt-preview');
+  if (btnTogglePrompt) {
+    btnTogglePrompt.addEventListener('click', () => {
+      const content = document.getElementById('code-preview-content');
+      const indicator = document.getElementById('code-preview-indicator');
+      if (content && indicator) {
+        if (content.style.display === 'none') {
+          content.style.display = 'block';
+          indicator.innerText = '[Schließen]';
+        } else {
+          content.style.display = 'none';
+          indicator.innerText = '[Aufklappen]';
+        }
+      }
+    });
+  }
 
   const btnDecisionYes = document.getElementById('btn-decision-yes');
   if (btnDecisionYes) {
@@ -3667,10 +3698,12 @@ function setupEventListeners() {
   }
 
   // Inspektor-Tabs
-  document.getElementById('tab-btn-live-work').addEventListener('click', () => switchInspectorTab('live-work'));
+  const tabLiveBtn = document.getElementById('tab-btn-live-work');
+  if (tabLiveBtn) tabLiveBtn.addEventListener('click', () => switchInspectorTab('live-work'));
   const tabDirectBtn = document.getElementById('tab-btn-direct-command');
   if (tabDirectBtn) tabDirectBtn.addEventListener('click', () => switchInspectorTab('direct-command'));
-  document.getElementById('tab-btn-learned').addEventListener('click', () => switchInspectorTab('learned'));
+  const tabLearnedBtn = document.getElementById('tab-btn-learned');
+  if (tabLearnedBtn) tabLearnedBtn.addEventListener('click', () => switchInspectorTab('learned'));
 
   const mobileToggle = document.getElementById('btn-mobile-sidebar-toggle');
   const sidebar = document.getElementById('sidebar-command-center');
@@ -3693,36 +3726,52 @@ function setupEventListeners() {
   const settingsModal = document.getElementById('modal-settings');
   const openSettingsBtn = document.getElementById('btn-open-settings');
 
-  engineBtn.addEventListener('click', () => {
-    state.settings.llm_mode = state.settings.llm_mode === 'gemini' ? 'ollama' : 'gemini';
-    saveSettings();
-    saveLLMConfig({ provider: state.settings.llm_mode });
-    updateUIThemeSettings();
-  });
-
-  openSettingsBtn.addEventListener('click', () => {
-    document.getElementById('settings-llm-mode').value = state.settings.llm_mode;
-    document.getElementById('settings-gemini-model').value = state.settings.gemini_model;
-    document.getElementById('settings-ollama-url').value = state.settings.ollama_url;
-    document.getElementById('settings-ollama-model').value = state.settings.ollama_model;
-    settingsModal.classList.add('open');
-  });
-
-  document.getElementById('btn-save-settings').addEventListener('click', () => {
-    state.settings.llm_mode = document.getElementById('settings-llm-mode').value;
-    state.settings.gemini_model = document.getElementById('settings-gemini-model').value;
-    state.settings.ollama_url = document.getElementById('settings-ollama-url').value;
-    state.settings.ollama_model = document.getElementById('settings-ollama-model').value;
-
-    saveSettings();
-    saveLLMConfig({
-      provider: state.settings.llm_mode,
-      ollamaUrl: state.settings.ollama_url,
-      ollamaModel: state.settings.ollama_model
+  if (engineBtn) {
+    engineBtn.addEventListener('click', () => {
+      state.settings.llm_mode = state.settings.llm_mode === 'gemini' ? 'ollama' : 'gemini';
+      saveSettings();
+      saveLLMConfig({ provider: state.settings.llm_mode });
+      updateUIThemeSettings();
     });
-    updateUIThemeSettings();
-    settingsModal.classList.remove('open');
-  });
+  }
+
+  if (openSettingsBtn && settingsModal) {
+    openSettingsBtn.addEventListener('click', () => {
+      const modeEl = document.getElementById('settings-llm-mode');
+      const gemModelEl = document.getElementById('settings-gemini-model');
+      const olUrlEl = document.getElementById('settings-ollama-url');
+      const olModelEl = document.getElementById('settings-ollama-model');
+      if (modeEl) modeEl.value = state.settings.llm_mode;
+      if (gemModelEl) gemModelEl.value = state.settings.gemini_model;
+      if (olUrlEl) olUrlEl.value = state.settings.ollama_url;
+      if (olModelEl) olModelEl.value = state.settings.ollama_model;
+      settingsModal.classList.add('open');
+    });
+  }
+
+  const btnSaveSettings = document.getElementById('btn-save-settings');
+  if (btnSaveSettings) {
+    btnSaveSettings.addEventListener('click', () => {
+      const modeEl = document.getElementById('settings-llm-mode');
+      const gemModelEl = document.getElementById('settings-gemini-model');
+      const olUrlEl = document.getElementById('settings-ollama-url');
+      const olModelEl = document.getElementById('settings-ollama-model');
+
+      if (modeEl) state.settings.llm_mode = modeEl.value;
+      if (gemModelEl) state.settings.gemini_model = gemModelEl.value;
+      if (olUrlEl) state.settings.ollama_url = olUrlEl.value;
+      if (olModelEl) state.settings.ollama_model = olModelEl.value;
+
+      saveSettings();
+      saveLLMConfig({
+        provider: state.settings.llm_mode,
+        ollamaUrl: state.settings.ollama_url,
+        ollamaModel: state.settings.ollama_model
+      });
+      updateUIThemeSettings();
+      if (settingsModal) settingsModal.classList.remove('open');
+    });
+  }
 
   // Globale Zentrale-Rückkehr für alle .btn-back-to-hub Buttons
   document.querySelectorAll('.btn-back-to-hub').forEach(btn => {
@@ -3873,23 +3922,23 @@ function updateUIThemeSettings() {
   const aiBadgeText = document.getElementById('active-ai-badge-text');
 
   if (state.settings.llm_mode === 'ollama') {
-    if (icon) icon.innerText = '🖥️';
+    if (icon) icon.innerHTML = '<svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>';
     if (label) label.innerText = `Ollama Lokal (${state.settings.ollama_model || 'llama3'})`;
     if (aiBadge) {
       aiBadge.className = 'active-ai-badge badge-ollama';
     }
     if (aiBadgeText) {
-      aiBadgeText.innerText = `🖥️ AKTIVE ENGINE: Ollama Lokal (${state.settings.ollama_model || 'llama3'})`;
+      aiBadgeText.innerText = `AKTIVE ENGINE: Ollama Lokal (${state.settings.ollama_model || 'llama3'})`;
     }
   } else {
     // Standard: Google Gemini
-    if (icon) icon.innerText = '☁️';
+    if (icon) icon.innerHTML = '<svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>';
     if (label) label.innerText = `Gemini Cloud (${state.settings.gemini_model || 'gemini-2.5-flash'})`;
     if (aiBadge) {
       aiBadge.className = 'active-ai-badge badge-gemini';
     }
     if (aiBadgeText) {
-      aiBadgeText.innerText = `☁️ AKTIVE ENGINE: Google Gemini (${state.settings.gemini_model || 'gemini-2.5-flash'})`;
+      aiBadgeText.innerText = `AKTIVE ENGINE: Google Gemini (${state.settings.gemini_model || 'gemini-2.5-flash'})`;
     }
   }
 

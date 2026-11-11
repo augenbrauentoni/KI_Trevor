@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TREVOR – AI Software Studio & Multi-Agent Command Center</title>
-  <link rel="stylesheet" href="./styles.css">
+  <!-- Cache-Busting Version v=4.0 laut Anforderung -->
+  <link rel="stylesheet" href="./styles.css?v=4.0">
+  <link rel="stylesheet" href="./style.css?v=4.0">
   <!-- Three.js & OrbitControls (Einziger autoritativer CDN-Import im <head>) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
-<body>
+<body class="slate-hud-body">
 
   <!-- =========================================================================
        0. SICHERHEITS-LOGIN SCREEN (OVERLAY PIN-ABFRAGE)
@@ -21,122 +23,15 @@
       <p class="login-subtitle">Sicherheitsbereich – Bitte Studio-PIN eingeben:</p>
       <div class="login-input-row">
         <input type="password" id="login-pin-input" class="login-pin-input" placeholder="••••" maxlength="8" autofocus autocomplete="off" />
-        <button id="btn-login-submit" class="btn-login-submit">
+        <button id="btn-login-submit" class="btn-login-submit" title="Freischalten">
           <span>Freischalten</span>
           <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
         </button>
       </div>
-      <div id="login-error-msg" class="login-error-msg" style="display: none;">❌ Ungültige PIN. Zugriff verweigert!</div>
+      <div id="login-error-msg" class="login-error-msg" style="display: none;">Ungültige PIN. Zugriff verweigert!</div>
       <p class="login-hint">PIN: <code>2026</code></p>
     </div>
   </div>
-
-  <!-- =========================================================================
-       1. TOP BAR & FILTER NAVIGATION
-       ========================================================================= -->
-  <header class="top-header">
-    <div class="top-bar-row-1">
-      <div class="brand-section">
-        <div class="brand-logo-badge">TREVOR</div>
-        <div>
-          <h1 style="font-size: 14px; font-weight: 800; letter-spacing: 0.5px;">COMMAND CENTER</h1>
-          <p style="font-size: 10px; color: var(--text-dim);">Slate J.A.R.V.I.S. Architecture Studio</p>
-        </div>
-      </div>
-
-      <!-- Live-Suchfeld mit Vektor-Icon -->
-      <div class="search-input-wrapper">
-        <span class="search-icon">
-          <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </span>
-        <input type="text" id="global-search-input" class="search-input" placeholder="Bereich oder Spezialist finden (z. B. 6. Datenbank, Login, Docker)...">
-      </div>
-
-      <!-- Projekt-Auswahl-Dropdown ("Aktives Ziel-Projekt") -->
-      <div class="project-selector-wrapper">
-        <span class="project-selector-label">
-          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
-          Ziel-Projekt:
-        </span>
-        <select id="project-selector-select" class="project-selector-dropdown">
-          <option value="KI_Trevor">KI_Trevor (Dieses Studio)</option>
-          <option value="PitchPro">Fussballschulen-Manager (PitchPro)</option>
-          <option value="LernfeldTrainer">LernfeldTrainer</option>
-          <option value="ClassKartGP">Class Kart GP</option>
-          <option value="NEW_PROJECT">+ Neues Projekt anlegen...</option>
-        </select>
-      </div>
-
-      <!-- WIP-Ladeanzeige (Hologramm Waveform / Status-Pille) -->
-      <div class="holo-wip-pill" id="holo-wip-indicator" title="Live System-Status">
-        <div class="holo-waveform">
-          <span class="holo-bar"></span>
-          <span class="holo-bar"></span>
-          <span class="holo-bar"></span>
-          <span class="holo-bar"></span>
-          <span class="holo-bar"></span>
-        </div>
-        <span class="holo-wip-text" id="holo-wip-text">SYSTEM ONLINE · J.A.R.V.I.S. READY</span>
-      </div>
-
-      <!-- Engine & Checkpoint Controls -->
-      <div class="header-right-controls">
-        <!-- Prominentes KI-Badge -->
-        <div id="active-ai-badge" class="active-ai-badge badge-gemini" title="Aktiver KI-Inferenz-Provider">
-          <span class="ai-badge-dot pulse"></span>
-          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
-          <span id="active-ai-badge-text">AKTIVE ENGINE: Google Gemini 2.5 Flash</span>
-        </div>
-
-        <!-- Mute-Toggle für Web-Audio Synthesizer -->
-        <button id="btn-toggle-sound" class="btn-sound-toggle" title="Sound an/aus">
-          <svg class="ui-icon" id="sound-toggle-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-          <span id="sound-toggle-label">Sound: AN</span>
-        </button>
-
-        <!-- J.A.R.V.I.S. Voice Output Toggle -->
-        <button id="btn-toggle-jarvis-voice" class="btn-voice-toggle" title="J.A.R.V.I.S. Sprachausgabe an/aus">
-          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-          <span id="voice-toggle-label">J.A.R.V.I.S. Voice: AN</span>
-        </button>
-
-        <!-- User Action-Center Button mit Zähler-Badge -->
-        <button id="btn-open-action-center" class="ctrl-btn action-center-toggle-btn" title="User Action-Center öffnen">
-          <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-          <span>Action-Center</span>
-          <span id="action-center-badge" class="action-center-badge">0</span>
-        </button>
-
-        <button id="engine-mode-btn" class="engine-mode-pill" title="Klicken zum Umschalten">
-          <span id="engine-mode-icon">
-            <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
-          </span>
-          <span id="engine-mode-label">Gemini Cloud (Schule)</span>
-        </button>
-        <button id="btn-open-settings" class="ctrl-btn" title="Einstellungen öffnen">
-          <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        </button>
-
-        <div id="checkpoint-badge" class="checkpoint-badge training">
-          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-          <span id="checkpoint-text">Autonomes Leerlauf-Training aktiv</span>
-        </div>
-
-        <button id="btn-resume-limit" class="btn-resume-pulse" style="display: none;">
-          <svg class="ui-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-          <span>Ab Zwischenstand fortsetzen</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Abteilungs-Pills (Räume 1 bis 10) -->
-    <nav class="dept-pills-row" id="dept-pills-container">
-      <button class="dept-pill-btn active" data-dept-id="all">
-        <span class="status-dot ready"></span> Alle 10 Bereiche
-      </button>
-      <!-- Dynamisch befüllt -->
-    </nav>
-  </header>
 
   <!-- =========================================================================
        TOAST-CONTAINER FÜR BENACHRICHTIGUNGEN (Z-INDEX: 9500)
@@ -144,341 +39,263 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- =========================================================================
-       2. HAUPTBEREICH: SPLIT-LAYOUT (75% STUDIO / 25% SIDEBAR)
+       VOLLBILD 3D-STUDIO CANVAS (DIE TERRASSEN-ARENA & HOLO-JARVIS)
        ========================================================================= -->
-  <div class="studio-main-wrapper">
-
-    <!-- LINKS: HAUPTBÜHNE (3D-STUDIO ODER 2D-ARBEITSPLÄTZE) -->
-    <main class="studio-stage-container">
-      <div class="stage-top-header">
-        <div class="stage-title">
-          <span style="color: var(--iron-gold); font-size: 16px;">•</span>
-          <span>Dein digitaler Architektur-Campus</span>
-        </div>
-
-        <div class="view-mode-toggle">
-          <button id="btn-view-3d" class="view-toggle-btn active">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-            <span>3D-Campus</span>
-          </button>
-          <button id="btn-view-grid" class="view-toggle-btn">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-            <span>Arbeitsplätze</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- ANSICHT 1: 3D CAMPUS MIT IRON-MAN TREVOR & GLAS-BÜROS -->
-      <div id="threejs-canvas-container">
-        <!-- Schwebendes Agenten-Inspektions-Panel (3D Raycaster Overlay) -->
-        <div id="agent-info-panel" class="agent-info-panel" style="display: none;">
-          <div class="agent-info-header">
-            <div class="agent-info-badge-row">
-              <span class="agent-info-avatar-icon" id="agent-info-icon">
-                <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-              </span>
-              <span class="agent-info-dept-badge" id="agent-info-dept">Frontend & 3D</span>
-            </div>
-            <button id="agent-info-close-btn" class="agent-info-close" title="Schließen">✕</button>
-          </div>
-          <div class="agent-info-body">
-            <h3 id="agent-info-name" class="agent-info-name">Spezial-Agent</h3>
-            <div id="agent-info-role" class="agent-info-role">Senior Software Architect</div>
-            <div class="agent-info-divider"></div>
-            <p id="agent-live-status" class="agent-live-status">Status: <span id="status-text">Wartet auf Aufgaben</span></p>
-            <div id="agent-info-status" class="agent-info-status" style="display: none;">Bereit für Arbeitsanweisungen im Studio</div>
-            <div id="agent-info-detail" class="agent-info-detail"></div>
-
-            <!-- Direkt-Beauftragung (Chat-Schnittstelle) -->
-            <div class="agent-direct-task-section">
-              <div class="agent-direct-task-header">
-                <span class="agent-direct-icon">
-                  <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                </span>
-                <span class="agent-direct-label">DIREKTBEFEHL (MICRO-MANAGEMENT)</span>
-              </div>
-              <div class="agent-direct-task-input-row">
-                <input type="text" id="agent-direct-prompt" placeholder="Direkte Anweisung..." autocomplete="off" />
-                <button id="btn-direct-task">Senden</button>
-              </div>
-              <div id="agent-direct-response" style="display:none;"></div>
-            </div>
-          </div>
-          <div class="agent-info-footer" style="display: flex; flex-direction: column; gap: 6px;">
-            <button id="agent-info-action-btn" class="agent-info-btn">
-              <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <span>Vollständigen Inspektor & Terminal öffnen</span>
-            </button>
-            <button class="btn-back-to-hub" title="Schließt das Panel und kehrt zur Zentrale zurück">
-              <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-              <span>Zurück zur Zentrale</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="canvas-controls-overlay">
-          <button id="ctrl-rot-left" class="ctrl-btn" title="Kamera links drehen">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-            <span>Links</span>
-          </button>
-          <button id="ctrl-rot-right" class="ctrl-btn" title="Kamera rechts drehen">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-            <span>Rechts</span>
-          </button>
-          <button id="ctrl-zoom-in" class="ctrl-btn" title="Zoom In">+</button>
-          <button id="ctrl-zoom-out" class="ctrl-btn" title="Zoom Out">−</button>
-          <button id="ctrl-floor-eg" class="ctrl-btn active" style="border-color: rgba(0, 240, 255, 0.4);" title="Kamera zu EG (Galerie-Terrasse)">
-            <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-            <span>EG Galerie</span>
-          </button>
-          <button id="ctrl-floor-ug" class="ctrl-btn" style="border-color: rgba(168, 85, 247, 0.4);" title="Kamera zu UG (Zentrale Sunken Arena)">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
-            <span>UG Arena</span>
-          </button>
-          <button id="ctrl-task-queue-toggle" class="ctrl-btn" style="border-color: rgba(245, 158, 11, 0.4);" title="Auftrags-Warteschlange öffnen">
-            <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-            <span>Queue (<span id="queue-badge-count">0</span>)</span>
-          </button>
-          <button class="btn-back-to-hub ctrl-btn" title="Kamera zurück zur Zentrale">
-            <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-            <span>Zentrale</span>
-          </button>
-          <button id="ctrl-reset-cam" class="ctrl-btn" title="Kamera zurücksetzen">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-            <span>Amphitheater</span>
-          </button>
-          <button id="ctrl-quiet-toggle" class="ctrl-btn" title="Ruhige Ansicht ein/aus">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            <span>Fokus-Modus</span>
-          </button>
-        </div>
-
-        <div class="canvas-footer-stats">
-          <span>14 Abteilungen (10 EG Galerie · 4 UG Arena) · 47 Spezialisten · Holo-JARVIS 3D Arena</span>
-        </div>
-      </div>
-
-      <!-- ANSICHT 2: 2D ARBEITSPLÄTZE GRID -->
-      <div id="workstations-grid-container" style="display: none;">
-        <!-- Dynamisch gerendert -->
-      </div>
-    </main>
-
-    <!-- RECHTS: KOMMANDO-SIDEBAR MIT TREVOR IM IRON-MAN LOOK -->
-    <aside class="sidebar-command-center" id="sidebar-command-center">
-      <div>
-        <div class="sidebar-header-row">
-          <span>DEIN ARBEITSPLATZ</span>
-          <span style="color: var(--iron-gold);">01 / STUDIO DIRECTOR</span>
-        </div>
-
-        <!-- Trevor Hero Box mit rot-goldenem Arc-Reactor -->
-        <div class="trevor-hero-box">
-          <div class="trevor-presence-row">
-            <div class="iron-man-avatar-orb">
-              <div class="arc-reactor-ring"></div>
-              <div class="arc-reactor-core"></div>
-              <div class="iron-man-armor-badge">
-                <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-              </div>
-            </div>
-            <div class="trevor-presence-text">
-              <h2>Trevor. <span style="font-size: 11px; color: var(--iron-gold);">MK-VII</span></h2>
-              <p>• Dein Studio-Leiter im Iron-Man Look</p>
-            </div>
-          </div>
-
-          <p class="trevor-lead-text">
-            Besprich dein Software-Projekt mit Trevor oder klicke auf einen beliebigen Arbeitsplatz, um zu prüfen, was der Spezialist gerade macht.
-          </p>
-
-          <button id="btn-sidebar-open-trevor" class="btn-work-with-trevor">
-            <span style="display: inline-flex; align-items: center; gap: 6px;">
-              <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-              <span>Mit Trevor arbeiten</span>
-            </span>
-            <span>→</span>
-          </button>
-        </div>
-
-        <!-- 4-Stufen Workflow Tracker -->
-        <div class="workflow-tracker-box">
-          <div class="workflow-tracker-title">So arbeitet dein Studio</div>
-
-          <div id="tracker-stage-1" class="stage-step">
-            <div class="stage-num">01</div>
-            <div class="stage-step-info">
-              <h4>Fachteam</h4>
-              <p>33 Spezial-PCs erarbeiten Code & Spezifikationen</p>
-            </div>
-          </div>
-
-          <div id="tracker-stage-2" class="stage-step">
-            <div class="stage-num">02</div>
-            <div class="stage-step-info">
-              <h4>Chef-Agent</h4>
-              <p>10 Abteilungsleiter prüfen auf Widersprüche & Bugs</p>
-            </div>
-          </div>
-
-          <div id="tracker-stage-3" class="stage-step">
-            <div class="stage-num">03</div>
-            <div class="stage-step-info">
-              <h4>Trevor</h4>
-              <p>Bündelt alles zur Executive Summary & Antigravity-Prompt</p>
-            </div>
-          </div>
-
-          <div id="tracker-stage-4" class="stage-step">
-            <div class="stage-num">04</div>
-            <div class="stage-step-info">
-              <h4>Du entscheidest</h4>
-              <p>Verbindliches braucht deine Freigabe (JA / NEIN)</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer-Links der Sidebar -->
-      <div class="sidebar-footer-links">
-        <button id="btn-sidebar-task-queue" class="footer-link-btn" style="border-color: rgba(245, 158, 11, 0.4);">
-          <span style="display: inline-flex; align-items: center; gap: 6px;">
-            <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-            <span>Auftrags-Queue (<span id="sidebar-queue-count">0</span>)</span>
+  <div id="threejs-canvas-container" class="fullscreen-canvas-container">
+    <!-- Schwebendes Agenten-Inspektions-Panel (3D Raycaster Overlay) -->
+    <div id="agent-info-panel" class="agent-info-panel" style="display: none;">
+      <div class="agent-info-header">
+        <div class="agent-info-badge-row">
+          <span class="agent-info-avatar-icon" id="agent-info-icon">
+            <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
           </span>
-          <span>→</span>
-        </button>
-        <button id="btn-sidebar-chef-reports" class="footer-link-btn">
-          <span style="display: inline-flex; align-items: center; gap: 6px;">
-            <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <span>Chef-Arbeitsplatz & Berichte</span>
-          </span>
-          <span>→</span>
-        </button>
-        <button id="btn-sidebar-trevor-terminal" class="footer-link-btn">
-          <span style="display: inline-flex; align-items: center; gap: 6px;">
-            <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-            <span>Trevor-Terminal & Freigabe</span>
-          </span>
-          <span>→</span>
-        </button>
+          <span class="agent-info-dept-badge" id="agent-info-dept">Software-Campus</span>
+        </div>
+        <button id="agent-info-close-btn" class="agent-info-close" title="Schließen">✕</button>
       </div>
-    </aside>
+      <div class="agent-info-body">
+        <h3 id="agent-info-name" class="agent-info-name">Spezial-Agent</h3>
+        <div id="agent-info-role" class="agent-info-role">Senior Software Architect</div>
+        <div class="agent-info-divider"></div>
+        <p id="agent-live-status" class="agent-live-status">Status: <span id="status-text">Wartet auf Aufgaben</span></p>
+        <div id="agent-info-status" class="agent-info-status" style="display: none;">Bereit für Arbeitsanweisungen im Studio</div>
+        <div id="agent-info-detail" class="agent-info-detail"></div>
 
-    <!-- Mobile Toggle Button (für Smartphone & Tablet) -->
-    <button id="btn-mobile-sidebar-toggle" class="mobile-sidebar-toggle-btn">
-      <span style="display: inline-flex; align-items: center; gap: 6px;">
-        <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-        <span>Trevor & Status</span>
-      </span>
-    </button>
-
-  </div>
-
-  <!-- =========================================================================
-       3. MODAL: KLICK-INSPEKTOR ("WAS MACHT DIESER RAUM / PC GERADE?")
-       ========================================================================= -->
-  <div id="modal-agent-inspector" class="modal-overlay">
-    <div class="terminal-modal-card" style="max-width: 760px;">
-      <div class="terminal-header">
-        <div class="terminal-title">
-          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <span id="inspector-agent-title">SPEZIALISTEN-INSPEKTOR</span>
-        </div>
-        <button class="ctrl-btn modal-close-btn" data-modal="modal-agent-inspector">✕</button>
-      </div>
-      <div class="terminal-body">
-        
-        <!-- Tabs im Inspektor -->
-        <div class="inspector-tabs-nav">
-          <button id="tab-btn-live-work" class="inspector-tab-btn active">
-            <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-            <span>Live-Status & Arbeit</span>
-          </button>
-          <button id="tab-btn-direct-command" class="inspector-tab-btn">
-            <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
-            <span>Direkte Anweisung</span>
-          </button>
-          <button id="tab-btn-learned" class="inspector-tab-btn">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            <span>Gelerntes Wissen (Training)</span>
-          </button>
-        </div>
-
-        <!-- TAB 1: LIVE-STATUS & AUFGABE -->
-        <div id="tab-content-live-work" style="display: flex; flex-direction: column; gap: 14px;">
-          <!-- Wofür bin ich zuständig? -->
-          <div class="inspector-callout-box">
-            <span class="inspector-callout-label">Wofür bin ich zuständig?</span>
-            <p id="inspector-easy-explanation" class="inspector-callout-text"></p>
-          </div>
-
-          <!-- Was mache ich in dieser Sekunde? -->
-          <div class="inspector-callout-box" style="border-color: rgba(0, 240, 255, 0.4);">
-            <span class="inspector-callout-label" style="color: var(--arc-cyan);">Was mache ich in dieser Sekunde?</span>
-            <div id="inspector-live-activity" style="font-size: 13px; font-weight: 600; color: #fff;"></div>
-            <div id="inspector-live-detail" style="font-size: 11px; color: var(--text-dim); margin-top: 2px;"></div>
-          </div>
-
-          <!-- Code / Technisches Protokoll -->
-          <div>
-            <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px;">
-              AKTUELLES CODE- & SPEZIFIKATIONS-PROTOKOLL:
-            </div>
-            <pre class="code-preview-content" id="inspector-agent-content" style="max-height: 280px; display: block;"></pre>
-          </div>
-        </div>
-
-        <!-- TAB 2: DIREKTE ANWEISUNG AN ABTEILUNG / PC -->
-        <div id="tab-content-direct-command" style="display: none; flex-direction: column; gap: 14px;">
-          <div class="inspector-callout-box" style="border-color: rgba(245, 158, 11, 0.4);">
-            <span class="inspector-callout-label" style="color: var(--accent-amber); display: inline-flex; align-items: center; gap: 6px;">
+        <!-- Direkt-Beauftragung (Chat-Schnittstelle) -->
+        <div class="agent-direct-task-section">
+          <div class="agent-direct-task-header">
+            <span class="agent-direct-icon">
               <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-              <span>DIREKT-AUFTRAG (BOTTOM-UP -> TREVOR)</span>
             </span>
-            <p style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
-              Die Ausführung startet sofort fachspezifisch in diesem Raum, wird vom Chef geprüft, bei Bedarf mit Nachbar-Abteilungen abgeglichen und Trevor zur finalen JA/NEIN-Vorlage übergeben.
-            </p>
+            <span class="agent-direct-label">DIREKTBEFEHL (MICRO-MANAGEMENT)</span>
           </div>
-
-          <div>
-            <label style="font-size: 12px; font-weight: 700; color: #fff;">
-              Deine konkrete Arbeitsanweisung:
-            </label>
-            <textarea id="inspector-direct-prompt" class="prompt-textarea" style="min-height: 85px; margin-top: 6px;" placeholder="Gib eine direkte Anweisung an diesen Bereich..."></textarea>
+          <div class="agent-direct-task-input-row">
+            <input type="text" id="agent-direct-prompt" placeholder="Direkte Anweisung..." autocomplete="off" />
+            <button id="btn-direct-task">Senden</button>
           </div>
-
-          <div>
-            <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px;">
-              SCHNELL-BEFEHLE FÜR DIESEN RAUM (1-KLICK):
-            </div>
-            <div id="inspector-quick-prompts-container" class="quick-prompts-row">
-              <!-- Dynamisch mit 3 Buttons befüllt -->
-            </div>
-          </div>
-
-          <button id="btn-inspector-dispatch-direct" class="btn-submit-task" style="width: 100%; justify-content: center; margin-top: 6px;">
-            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-            <span>Direkt ausführen & an Trevor melden</span>
-          </button>
+          <div id="agent-direct-response" style="display:none;"></div>
         </div>
-
-        <!-- TAB 3: GELERNTES WISSEN (IDLE TRAINING) -->
-        <div id="tab-content-learned" style="display: none; flex-direction: column; gap: 12px;">
-          <div style="font-size: 12px; color: var(--text-muted);">
-            Erkenntnisse und Optimierungen, die dieser Spezialist beim autonomen Üben an deinen bestehenden Projekten gesammelt hat:
-          </div>
-          <div class="learned-insights-list" id="inspector-learned-list">
-            <!-- Dynamisch befüllt -->
-          </div>
-        </div>
-
+      </div>
+      <div class="agent-info-footer" style="display: flex; flex-direction: column; gap: 6px;">
+        <button id="agent-info-action-btn" class="agent-info-btn">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span>Vollständigen Inspektor & Terminal öffnen</span>
+        </button>
+        <button class="btn-back-to-hub" title="Schließt das Panel und kehrt zur Zentrale zurück">
+          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+          <span>Zurück zur Zentrale</span>
+        </button>
       </div>
     </div>
   </div>
 
   <!-- =========================================================================
-       4. MODAL: TREVOR COMMAND TERMINAL & JA/NEIN ENTSCHEIDUNGSHUB
+       1. SLATE-HUD: SCHMALE ICON-SIDEBAR (GANZ LINKS)
+       ========================================================================= -->
+  <aside id="slate-icon-sidebar" class="slate-icon-sidebar">
+    <div class="sidebar-top-icons">
+      <!-- Trevor Logo / Arc-Orb Badge -->
+      <div class="sidebar-brand-orb" id="btn-sidebar-brand" title="TREVOR MK-VII · Slate J.A.R.V.I.S. Studio">
+        <span class="brand-text">TRVR</span>
+      </div>
+
+      <!-- Neuer Auftrag an Trevor (Terminal öffnen) -->
+      <button id="btn-sidebar-open-trevor" class="sidebar-icon-btn active-hover" title="Neuen Auftrag erstellen / Trevor Terminal">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      </button>
+
+      <!-- Task-Warteschlange Panel ein-/ausklappen -->
+      <button id="ctrl-task-queue-toggle" class="sidebar-icon-btn badge-parent" title="Task-Warteschlange anzeigen/verbergen">
+        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        <span id="queue-badge-count" class="sidebar-badge-count">0</span>
+      </button>
+
+      <!-- User Action-Center Button -->
+      <button id="btn-open-action-center" class="sidebar-icon-btn action-center-toggle-btn badge-parent" title="User Action-Center öffnen">
+        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span id="action-center-badge" class="sidebar-badge-count">0</span>
+      </button>
+
+      <!-- Chef-Agenten Berichte & Audit -->
+      <button id="btn-sidebar-chef-reports" class="sidebar-icon-btn" title="Chef-Agenten Berichte & Audit">
+        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+      </button>
+    </div>
+
+    <div class="sidebar-bottom-icons">
+      <!-- Web Audio Sound Toggle -->
+      <button id="btn-toggle-sound" class="sidebar-icon-btn" title="Synthesizer Sound Effekte an/aus">
+        <svg class="ui-icon" id="sound-toggle-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+      </button>
+
+      <!-- JARVIS Voice Toggle -->
+      <button id="btn-toggle-jarvis-voice" class="sidebar-icon-btn" title="J.A.R.V.I.S. Sprachausgabe an/aus">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      </button>
+
+      <!-- Settings Dialog -->
+      <button id="btn-open-settings" class="sidebar-icon-btn" title="System- & KI-Einstellungen">
+        <svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+
+      <!-- Kompatibilitäts-Elemente (Versteckt, verhindern NullPointer) -->
+      <button id="btn-sidebar-trevor-terminal" style="display: none;"></button>
+      <button id="btn-sidebar-task-queue" style="display: none;"></button>
+      <button id="btn-resume-limit" style="display: none;"></button>
+      <button id="engine-mode-btn" style="display: none;"></button>
+      <select id="project-selector-select" style="display: none;">
+        <option value="KI_Trevor">KI_Trevor</option>
+      </select>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       1b. SLATE-HUD: EINKLAPPBARES TASK-WARTESCHLANGE PANEL (NEBEN DER SIDEBAR)
+       ========================================================================= -->
+  <div id="task-queue-panel" class="task-queue-panel" style="display: none;">
+    <div class="task-queue-header">
+      <div class="task-queue-title">
+        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        <span>TASK-WARTESCHLANGE</span>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="btn-back-to-hub" title="Zurück zur Zentrale">
+          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+          <span>Zentrale</span>
+        </button>
+        <button id="task-queue-close-btn" class="ctrl-btn panel-close-btn" title="Schließen">✕</button>
+      </div>
+    </div>
+    <div class="task-queue-body">
+      <div class="task-queue-input-box">
+        <input type="text" id="task-queue-new-input" placeholder="Neuen Auftrag in Queue einreihen..." autocomplete="off" />
+        <button id="btn-add-to-queue" class="btn-queue-add" title="Auftrag einreihen">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>Einreihen</span>
+        </button>
+      </div>
+      <div class="task-queue-meta-row">
+        <span id="queue-count-badge" class="queue-count-badge">0 wartende Aufträge</span>
+        <button id="btn-queue-start-next" class="btn-queue-start" style="display: none;">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>Nächsten starten</span>
+        </button>
+      </div>
+      <ul id="task-queue-list" class="task-queue-list"></ul>
+      <div id="queue-empty-placeholder" class="queue-empty-placeholder">
+        Keine wartenden Aufträge in der Warteschlange.
+      </div>
+    </div>
+    <div class="task-queue-footer">
+      <button class="btn-back-to-hub" style="width: 100%;">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+        <span>Zurück zur Zentrale</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       2. SLATE-HUD: OBEN MITTE – SCHWEBENDE STATUS-PILLE (J.A.R.V.I.S. WAVEFORM)
+       ========================================================================= -->
+  <div class="slate-top-hud">
+    <div class="holo-wip-pill" id="holo-wip-indicator" title="Live System-Status">
+      <div class="holo-waveform">
+        <span class="holo-bar"></span>
+        <span class="holo-bar"></span>
+        <span class="holo-bar"></span>
+        <span class="holo-bar"></span>
+        <span class="holo-bar"></span>
+      </div>
+      <span class="holo-wip-text" id="holo-wip-text">Live-Activity: SYSTEM ONLINE · J.A.R.V.I.S. READY</span>
+    </div>
+
+    <!-- Aktives KI-Badge neben der Status-Pille -->
+    <div id="active-ai-badge" class="active-ai-badge badge-gemini" title="Aktive Engine">
+      <span class="ai-badge-dot pulse"></span>
+      <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+      <span id="active-ai-badge-text">Google Gemini 2.5 Flash</span>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       3. SLATE-HUD: RECHTS – SCHWEBENDES USER ACTION-CENTER PANEL
+       ========================================================================= -->
+  <div id="user-action-center" class="user-action-center-panel" style="display: none;">
+    <div class="action-center-header">
+      <div class="action-center-title">
+        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span>USER ACTION-CENTER</span>
+        <span id="action-center-header-badge" class="action-center-header-badge">0 offen</span>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="btn-back-to-hub" title="Zurück zur Zentrale">
+          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+          <span>Zentrale</span>
+        </button>
+        <button id="action-center-close-btn" class="ctrl-btn panel-close-btn" title="Schließen">✕</button>
+      </div>
+    </div>
+    <div class="action-center-body">
+      <div id="action-center-empty" class="action-center-empty">
+        <svg class="ui-icon ui-icon-cyan" style="width: 32px; height: 32px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        <p style="font-weight: 700; color: #f8fafc; margin: 6px 0 2px 0;">Keine offenen Aktionen</p>
+        <p style="font-size: 11px; color: var(--text-dim); margin: 0;">Trevor benachrichtigt dich automatisch, sobald eine Rückfrage oder ein fertiges Ergebnis deine Freigabe benötigt.</p>
+      </div>
+      <div id="action-center-list" class="action-center-list" style="display: none;"></div>
+    </div>
+    <div class="action-center-footer">
+      <button class="btn-back-to-hub" style="width: 100%;">
+        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+        <span>Zurück zur Zentrale</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       4. SLATE-HUD: UNTEN MITTE – KOMPAKTES STEUERUNGS-DOCK
+       ========================================================================= -->
+  <div id="slate-bottom-dock" class="canvas-controls-overlay">
+    <!-- Mikrofon-Icon (Sprachsteuerung / STT) -->
+    <button id="ctrl-mic" class="ctrl-btn dock-mic-btn" title="Mit J.A.R.V.I.S. sprechen (Sprachsteuerung)">
+      <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      <span>Sprechen</span>
+    </button>
+
+    <!-- Zentrale Navigation -->
+    <button id="ctrl-hub" class="btn-back-to-hub ctrl-btn" title="Kamera zurück zur Zentrale">
+      <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+      <span>Zentrale</span>
+    </button>
+
+    <!-- EG Galerie -->
+    <button id="ctrl-floor-eg" class="ctrl-btn active" style="border-color: rgba(0, 240, 255, 0.4);" title="Kamera zu EG (Galerie-Terrasse)">
+      <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+      <span>EG</span>
+    </button>
+
+    <!-- UG Arena -->
+    <button id="ctrl-floor-ug" class="ctrl-btn" style="border-color: rgba(168, 85, 247, 0.4);" title="Kamera zu UG (Zentrale Sunken Arena)">
+      <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+      <span>UG</span>
+    </button>
+
+    <!-- Feine Kamera-Navigation -->
+    <button id="ctrl-rot-left" class="ctrl-btn ctrl-mini" title="Kamera links drehen">
+      <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+    </button>
+    <button id="ctrl-rot-right" class="ctrl-btn ctrl-mini" title="Kamera rechts drehen">
+      <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+    </button>
+    <button id="ctrl-zoom-in" class="ctrl-btn ctrl-mini" title="Zoom In">+</button>
+    <button id="ctrl-zoom-out" class="ctrl-btn ctrl-mini" title="Zoom Out">−</button>
+    <button id="ctrl-reset-cam" class="ctrl-btn" title="Kamera zurücksetzen (Amphitheater-Blick)">
+      <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+      <span>Reset</span>
+    </button>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 1: TREVOR COMMAND TERMINAL & DECISION HUB
        ========================================================================= -->
   <div id="modal-trevor-terminal" class="modal-overlay">
     <div class="terminal-modal-card">
@@ -580,34 +397,34 @@
               <div id="progress-bar-fill" class="progress-bar-fill"></div>
             </div>
 
-            <!-- LIVE-AKTIVITÄTS-MONITOR FÜR MICRO-STATUS & ABTEILUNGEN -->
+            <!-- LIVE-AKTIVITÄTS-MONITOR -->
             <div id="live-activity-monitor" class="live-activity-monitor">
               1/4: Trevor analysiert...
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
               <span id="progress-active-agent">Warte auf Spezialisten...</span>
-              <span style="color: #34d399;">✔ Zwischenstand in Supabase & lokal gesichert</span>
+              <span style="color: #34d399;">Zwischenstand in Supabase & lokal gesichert</span>
             </div>
           </div>
 
-          <!-- BEREICH C: STUFE 04 - DEINE ENTSCHEIDUNG (NUR JA ODER NEIN) -->
+          <!-- BEREICH C: STUFE 04 - DEINE ENTSCHEIDUNG (JA ODER NEIN) -->
           <div id="section-decision" style="display: none; flex-direction: column; gap: 14px;">
             
             <div class="decision-summary-box">
               <h3 style="font-size: 14px; font-weight: 800; color: var(--iron-gold); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                 <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                <span>TREVORS EXECUTIVE SUMMARY FÜR DICH:</span>
+                <span>TREVORS EXECUTIVE SUMMARY:</span>
               </h3>
               <div id="decision-summary-text"></div>
             </div>
 
-            <!-- INTERAKTIVE PROMPT-ROADMAP (SCHRITTE-CHECKLISTE) -->
+            <!-- INTERAKTIVE PROMPT-ROADMAP -->
             <div id="decision-roadmap-box" class="roadmap-box">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <h4 style="font-size: 13px; font-weight: 800; color: var(--arc-cyan); display: flex; align-items: center; gap: 6px;">
                   <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-                  <span>INTERAKTIVE PROMPT-ROADMAP (SCHRITTE AUSWÄHLEN)</span>
+                  <span>INTERAKTIVE PROMPT-ROADMAP</span>
                 </h4>
                 <div style="display: flex; gap: 6px;">
                   <button id="btn-roadmap-all-yes" class="ctrl-btn" style="padding: 3px 8px; font-size: 11px;">Alle [JA]</button>
@@ -619,9 +436,7 @@
               </div>
 
               <!-- Dynamische Liste der Schritte -->
-              <div id="roadmap-steps-list" class="roadmap-steps-list">
-                <!-- Wird dynamisch aus task.checkpoint_data.structured_steps befüllt -->
-              </div>
+              <div id="roadmap-steps-list" class="roadmap-steps-list"></div>
 
               <!-- Button für dynamischen Teil-Export & Zentrale Navigation -->
               <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
@@ -640,7 +455,7 @@
             <div class="code-preview-collapsible">
               <div class="code-preview-header" id="btn-toggle-prompt-preview">
                 <span>GENERIERTER ANTIGRAVITY MASTER-PROMPT (VORSCHAU)</span>
-                <span id="code-preview-indicator">▼ Aufklappen</span>
+                <span id="code-preview-indicator">[Aufklappen]</span>
               </div>
               <pre class="code-preview-content" id="code-preview-content" style="display: none;"></pre>
             </div>
@@ -649,8 +464,8 @@
             <div id="decision-success-banner" class="success-banner">
               <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
               <div>
-                <strong>Prompt freigegeben & unter <code>05_Antigravity_Outputs/ANTIGRAVITY_TASK.md</code> gesichert!</strong>
-                <div style="font-size: 11px; margin-top: 2px;">Automatisch in deine Zwischenablage kopiert & an die Heim-Station übermittelt.</div>
+                <strong>Prompt freigegeben & gesichert!</strong>
+                <div style="font-size: 11px; margin-top: 2px;">In deine Zwischenablage kopiert & an die Heim-Station übermittelt.</div>
               </div>
             </div>
 
@@ -702,9 +517,7 @@
               <span>Aktualisieren</span>
             </button>
           </div>
-          <div id="trevor-history-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 480px; overflow-y: auto;">
-            <!-- Dynamisch befüllt -->
-          </div>
+          <div id="trevor-history-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 480px; overflow-y: auto;"></div>
         </div>
 
       </div>
@@ -712,7 +525,102 @@
   </div>
 
   <!-- =========================================================================
-       5. MODAL: CHEF REPORTS ÜBERSICHT
+       MODAL 2: SPEZIALISTEN-INSPEKTOR
+       ========================================================================= -->
+  <div id="modal-agent-inspector" class="modal-overlay">
+    <div class="terminal-modal-card" style="max-width: 760px;">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span id="inspector-agent-title">SPEZIALISTEN-INSPEKTOR</span>
+        </div>
+        <button class="ctrl-btn modal-close-btn" data-modal="modal-agent-inspector">✕</button>
+      </div>
+      <div class="terminal-body">
+        
+        <!-- Tabs im Inspektor -->
+        <div class="inspector-tabs-nav">
+          <button id="tab-btn-live-work" class="inspector-tab-btn active">
+            <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span>Live-Status & Arbeit</span>
+          </button>
+          <button id="tab-btn-direct-command" class="inspector-tab-btn">
+            <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+            <span>Direkte Anweisung</span>
+          </button>
+          <button id="tab-btn-learned" class="inspector-tab-btn">
+            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <span>Gelerntes Wissen (Training)</span>
+          </button>
+        </div>
+
+        <!-- TAB 1: LIVE-STATUS & AUFGABE -->
+        <div id="tab-content-live-work" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="inspector-callout-box">
+            <span class="inspector-callout-label">Zuständigkeit:</span>
+            <p id="inspector-easy-explanation" class="inspector-callout-text"></p>
+          </div>
+
+          <div class="inspector-callout-box" style="border-color: rgba(0, 240, 255, 0.4);">
+            <span class="inspector-callout-label" style="color: var(--arc-cyan);">Aktuelle Aktivität:</span>
+            <div id="inspector-live-activity" style="font-size: 13px; font-weight: 600; color: #fff;"></div>
+            <div id="inspector-live-detail" style="font-size: 11px; color: var(--text-dim); margin-top: 2px;"></div>
+          </div>
+
+          <div>
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px;">
+              AKTUELLES CODE- & SPEZIFIKATIONS-PROTOKOLL:
+            </div>
+            <pre class="code-preview-content" id="inspector-agent-content" style="max-height: 280px; display: block;"></pre>
+          </div>
+        </div>
+
+        <!-- TAB 2: DIREKTE ANWEISUNG AN ABTEILUNG / PC -->
+        <div id="tab-content-direct-command" style="display: none; flex-direction: column; gap: 14px;">
+          <div class="inspector-callout-box" style="border-color: rgba(245, 158, 11, 0.4);">
+            <span class="inspector-callout-label" style="color: var(--accent-amber); display: inline-flex; align-items: center; gap: 6px;">
+              <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              <span>DIREKT-AUFTRAG (BOTTOM-UP -> TREVOR)</span>
+            </span>
+            <p style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+              Die Ausführung startet sofort fachspezifisch in diesem Raum, wird vom Chef geprüft und Trevor zur finalen Freigabe übergeben.
+            </p>
+          </div>
+
+          <div>
+            <label style="font-size: 12px; font-weight: 700; color: #fff;">
+              Deine konkrete Arbeitsanweisung:
+            </label>
+            <textarea id="inspector-direct-prompt" class="prompt-textarea" style="min-height: 85px; margin-top: 6px;" placeholder="Gib eine direkte Anweisung an diesen Bereich..."></textarea>
+          </div>
+
+          <div>
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px;">
+              SCHNELL-BEFEHLE FÜR DIESEN RAUM (1-KLICK):
+            </div>
+            <div id="inspector-quick-prompts-container" class="quick-prompts-row"></div>
+          </div>
+
+          <button id="btn-inspector-dispatch-direct" class="btn-submit-task" style="width: 100%; justify-content: center; margin-top: 6px;">
+            <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span>Direkt ausführen & an Trevor melden</span>
+          </button>
+        </div>
+
+        <!-- TAB 3: GELERNTES WISSEN (IDLE TRAINING) -->
+        <div id="tab-content-learned" style="display: none; flex-direction: column; gap: 12px;">
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Erkenntnisse und Optimierungen, die dieser Spezialist beim autonomen Üben gesammelt hat:
+          </div>
+          <div class="learned-insights-list" id="inspector-learned-list"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 3: CHEF REPORTS ÜBERSICHT
        ========================================================================= -->
   <div id="modal-chef-reports" class="modal-overlay">
     <div class="terminal-modal-card" style="max-width: 800px;">
@@ -723,14 +631,12 @@
         </div>
         <button class="ctrl-btn modal-close-btn" data-modal="modal-chef-reports">✕</button>
       </div>
-      <div class="terminal-body" id="chef-reports-list" style="display: flex; flex-direction: column; gap: 14px;">
-        <!-- Dynamisch befüllt -->
-      </div>
+      <div class="terminal-body" id="chef-reports-list" style="display: flex; flex-direction: column; gap: 14px;"></div>
     </div>
   </div>
 
   <!-- =========================================================================
-       6. MODAL: SYSTEM- & KI-EINSTELLUNGEN
+       MODAL 4: SYSTEM- & KI-EINSTELLUNGEN
        ========================================================================= -->
   <div id="modal-settings" class="modal-overlay">
     <div class="terminal-modal-card" style="max-width: 520px;">
@@ -758,7 +664,7 @@
         <div>
           <label style="font-size: 12px; font-weight: 600; color: #fff;">Cloud API-Sicherheit (Render Secrets):</label>
           <div style="font-size: 11px; color: #34d399; margin-top: 6px; background: rgba(52, 211, 153, 0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(52, 211, 153, 0.25);">
-            ✔ <strong>Node.js Cloud-Proxy aktiv:</strong> <code>GEMINI_API_KEY</code> wird sicher auf dem Server verarbeitet. Keine sensiblen Schlüssel im Browser-Speicher.
+            <strong>Node.js Cloud-Proxy aktiv:</strong> <code>GEMINI_API_KEY</code> wird sicher auf dem Server verarbeitet. Keine sensiblen Schlüssel im Browser-Speicher.
           </div>
         </div>
 
@@ -780,54 +686,7 @@
   </div>
 
   <!-- =========================================================================
-       7. TASK-QUEUE PANEL (SEITLICHES PANEL FÜR WARTENDE AUFTRÄGE)
-       ========================================================================= -->
-  <div id="task-queue-panel" class="task-queue-panel" style="display: none;">
-    <div class="task-queue-header">
-      <div class="task-queue-title">
-        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-        <span>AUFTRAGS-QUEUE (WARTESCHLANGE)</span>
-      </div>
-      <div style="display: flex; gap: 6px; align-items: center;">
-        <button class="btn-back-to-hub" title="Zurück zur Zentrale">
-          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-          <span>Zentrale</span>
-        </button>
-        <button id="task-queue-close-btn" class="ctrl-btn panel-close-btn" title="Schließen">✕</button>
-      </div>
-    </div>
-    <div class="task-queue-body">
-      <div class="task-queue-input-box">
-        <input type="text" id="task-queue-new-input" placeholder="Neuen Auftrag in Queue einreihen..." autocomplete="off" />
-        <button id="btn-add-to-queue" class="btn-queue-add">
-          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          <span>Einreihen</span>
-        </button>
-      </div>
-      <div class="task-queue-meta-row">
-        <span id="queue-count-badge" class="queue-count-badge">0 wartende Aufträge</span>
-        <button id="btn-queue-start-next" class="btn-queue-start" style="display: none;">
-          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-          <span>Nächsten Auftrag ausführen</span>
-        </button>
-      </div>
-      <ul id="task-queue-list" class="task-queue-list">
-        <!-- Dynamische Einträge mit Up/Down-Buttons und Delete-Button -->
-      </ul>
-      <div id="queue-empty-placeholder" class="queue-empty-placeholder">
-        Keine wartenden Aufträge in der Warteschlange.
-      </div>
-    </div>
-    <div class="task-queue-footer">
-      <button class="btn-back-to-hub" style="width: 100%;">
-        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-        <span>Zurück zur Zentrale</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- =========================================================================
-       8. Q&A PANEL (TREVOR DIREKT-FRAGEN OVERLAY MIT ERKLÄRUNGS-MODUS)
+       MODAL 5: Q&A PANEL (TREVOR DIREKT-FRAGEN OVERLAY)
        ========================================================================= -->
   <div id="qa-panel" class="modal-overlay qa-panel-overlay" style="display: none;">
     <div class="terminal-modal-card qa-card" style="max-width: 640px;">
@@ -866,7 +725,7 @@
               <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               <span>[Nein]</span>
             </button>
-            <button id="qa-btn-explain" class="qa-btn qa-btn-explain" title="Einfache Erklärung mit Alltag-Analogien anfordern">
+            <button id="qa-btn-explain" class="qa-btn qa-btn-explain" title="Einfache Erklärung anfordern">
               <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="18" x2="15" y2="18"></line><line x1="10" y1="22" x2="14" y2="22"></line><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>
               <span>[Erklärung]</span>
             </button>
@@ -882,44 +741,7 @@
     </div>
   </div>
 
-  <!-- =========================================================================
-       9. USER ACTION-CENTER PANEL (RÜCKFRAGEN & ERGEBNIS-FREIGABEN)
-       ========================================================================= -->
-  <div id="user-action-center" class="user-action-center-panel" style="display: none;">
-    <div class="action-center-header">
-      <div class="action-center-title">
-        <svg class="ui-icon ui-icon-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        <span>USER ACTION-CENTER</span>
-        <span id="action-center-header-badge" class="action-center-header-badge">0 offen</span>
-      </div>
-      <div style="display: flex; gap: 6px; align-items: center;">
-        <button class="btn-back-to-hub" title="Zurück zur Zentrale">
-          <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-          <span>Zentrale</span>
-        </button>
-        <button id="action-center-close-btn" class="ctrl-btn panel-close-btn" title="Schließen">✕</button>
-      </div>
-    </div>
-    <div class="action-center-body">
-      <div id="action-center-empty" class="action-center-empty">
-        <svg class="ui-icon ui-icon-cyan" style="width: 32px; height: 32px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-        <p style="font-weight: 700; color: #f8fafc; margin: 6px 0 2px 0;">Keine offenen Aktionen</p>
-        <p style="font-size: 11px; color: var(--text-dim); margin: 0;">Trevor benachrichtigt dich automatisch, sobald eine Rückfrage oder ein fertiges Ergebnis deine Entscheidung benötigt.</p>
-      </div>
-      <div id="action-center-list" class="action-center-list" style="display: none;">
-        <!-- Dynamische Action-Cards (CLARIFICATION_NEEDED / APPROVAL_NEEDED) -->
-      </div>
-    </div>
-    <div class="action-center-footer">
-      <button class="btn-back-to-hub" style="width: 100%;">
-        <svg class="ui-icon ui-icon-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-        <span>Zurück zur Zentrale</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Skripte mit defer-Absicherung gegen blockierte UI-Felder -->
-   
-  <script defer type="module" src="./app.js"></script>
+  <!-- Skripte mit defer-Absicherung gegen blockierte UI-Felder (Cache-Busting v=4.0) -->
+  <script defer type="module" src="./app.js?v=4.0"></script>
 </body>
 </html>

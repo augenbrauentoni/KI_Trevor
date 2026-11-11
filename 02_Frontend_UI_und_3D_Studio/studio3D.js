@@ -54,10 +54,8 @@ let holoJarvisParticles = null;
 let holoJarvisLight = null;
 let holoJarvisBeam = null;
 
-// Etagen-Status & Aufzug
+// Etagen-Status & Beleuchtung
 let targetCameraY = 5;
-let elevatorCabin = null;
-let targetElevatorY = 1.0;
 let currentFloor = 'EG';
 const ugLights = [];
 
@@ -371,7 +369,7 @@ function setupCampusLighting(THREE_LIB) {
 function setupTerraceArena(THREE_LIB) {
   const arenaGroup = new THREE_LIB.Group();
 
-  // 1. ZENTRALES TIEFGESCHOSS / SUNKEN ARENA BASIN (UG-Ebene: y = -2.4, Radius 8.8)
+  // 1. ZENTRALES TIEFGESCHOSS / SUNKEN ARENA BASIN (UG-Ebene: y = -2.5, Radius 8.8)
   const sunkenFloorGeo = new THREE_LIB.CylinderGeometry(8.8, 9.0, 0.4, 64);
   const sunkenFloorMat = new THREE_LIB.MeshStandardMaterial({
     color: 0x090D16,
@@ -379,13 +377,13 @@ function setupTerraceArena(THREE_LIB) {
     metalness: 0.25
   });
   const sunkenFloor = new THREE_LIB.Mesh(sunkenFloorGeo, sunkenFloorMat);
-  sunkenFloor.position.y = -2.6;
+  sunkenFloor.position.y = -2.7;
   sunkenFloor.receiveShadow = true;
   arenaGroup.add(sunkenFloor);
 
   // Holographisches Cyber-Grid im Sunken Basin
   const arenaGrid = new THREE_LIB.GridHelper(17.6, 22, 0x00F0FF, 0x1E293B);
-  arenaGrid.position.y = -2.39;
+  arenaGrid.position.y = -2.49;
   arenaGroup.add(arenaGrid);
 
   // Konzentrische cyanfarbene Leuchtringe im Arenaboden
@@ -399,7 +397,7 @@ function setupTerraceArena(THREE_LIB) {
     });
     const ring = new THREE_LIB.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = -2.38;
+    ring.position.y = -2.48;
     arenaGroup.add(ring);
   });
 
@@ -414,14 +412,14 @@ function setupTerraceArena(THREE_LIB) {
     side: THREE_LIB.DoubleSide
   });
   const arenaBalustrade = new THREE_LIB.Mesh(arenaBalustradeGeo, arenaBalustradeMat);
-  arenaBalustrade.position.y = -2.0;
+  arenaBalustrade.position.y = -2.1;
   arenaGroup.add(arenaBalustrade);
 
   const arenaHandrailGeo = new THREE_LIB.TorusGeometry(8.8, 0.06, 8, 64);
   const arenaHandrailMat = new THREE_LIB.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
   const arenaHandrail = new THREE_LIB.Mesh(arenaHandrailGeo, arenaHandrailMat);
   arenaHandrail.rotation.x = Math.PI / 2;
-  arenaHandrail.position.y = -1.6;
+  arenaHandrail.position.y = -1.7;
   arenaGroup.add(arenaHandrail);
 
   // 4 radiale Treppenaufgänge zwischen Tieffeld (y = -2.4) und Galerie (y = 2.4)
@@ -493,11 +491,11 @@ function setupTerraceArena(THREE_LIB) {
 }
 
 /**
- * Holographischer J.A.R.V.I.S. (Zentraler Mittelpunkt über der Tieffeld-Arena bei (0, 1.8, 0))
+ * Holographischer J.A.R.V.I.S. (Zentraler Mittelpunkt über der Tieffeld-Arena bei (0, 1.5, 0))
  */
 function setupHolographicJarvis(THREE_LIB) {
   holoJarvisGroup = new THREE_LIB.Group();
-  holoJarvisGroup.position.set(0, 1.8, 0);
+  holoJarvisGroup.position.set(0, 1.5, 0);
 
   // 1. Projektions-Basis & Lichtkegel aus der Tieffeld-Arena (World y = -2.2)
   const pedestalGeo = new THREE_LIB.CylinderGeometry(1.6, 1.9, 0.5, 32);
@@ -877,7 +875,7 @@ function setupCompactDepartments(THREE_LIB, hierarchyData) {
 
     const podGroup = new THREE_LIB.Group();
     podGroup.position.set(posX, 2.5, posZ);
-    podGroup.lookAt(0, 1.8, 0); // Ausrichtung direkt zum zentralen Holo-JARVIS
+    podGroup.lookAt(0, 1.5, 0); // Ausrichtung direkt zum zentralen Holo-JARVIS
 
     buildDepartmentPod(THREE_LIB, podGroup, dept);
     scene.add(podGroup);
@@ -1325,9 +1323,7 @@ function setupRaycasting(THREE_LIB, onAgentClick, onTrevorClick) {
       if (data.type === 'trevor' || data.type === 'decision_terminal') {
         zoomToPosition(THREE_LIB, new THREE_LIB.Vector3(0, 2.5, 17.5), 10);
       } else if (data.type === 'holo_jarvis' || data.type === 'ug_terminal') {
-        zoomToPosition(THREE_LIB, new THREE_LIB.Vector3(0, 1.8, 0), 10);
-      } else if (data.type === 'elevator') {
-        switchFloor(currentFloor === 'EG' ? 'UG' : 'EG');
+        zoomToPosition(THREE_LIB, new THREE_LIB.Vector3(0, 1.5, 0), 10);
       } else if (data.type === 'pc') {
         zoomToPosition(THREE_LIB, hit.getWorldPosition(new THREE_LIB.Vector3()), 10);
       } else if (data.type === 'chef') {
@@ -1572,13 +1568,11 @@ export function update3DStudioState(stageInput, floor) {
 
   // Zustandsbasierte native Kamera-Animation laut Anforderung
   if (floor !== undefined && floor !== null) {
-    targetCameraY = (floor === 'UG') ? -10 : 5;
     currentFloor = (floor === 'UG') ? 'UG' : 'EG';
-    targetElevatorY = (floor === 'UG') ? -14.0 : 1.0;
+    switchFloor(currentFloor);
   } else if (typeof stageInput === 'string' && (stageInput.toLowerCase().includes('ug') || stageInput.toLowerCase().includes('keller') || stageInput.toLowerCase().includes('untergeschoss'))) {
-    targetCameraY = -10;
     currentFloor = 'UG';
-    targetElevatorY = -14.0;
+    switchFloor('UG');
   }
 
   const btnEg = document.getElementById('ctrl-floor-eg');
