@@ -3404,10 +3404,11 @@ export function renderInteractiveRoadmap(steps) {
     const total = validSteps.length;
     const approved = validSteps.filter(s => s.approved !== false && s.enabled !== false).length;
     const rejected = total - approved;
+    const percent = total > 0 ? Math.round((approved / total) * 100) : 0;
 
     const counterBadge = container.querySelector('.roadmap-counter-badge');
     if (counterBadge) {
-      counterBadge.innerHTML = `Freigegeben: <strong>${approved} von ${total}</strong> Maßnahmen`;
+      counterBadge.innerHTML = `Freigegeben: <strong>${approved} von ${total}</strong> Maßnahmen <span style="color: #00f0ff; margin-left: 4px;">(${percent}% aktiv)</span>`;
     }
 
     const btnAll = container.querySelector('.roadmap-quick-btn[data-filter="all"]');
@@ -3416,17 +3417,39 @@ export function renderInteractiveRoadmap(steps) {
     if (btnAll) btnAll.innerText = `Alle (${total})`;
     if (btnApp) btnApp.innerText = `Nur [JA] (${approved})`;
     if (btnRej) btnRej.innerText = `Nur [NEIN] (${rejected})`;
+
+    // Live-Update des generierten Master-Prompts in der Vorschau falls sichtbar
+    const codePreview = document.getElementById('code-preview-content');
+    if (codePreview) {
+      const activeApproved = validSteps.filter(s => s.approved !== false && s.enabled !== false);
+      codePreview.innerText = buildAntigravityPromptForSteps(activeApproved, state.activeTask);
+    }
   };
 
   const initialApproved = validSteps.filter(s => s.approved !== false && s.enabled !== false).length;
+  const initialPercent = validSteps.length > 0 ? Math.round((initialApproved / validSteps.length) * 100) : 0;
+
+  // Abteilungs-Kategorien für Multi-Filter
+  const catFrontend = validSteps.filter(s => /frontend|aussehen|bedienung|3d|ui/i.test(s.department || s.title)).length;
+  const catBackend = validSteps.filter(s => /backend|server|api|logik|bridge/i.test(s.department || s.title)).length;
+  const catDb = validSteps.filter(s => /datenbank|speicher|supabase|schema|rls/i.test(s.department || s.title)).length;
 
   const statsBarHtml = `
     <div class="roadmap-stats-bar">
-      <span class="roadmap-counter-badge">Freigegeben: <strong>${initialApproved} von ${validSteps.length}</strong> Maßnahmen</span>
-      <div class="roadmap-filter-buttons">
-        <button class="roadmap-quick-btn active" data-filter="all">Alle (${validSteps.length})</button>
-        <button class="roadmap-quick-btn" data-filter="approved">Nur [JA] (${initialApproved})</button>
-        <button class="roadmap-quick-btn" data-filter="rejected">Nur [NEIN] (${validSteps.length - initialApproved})</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <span class="roadmap-counter-badge">Freigegeben: <strong>${initialApproved} von ${validSteps.length}</strong> Maßnahmen <span style="color: #00f0ff; margin-left: 4px;">(${initialPercent}% aktiv)</span></span>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn-roadmap-bulk" id="btn-roadmap-bulk-yes" title="Alle Schritte auf JA setzen">⚡ Alle [JA]</button>
+          <button type="button" class="btn-roadmap-bulk" id="btn-roadmap-bulk-no" title="Alle Schritte auf NEIN setzen">✕ Alle [NEIN]</button>
+        </div>
+      </div>
+      <div class="roadmap-filter-buttons" style="margin-top: 8px;">
+        <button type="button" class="roadmap-quick-btn active" data-filter="all">Alle (${validSteps.length})</button>
+        <button type="button" class="roadmap-quick-btn" data-filter="approved">Nur [JA] (${initialApproved})</button>
+        <button type="button" class="roadmap-quick-btn" data-filter="rejected">Nur [NEIN] (${validSteps.length - initialApproved})</button>
+        ${catFrontend > 0 ? `<button type="button" class="roadmap-quick-btn" data-filter="frontend">Frontend & 3D (${catFrontend})</button>` : ''}
+        ${catBackend > 0 ? `<button type="button" class="roadmap-quick-btn" data-filter="backend">Backend & APIs (${catBackend})</button>` : ''}
+        ${catDb > 0 ? `<button type="button" class="roadmap-quick-btn" data-filter="db">Datenbank & RLS (${catDb})</button>` : ''}
       </div>
     </div>
   `;
@@ -3434,12 +3457,17 @@ export function renderInteractiveRoadmap(steps) {
   const cardsHtml = validSteps.map((step) => {
     const isApproved = step.approved !== false && step.enabled !== false;
     const targetFile = step.file || step.target_file || '05_Antigravity_Outputs/ANTIGRAVITY_TASK.md';
+    const deptStr = step.department || 'Allgemein';
+    const priority = step.priority || 'HOCH';
+    const stepCategory = /frontend|3d|aussehen/i.test(deptStr) ? 'frontend' : (/backend|server|api/i.test(deptStr) ? 'backend' : (/datenbank|schema|speicher/i.test(deptStr) ? 'db' : 'other'));
+
     return `
-      <div class="roadmap-step-card ${isApproved ? 'enabled' : 'disabled'}" id="step-card-${escapeHtml(step.id)}" data-approved="${isApproved}">
+      <div class="roadmap-step-card ${isApproved ? 'enabled' : 'disabled'}" id="step-card-${escapeHtml(step.id)}" data-approved="${isApproved}" data-category="${stepCategory}">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <span class="step-id-badge">${escapeHtml(step.id)}</span>
-            <span class="step-dept-badge">${escapeHtml(step.department || 'Allgemein')}</span>
+            <span class="step-dept-badge">${escapeHtml(deptStr)}</span>
+            <span class="step-priority-badge priority-${priority.toLowerCase()}">${escapeHtml(priority)}</span>
             <span class="badge-logic-verified">✔ Logik geprüft durch Abteilungsleiter</span>
             <strong style="color: #fff; font-size: 13px;">${escapeHtml(step.title)}</strong>
           </div>
@@ -3449,11 +3477,11 @@ export function renderInteractiveRoadmap(steps) {
           </label>
         </div>
 
-        <div style="font-size: 11px; color: #94a3b8; margin: 6px 0; line-height: 1.4;">
+        <div style="font-size: 11px; color: #94a3b8; margin: 8px 0; line-height: 1.45;">
           ${escapeHtml(step.description || '')}
         </div>
 
-        <div style="font-size: 10px; color: #38bdf8; display: flex; align-items: center; gap: 4px; font-family: var(--font-mono);">
+        <div style="font-size: 10px; color: #38bdf8; display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); background: rgba(15, 23, 42, 0.6); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.15);">
           <span>📁 Ziel-Datei:</span>
           <code>${escapeHtml(targetFile)}</code>
         </div>
@@ -3473,16 +3501,59 @@ export function renderInteractiveRoadmap(steps) {
 
       container.querySelectorAll('.roadmap-step-card').forEach(card => {
         const approved = card.dataset.approved === 'true';
+        const category = card.dataset.category || 'other';
+
         if (filter === 'all') {
           card.style.display = 'block';
         } else if (filter === 'approved') {
           card.style.display = approved ? 'block' : 'none';
         } else if (filter === 'rejected') {
           card.style.display = !approved ? 'block' : 'none';
+        } else if (filter === 'frontend') {
+          card.style.display = (category === 'frontend') ? 'block' : 'none';
+        } else if (filter === 'backend') {
+          card.style.display = (category === 'backend') ? 'block' : 'none';
+        } else if (filter === 'db') {
+          card.style.display = (category === 'db') ? 'block' : 'none';
         }
       });
     });
   });
+
+  // Bulk [JA] / [NEIN] Buttons
+  const bulkYes = container.querySelector('#btn-roadmap-bulk-yes');
+  if (bulkYes) {
+    bulkYes.addEventListener('click', () => {
+      validSteps.forEach(s => { s.approved = true; s.enabled = true; });
+      container.querySelectorAll('.step-checkbox').forEach(cb => { cb.checked = true; });
+      container.querySelectorAll('.roadmap-step-card').forEach(c => {
+        c.classList.add('enabled');
+        c.classList.remove('disabled');
+        c.dataset.approved = 'true';
+        const btnSpan = c.querySelector('.switch-toggle-btn');
+        if (btnSpan) { btnSpan.innerText = 'JA'; btnSpan.className = 'switch-toggle-btn yes'; }
+      });
+      updateStatsAndCounters();
+      saveLocalCheckpoint();
+    });
+  }
+
+  const bulkNo = container.querySelector('#btn-roadmap-bulk-no');
+  if (bulkNo) {
+    bulkNo.addEventListener('click', () => {
+      validSteps.forEach(s => { s.approved = false; s.enabled = false; });
+      container.querySelectorAll('.step-checkbox').forEach(cb => { cb.checked = false; });
+      container.querySelectorAll('.roadmap-step-card').forEach(c => {
+        c.classList.remove('enabled');
+        c.classList.add('disabled');
+        c.dataset.approved = 'false';
+        const btnSpan = c.querySelector('.switch-toggle-btn');
+        if (btnSpan) { btnSpan.innerText = 'NEIN'; btnSpan.className = 'switch-toggle-btn no'; }
+      });
+      updateStatsAndCounters();
+      saveLocalCheckpoint();
+    });
+  }
 
   // Event-Listener für Schalter / Checkboxen
   container.querySelectorAll('.step-checkbox').forEach(input => {
@@ -3533,6 +3604,7 @@ export function extractClientStructuredSteps(task) {
         file: '02_Frontend_UI_und_3D_Studio/app.js',
         target_file: '02_Frontend_UI_und_3D_Studio/app.js',
         description: 'Implementierung der Dark-Slate Komponenten und der dynamischen [JA]/[NEIN] Entscheidungsliste für Optimierungen und Neuerungen.',
+        priority: 'HOCH',
         logicVerified: true,
         approved: true,
         enabled: true
@@ -3544,6 +3616,7 @@ export function extractClientStructuredSteps(task) {
         file: '06_Deployment_und_Config/server.js',
         target_file: '06_Deployment_und_Config/server.js',
         description: 'Absicherung der API-Endpunkte für Gemini und Ollama Inferenz sowie Task-Historie.',
+        priority: 'HOCH',
         logicVerified: true,
         approved: true,
         enabled: true
@@ -3555,6 +3628,7 @@ export function extractClientStructuredSteps(task) {
         file: '01_Datenbank_Supabase/schema.sql',
         target_file: '01_Datenbank_Supabase/schema.sql',
         description: 'Tabellenstrukturen, relationale Indizes und RLS-Sicherheitsregeln absichern.',
+        priority: 'HOCH',
         logicVerified: true,
         approved: true,
         enabled: true
@@ -3566,6 +3640,55 @@ export function extractClientStructuredSteps(task) {
         file: '02_Frontend_UI_und_3D_Studio/studio3D.js',
         target_file: '02_Frontend_UI_und_3D_Studio/studio3D.js',
         description: 'Optimierung des OrbitControls Damping, 60 FPS Animation-Frames und Raum-Statusanzeigen.',
+        priority: 'HOCH',
+        logicVerified: true,
+        approved: true,
+        enabled: true
+      },
+      {
+        id: 'step_5',
+        title: 'Local Bridge WebSocket-Streaming & Live-Log [step_5]',
+        department: '7. Verbindungen & APIs',
+        file: '04_KI_Engine_und_Bridges/localBridgeServer.js',
+        target_file: '04_KI_Engine_und_Bridges/localBridgeServer.js',
+        description: 'WebSocket Live-Log-Streaming statt HTTP-Polling für minimale Latenz.',
+        priority: 'MITTEL',
+        logicVerified: true,
+        approved: true,
+        enabled: true
+      },
+      {
+        id: 'step_6',
+        title: 'Token-Budget & Fallback-Retry-Exponential [step_6]',
+        department: '5. Server & Hintergrund-Logik (Backend)',
+        file: '02_Frontend_UI_und_3D_Studio/llmEngine.js',
+        target_file: '02_Frontend_UI_und_3D_Studio/llmEngine.js',
+        description: 'Automatisches Token-Clipping & exponentielles Backoff bei Rate-Limits.',
+        priority: 'MITTEL',
+        logicVerified: true,
+        approved: true,
+        enabled: true
+      },
+      {
+        id: 'step_7',
+        title: 'Code-RAG AST-Chunking Filter für Großdateien [step_7]',
+        department: '2. Bauplan & Technik',
+        file: '02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js',
+        target_file: '02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js',
+        description: 'AST-basierter Chunking-Filter für Code-Dateien (> 500 Zeilen).',
+        priority: 'HOCH',
+        logicVerified: true,
+        approved: true,
+        enabled: true
+      },
+      {
+        id: 'step_8',
+        title: 'Offline PWA Caching & ServiceWorker [step_8]',
+        department: '10. Bereitstellung & Wartung (DevOps)',
+        file: '06_Deployment_und_Config/serviceWorker.js',
+        target_file: '06_Deployment_und_Config/serviceWorker.js',
+        description: 'ServiceWorker für vollständige Offline-Verfügbarkeit des Studios.',
+        priority: 'NIEDRIG',
         logicVerified: true,
         approved: true,
         enabled: true

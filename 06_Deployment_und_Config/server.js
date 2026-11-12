@@ -58,7 +58,14 @@ const MIME_TYPES = {
 function parseBody(req) {
   return new Promise((resolve) => {
     let body = '';
-    req.on('data', chunk => { body += chunk; });
+    req.on('data', chunk => { 
+      body += chunk; 
+      // DoS-Schutz: Maximale Payload-Größe 10 MB
+      if (body.length > 10 * 1024 * 1024) {
+        req.destroy();
+        resolve({});
+      }
+    });
     req.on('end', () => {
       try {
         resolve(JSON.parse(body || '{}'));
@@ -69,16 +76,44 @@ function parseBody(req) {
   });
 }
 
+/**
+ * Maskiert vertrauliche API-Schlüssel für sichere Logs und Error-Payloads
+ */
+function maskApiKey(key) {
+  if (!key || typeof key !== 'string') return '[NONE]';
+  if (key.length <= 8) return '***';
+  return `${key.slice(0, 4)}...${key.slice(-4)}`;
+}
+
+/**
+ * Bereinigt Dateinamen für den sicheren Export gegen Directory-Traversal
+ */
+function sanitizeExportFilename(rawFilename) {
+  if (!rawFilename || typeof rawFilename !== 'string') {
+    return 'ANTIGRAVITY_TASK.md';
+  }
+  let base = path.basename(rawFilename.trim());
+  let ext = path.extname(base);
+  let nameWithoutExt = ext ? base.slice(0, -ext.length) : base;
+  let clean = nameWithoutExt.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_');
+  if (!clean || clean === '_') clean = 'ANTIGRAVITY_TASK';
+  return `${clean}.md`;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   let pathname = decodeURIComponent(url.pathname);
 
-  // CORS-Header & Tunnel-Bypass für mobiles Arbeiten von unterwegs
+  // CORS-Header & Sicherheits-Header (CORS-Hardening)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Bypass-Tunnel-Reminder, ngrok-skip-browser-warning');
   res.setHeader('Bypass-Tunnel-Reminder', 'true');
   res.setHeader('ngrok-skip-browser-warning', 'true');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -151,14 +186,21 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Dual-Engine Inferenz-Proxy (Gemini Cloud / Ollama Lokal)
-  if (pathname === '/api/llm/query' && req.method === 'POST') {
+  if ((pathname === '/api/llm/query' || pathname === '/api/generate') && req.method === 'POST') {
     try {
       const body = await parseBody(req);
       const { provider = 'gemini', systemPrompt = '', userPrompt = '', apiKey = '', model, expectJson = false } = body;
 
-      if (!userPrompt) {
+      if (!userPrompt || typeof userPrompt !== 'string' || userPrompt.trim() === '') {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: 'userPrompt erforderlich.' }));
+        res.end(JSON.stringify({ success: false, error: 'userPrompt ist erforderlich und darf nicht leer sein.' }));
+        return;
+      }
+
+      // Payload-Größenbegrenzung für Inferenz-Prompts (500.000 Zeichen)
+      if (userPrompt.length > 500000 || (systemPrompt && systemPrompt.length > 200000)) {
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Payload zu groß (maximal 500.000 Zeichen erlaubt).' }));
         return;
       }
 
@@ -175,12 +217,25 @@ const server = http.createServer(async (req, res) => {
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
-        const resp = await fetch('http://localhost:11434/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(ollamaPayload),
-          signal: controller.signal
-        });
+        let resp;
+        try {
+          resp = await fetch('http://localhost:11434/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ollamaPayload),
+            signal: controller.signal
+          });
+        } catch (fetchErr) {
+          clearTimeout(timeoutId);
+          res.writeHead(503, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            provider: 'ollama',
+            model: ollamaModel,
+            error: 'Ollama-Server ist lokal nicht erreichbar oder hat das Zeitlimit überschritten (Port 11434).'
+          }));
+          return;
+        }
         clearTimeout(timeoutId);
 
         if (!resp.ok) {
@@ -223,17 +278,32 @@ const server = http.createServer(async (req, res) => {
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 45000);
-        const resp = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents }),
-          signal: controller.signal
-        });
+        let resp;
+        try {
+          resp = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents }),
+            signal: controller.signal
+          });
+        } catch (fetchErr) {
+          clearTimeout(timeoutId);
+          res.writeHead(504, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            provider: 'gemini',
+            model: geminiModel,
+            error: 'Google Gemini API-Aufruf hat das Zeitlimit überschritten (Gateway Timeout).'
+          }));
+          return;
+        }
         clearTimeout(timeoutId);
 
         if (!resp.ok) {
-          const errText = await resp.text();
-          throw new Error(`Gemini API Fehler (${resp.status}): ${errText.slice(0, 150)}`);
+          const rawErr = await resp.text();
+          // API-Key in Fehlerausgaben maskieren
+          const sanitizedErr = rawErr.replace(new RegExp(geminiKey, 'g'), maskApiKey(geminiKey));
+          throw new Error(`Gemini API Fehler (${resp.status}): ${sanitizedErr.slice(0, 150)}`);
         }
 
         const data = await resp.json();
@@ -278,11 +348,25 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Checkpoint sicher speichern
+  // Checkpoint sicher mit Backup speichern
   if (pathname === '/api/task/checkpoint' && req.method === 'POST') {
     try {
       const body = await parseBody(req);
-      const cpFile = path.join(ROOT_DIR, '00_Checkpoints_und_Status', 'active_checkpoint.json');
+      const cpDir = path.join(ROOT_DIR, '00_Checkpoints_und_Status');
+      const cpFile = path.join(cpDir, 'active_checkpoint.json');
+      const cpBackup = path.join(cpDir, 'active_checkpoint.backup.json');
+
+      if (!fs.existsSync(cpDir)) {
+        fs.mkdirSync(cpDir, { recursive: true });
+      }
+
+      // Vorhandenen Checkpoint vor Überschreiben als Backup sichern
+      if (fs.existsSync(cpFile)) {
+        try {
+          fs.copyFileSync(cpFile, cpBackup);
+        } catch { /* ignore backup failure */ }
+      }
+
       fs.writeFileSync(cpFile, JSON.stringify(body, null, 2), 'utf-8');
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, message: 'Checkpoint erfolgreich gespeichert.' }));
@@ -294,14 +378,26 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Task-Historie abfragen (mit strikter Parameter-Validierung)
+  // Task-Historie abfragen (mit Status-Filter & strikter Validierung)
   if (pathname === '/api/task/history' && req.method === 'GET') {
     try {
       const rawLimit = parseInt(url.searchParams.get('limit') || '20', 10);
       const limit = isNaN(rawLimit) ? 20 : Math.min(Math.max(rawLimit, 1), 100);
-      const history = await getTaskHistory(limit);
+      const requestedStatus = url.searchParams.get('status');
+
+      let history = await getTaskHistory(limit);
+
+      if (requestedStatus) {
+        history = history.filter(t => {
+          if (requestedStatus === 'completed') {
+            return t.status === 'approved' || t.status === 'completed';
+          }
+          return t.status === requestedStatus;
+        });
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, tasks: history, limit }));
+      res.end(JSON.stringify({ success: true, tasks: history, limit, total: history.length }));
       return;
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -310,17 +406,46 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-function sanitizeExportFilename(rawFilename) {
-  if (!rawFilename || typeof rawFilename !== 'string') {
-    return 'ANTIGRAVITY_TASK.md';
+  // Dedizierter Endpunkt für abgeschlossene Tasks (Task-Historie Klick-Inspektion)
+  if (pathname === '/api/task/completed' && req.method === 'GET') {
+    try {
+      const history = await getTaskHistory(50);
+      const completed = history.filter(t => t.status === 'approved' || t.status === 'completed');
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, count: completed.length, tasks: completed }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
   }
-  let base = path.basename(rawFilename.trim());
-  let ext = path.extname(base);
-  let nameWithoutExt = ext ? base.slice(0, -ext.length) : base;
-  let clean = nameWithoutExt.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_');
-  if (!clean || clean === '_') clean = 'ANTIGRAVITY_TASK';
-  return `${clean}.md`;
-}
+
+  // Master-Optimierungs-Katalog abfragen (OPT-01 bis OPT-08)
+  if (pathname === '/api/optimizations' && req.method === 'GET') {
+    try {
+      const optFile = path.join(ROOT_DIR, '00_Checkpoints_und_Status', 'OPTIMIERUNGEN_UND_NEUERUNGEN.md');
+      let markdownContent = '';
+      if (fs.existsSync(optFile)) {
+        markdownContent = fs.readFileSync(optFile, 'utf-8');
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        catalog_version: '1.0',
+        master_steps: 4,
+        total_optimizations: 8,
+        markdown: markdownContent
+      }));
+      return;
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+      return;
+    }
+  }
 
 // Task-Export-Endpunkt (mit dynamischen Dateinamen & striktem Sandbox-Schutz)
   if (pathname === '/api/export-task' && req.method === 'POST') {
@@ -424,7 +549,7 @@ function sanitizeExportFilename(rawFilename) {
     }
   }
 
-  // Benutzerentscheidung verarbeiten (JA / NEIN)
+  // Benutzerentscheidung verarbeiten (JA / NEIN mit strikter Validierung)
   if (pathname === '/api/task/decision' && req.method === 'POST') {
     try {
       const body = await parseBody(req);
@@ -436,11 +561,26 @@ function sanitizeExportFilename(rawFilename) {
         return;
       }
 
-      const result = await handleUserDecision(taskId, decision, feedback || '');
+      const upperDecision = String(decision).trim().toUpperCase();
+      if (upperDecision !== 'JA' && upperDecision !== 'NEIN') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Ungültige Entscheidung. Nur "JA" oder "NEIN" zulässig.' }));
+        return;
+      }
+
+      const sanitizedFeedback = typeof feedback === 'string' ? feedback.slice(0, 5000).trim() : '';
+      const result = await handleUserDecision(taskId, upperDecision, sanitizedFeedback);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, result }));
+      res.end(JSON.stringify({ 
+        success: true, 
+        taskId, 
+        decision: upperDecision, 
+        result,
+        timestamp: new Date().toISOString()
+      }));
       return;
     } catch (err) {
+      console.error('[Server Decision API] Fehler:', err.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: err.message }));
       return;

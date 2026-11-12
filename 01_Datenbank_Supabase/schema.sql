@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     last_completed_agent TEXT,
     checkpoint_data JSONB NOT NULL DEFAULT '{}'::jsonb,
     status TEXT NOT NULL DEFAULT 'running' 
-        CHECK (status IN ('running', 'paused_limit', 'pending_approval', 'approved', 'rejected')),
+        CHECK (status IN ('running', 'paused_limit', 'pending_approval', 'approved', 'rejected', 'completed')),
     trevor_summary TEXT,
     antigravity_prompt TEXT,
     rejection_feedback TEXT,
@@ -128,21 +128,43 @@ CREATE TABLE IF NOT EXISTS trevor_memory (
 );
 
 -- -----------------------------------------------------------------------------
+-- 9. TABLE: idle_training_logs (Transparenter Agenten-Trainingsmodus & Vorschläge)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS idle_training_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    agent_id TEXT NOT NULL,
+    agent_name TEXT NOT NULL,
+    target_project TEXT NOT NULL DEFAULT 'KI_Trevor',
+    focus_domain TEXT NOT NULL,
+    activity_log TEXT NOT NULL,
+    finding_summary TEXT,
+    code_proposal TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'discarded')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+-- -----------------------------------------------------------------------------
 -- INDEXES FOR MAXIMUM QUERY PERFORMANCE
 -- -----------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_status_created_at ON tasks(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tasks_project_created ON tasks(project_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tasks_current_stage ON tasks(current_stage);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_task_id ON agent_logs(task_id);
+CREATE INDEX IF NOT EXISTS idx_agent_logs_task_created ON agent_logs(task_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_agent_id ON agent_logs(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_department_id ON agent_logs(department_id);
 CREATE INDEX IF NOT EXISTS idx_optimizations_status ON system_optimizations(status);
+CREATE INDEX IF NOT EXISTS idx_optimizations_status_dept ON system_optimizations(status, department_id);
 CREATE INDEX IF NOT EXISTS idx_optimizations_dept ON system_optimizations(department_id);
 CREATE INDEX IF NOT EXISTS idx_task_decisions_task ON task_decisions(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_decisions_step ON task_decisions(step_id);
 CREATE INDEX IF NOT EXISTS idx_dept_metrics_floor ON department_metrics(floor);
 CREATE INDEX IF NOT EXISTS idx_trevor_memory_dept ON trevor_memory(department);
 CREATE INDEX IF NOT EXISTS idx_trevor_memory_created_at ON trevor_memory(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_idle_training_created ON idle_training_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_idle_training_status ON idle_training_logs(status);
 
 -- -----------------------------------------------------------------------------
 -- AUTO-UPDATE TRIGGER FOR updated_at COLUMNS
@@ -198,6 +220,7 @@ ALTER TABLE system_optimizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_decisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE department_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trevor_memory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idle_training_logs ENABLE ROW LEVEL SECURITY;
 
 DO $$ 
 BEGIN
@@ -224,6 +247,9 @@ BEGIN
 
     DROP POLICY IF EXISTS "Public access trevor_memory" ON trevor_memory;
     CREATE POLICY "Public access trevor_memory" ON trevor_memory FOR ALL USING (true) WITH CHECK (true);
+
+    DROP POLICY IF EXISTS "Public access idle_training_logs" ON idle_training_logs;
+    CREATE POLICY "Public access idle_training_logs" ON idle_training_logs FOR ALL USING (true) WITH CHECK (true);
 END $$;
 
 -- -----------------------------------------------------------------------------
@@ -247,13 +273,17 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Seed Freigegebene Master-Optimierungen (Roadmap)
+-- Seed Freigegebene Master-Optimierungen (Roadmap OPT-01 bis OPT-08)
 INSERT INTO system_optimizations (id, category, department_id, title, target_file, description, priority, status)
 VALUES
-    ('OPT-01', 'Frontend', 3, 'Interaktive Benutzeroberfläche & Checkliste', '02_Frontend_UI_und_3D_Studio/app.js', 'Dark-Slate [JA]/[NEIN] Entscheidungsliste mit Multi-Filter & Live-Counter', 'HIGH', 'completed'),
-    ('OPT-02', 'Backend', 5, 'Dual-Engine REST-Endpunkte & Task-Router', '06_Deployment_und_Config/server.js', 'Absicherung der API-Endpunkte für Gemini und Ollama Inferenz sowie Task-Historie', 'HIGH', 'completed'),
-    ('OPT-03', 'Database', 6, 'Supabase Schema & Row-Level-Security Policies', '01_Datenbank_Supabase/schema.sql', 'Tabellenstrukturen, relationale Indizes und RLS-Sicherheitsregeln absichern', 'HIGH', 'completed'),
-    ('OPT-04', '3D-Campus', 4, 'Three.js 3D-Campus Render-Loop & State-Sync', '02_Frontend_UI_und_3D_Studio/studio3D.js', 'Optimierung des OrbitControls Damping, 60 FPS Animation-Frames und Raum-Statusanzeigen', 'HIGH', 'in_progress')
+    ('OPT-01', 'Frontend & 3D', 3, 'Interaktive Benutzeroberfläche & Checkliste', '02_Frontend_UI_und_3D_Studio/app.js', 'Dark-Slate [JA]/[NEIN] Entscheidungsliste mit Multi-Filter & Live-Counter', 'HIGH', 'completed'),
+    ('OPT-02', 'Backend & Bridges', 5, 'Dual-Engine REST-Endpunkte & Task-Router', '06_Deployment_und_Config/server.js', 'Absicherung der API-Endpunkte für Gemini und Ollama Inferenz sowie Task-Historie', 'HIGH', 'completed'),
+    ('OPT-03', 'System & Architektur', 6, 'Supabase Schema & Row-Level-Security Policies', '01_Datenbank_Supabase/schema.sql', 'Tabellenstrukturen, relationale Indizes und RLS-Sicherheitsregeln absichern', 'HIGH', 'completed'),
+    ('OPT-04', '3D-Campus & Visualisierung', 4, 'Three.js 3D-Campus Render-Loop & State-Sync', '02_Frontend_UI_und_3D_Studio/studio3D.js', 'Optimierung des OrbitControls Damping, 60 FPS Animation-Frames und Raum-Statusanzeigen', 'HIGH', 'in_progress'),
+    ('OPT-05', 'Bridges & Schnittstellen', 7, 'Local Bridge WebSocket-Streaming & Live-Log', '04_KI_Engine_und_Bridges/localBridgeServer.js', 'WebSocket Live-Log-Streaming statt HTTP-Polling für minimale Latenz', 'MEDIUM', 'proposed'),
+    ('OPT-06', 'KI Engine & LLM', 5, 'Token-Budget & Fallback-Retry-Exponential', '02_Frontend_UI_und_3D_Studio/llmEngine.js', 'Automatisches Token-Clipping & exponentielles Backoff bei Rate-Limits', 'MEDIUM', 'proposed'),
+    ('OPT-07', 'Architektur & Workflow', 2, 'Code-RAG AST-Chunking Filter für Großdateien', '02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js', 'AST-basierter Chunking-Filter für Code-Dateien (> 500 Zeilen)', 'HIGH', 'proposed'),
+    ('OPT-08', 'DevOps & Deployment', 10, 'Offline PWA Caching & ServiceWorker', '06_Deployment_und_Config/serviceWorker.js', 'ServiceWorker für vollständige Offline-Verfügbarkeit des Studios', 'LOW', 'proposed')
 ON CONFLICT (id) DO UPDATE SET
     status = EXCLUDED.status,
     title = EXCLUDED.title,

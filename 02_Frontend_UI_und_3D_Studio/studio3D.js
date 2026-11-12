@@ -2033,14 +2033,32 @@ export function focusAgentIn3D(agentId) {
   }
 }
 
+let current3DActiveStage = 1;
+
 /**
  * 60-FPS ANIMATIONS-LOOP MIT POST-PROCESSING & BUTTERWEICHEM LERPING
  */
 function animate() {
   animationFrameId = requestAnimationFrame(animate);
 
-  const delta = clock ? clock.getDelta() : 0.016;
+  const rawDelta = clock ? clock.getDelta() : 0.016;
+  // Delta-Clamping: Verhindert Ruckeln/Sprünge bei Tab-Wechseln oder Inaktivität
+  const delta = Math.min(Math.max(rawDelta, 0.001), 0.08);
   const elapsed = clock ? clock.getElapsedTime() : performance.now() * 0.001;
+
+  // Stage-spezifische Geschwindigkeits- und Leucht-Multiplikatoren
+  let stageSpeedMult = 1.0;
+  let stageGlowMult = 1.0;
+  if (current3DActiveStage === 2) {
+    stageSpeedMult = 1.2;
+    stageGlowMult = 1.15;
+  } else if (current3DActiveStage === 3) {
+    stageSpeedMult = 1.55;
+    stageGlowMult = 1.4;
+  } else if (current3DActiveStage === 4) {
+    stageSpeedMult = 0.85;
+    stageGlowMult = 1.0;
+  }
 
   // A. HOLO IRON-MAN & J.A.R.V.I.S. ANIMATIONEN
   if (holoJarvisCoreGroup) {
@@ -2050,13 +2068,13 @@ function animate() {
     }
 
     if (holoJarvisPoints) {
-      holoJarvisPoints.rotation.y += delta * 0.22;
-      holoJarvisPoints.rotation.x += delta * 0.08;
+      holoJarvisPoints.rotation.y += delta * 0.22 * stageSpeedMult;
+      holoJarvisPoints.rotation.x += delta * 0.08 * stageSpeedMult;
     }
 
     holoJarvisRings.forEach(ring => {
       const spd = ring.userData.speed || 0.5;
-      ring.rotation.z += delta * spd;
+      ring.rotation.z += delta * spd * stageSpeedMult;
     });
 
     const isSpeaking = (typeof window !== 'undefined' && window.isJarvisSpeaking === true);
@@ -2065,7 +2083,8 @@ function animate() {
     holoJarvisCoreGroup.scale.set(currentScale, currentScale, currentScale);
 
     if (holoJarvisLight) {
-      holoJarvisLight.intensity = isSpeaking ? 5.2 + Math.sin(elapsed * 8.0) * 2.0 : 3.4 + pulseBase * 0.6;
+      const baseIntensity = isSpeaking ? 5.2 + Math.sin(elapsed * 8.0) * 2.0 : 3.4 + pulseBase * 0.6;
+      holoJarvisLight.intensity = baseIntensity * stageGlowMult;
     }
   }
 
@@ -2077,7 +2096,7 @@ function animate() {
 
   // C. LICHT-IMPULSE AUF DEN VERBINDUNGSLINIEN
   connectionCurves.forEach(item => {
-    item.progress = (item.progress + delta * 0.35) % 1.0;
+    item.progress = (item.progress + delta * 0.35 * stageSpeedMult) % 1.0;
     const pt = item.curve.getPoint(item.progress);
     item.mesh.position.copy(pt);
   });
@@ -2097,7 +2116,7 @@ function animate() {
     }
   }
 
-  // E. ORBITCONTROLS DAMPING UPDATEN
+  // E. ORBITCONTROLS DAMPING UPDATEN (Strikt 0.05 Damping-Faktor)
   if (controls) {
     controls.update();
   }
@@ -2167,24 +2186,70 @@ export function updateAgentStatusIn3D(agentId, type, status) {
   updateAgentStatus(agentId, status);
 }
 
+/**
+ * Synchronisiert die 4 Workflow-Stufen mit der 3D-Campus-Beleuchtung & Hologramm
+ */
 export function setStageIn3D(stageNum) {
-  console.log(`[Studio 3D] Stage gesetzt: ${stageNum}`);
+  const num = typeof stageNum === 'number' ? stageNum : parseInt(String(stageNum).charAt(0), 10) || 1;
+  current3DActiveStage = num;
+  console.log(`[Studio 3D] Stage gesetzt: ${num} (Workflow State-Sync aktiv)`);
+
+  const THREE = getTHREE();
+  if (!THREE) return;
+
+  // Stufen-spezifische Farb- und Beleuchtungsanpassung
+  if (holoJarvisLight) {
+    if (num === 1) {
+      holoJarvisLight.color.setHex(0x00F0FF); // Cyan für Fachteam
+    } else if (num === 2) {
+      holoJarvisLight.color.setHex(0xF59E0B); // Gold/Amber für Chef-Agenten
+    } else if (num === 3) {
+      holoJarvisLight.color.setHex(0x38BDF8); // Intensives Sky-Blue für Trevor Core
+    } else if (num === 4) {
+      holoJarvisLight.color.setHex(0x10B981); // Smaragdgrün für Du entscheidest
+    }
+  }
 }
 
+/**
+ * Universeller State-Sync für Stufen & Etagen-Umschaltung
+ */
 export function update3DStudioState(stageInput, floor) {
   if (floor === 'UG') {
     switchFloor('UG');
   } else if (floor === 'EG') {
     switchFloor('EG');
   }
+
+  if (stageInput !== undefined && stageInput !== null) {
+    let stageNum = 1;
+    if (typeof stageInput === 'number') {
+      stageNum = stageInput;
+    } else if (typeof stageInput === 'string') {
+      if (stageInput.includes('1') || stageInput.includes('fachteam')) stageNum = 1;
+      else if (stageInput.includes('2') || stageInput.includes('chef')) stageNum = 2;
+      else if (stageInput.includes('3') || stageInput.includes('trevor')) stageNum = 3;
+      else if (stageInput.includes('4') || stageInput.includes('decision')) stageNum = 4;
+    }
+    setStageIn3D(stageNum);
+  }
 }
 
 export function triggerDataStreamToTrevor(deptId) {
   console.log(`[Studio 3D] Datenimpuls von Dept #${deptId} zum Holo-JARVIS ausgelöst`);
+  connectionCurves.forEach(item => {
+    if (!deptId || item.deptId === deptId || item.deptId === parseInt(deptId, 10)) {
+      item.progress = 0.0;
+    }
+  });
 }
 
 export function updateRoomMicroStatus(deptId, statusText) {
-  // Dezent
+  const dId = parseInt(deptId, 10);
+  if (isNaN(dId)) return;
+  TREVOR_AGENT_ROSTER.filter(a => a.dept === dId).forEach(agent => {
+    updateAgentStatus(agent.id, 'working', statusText);
+  });
 }
 
 function onWindowResize() {

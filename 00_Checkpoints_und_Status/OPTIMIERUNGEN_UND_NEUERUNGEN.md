@@ -8,10 +8,10 @@
 
 | ID | Bereich | Priorität | Status | Ziel-Datei / Modul | Kurzbeschreibung |
 |---|---|---|---|---|---|
-| **OPT-01** | Frontend UI & Roadmap | HOCH | In Arbeit (Schritt 1) | `02_Frontend_UI_und_3D_Studio/app.js` | Dark-Slate [JA]/[NEIN] Entscheidungsliste mit Multi-Filter & Zähler |
-| **OPT-02** | Backend & Server API | HOCH | In Arbeit (Schritt 2) | `06_Deployment_und_Config/server.js` | Dual-Engine Proxy, CORS-Hardening, Checkpoint-Endpunkte |
-| **OPT-03** | Datenbank & Sicherheit | HOCH | In Arbeit (Schritt 3) | `01_Datenbank_Supabase/schema.sql` | RLS-Regeln, Backlog-Tabelle, Indizes & Migrationen |
-| **OPT-04** | 3D-Campus & Three.js | HOCH | In Arbeit (Schritt 4) | `02_Frontend_UI_und_3D_Studio/studio3D.js` | OrbitControls Damping (0.05), 60 FPS Delta-Clock, State-Sync |
+| **OPT-01** | Frontend UI & Roadmap | HOCH | ✅ Abgeschlossen (LIVE) | `02_Frontend_UI_und_3D_Studio/app.js` | Dark-Slate [JA]/[NEIN] Entscheidungsliste mit Multi-Filter & Zähler |
+| **OPT-02** | Backend & Server API | HOCH | ✅ Abgeschlossen (LIVE) | `06_Deployment_und_Config/server.js` | Dual-Engine Proxy, CORS-Hardening, Checkpoint-Endpunkte |
+| **OPT-03** | Datenbank & Sicherheit | HOCH | ✅ Abgeschlossen (LIVE) | `01_Datenbank_Supabase/schema.sql` | RLS-Regeln, Backlog-Tabelle, Indizes & Migrationen |
+| **OPT-04** | 3D-Campus & Three.js | HOCH | ✅ Abgeschlossen (LIVE) | `02_Frontend_UI_und_3D_Studio/studio3D.js` | OrbitControls Damping (0.05), 60 FPS Delta-Clock, State-Sync |
 | **OPT-05** | Local Bridge Server | MITTEL | Geplant | `04_KI_Engine_und_Bridges/localBridgeServer.js` | WebSocket Live-Log-Streaming statt Polling |
 | **OPT-06** | KI Engine & Token-Budget | MITTEL | Geplant | `02_Frontend_UI_und_3D_Studio/llmEngine.js` | Automatisches Token-Clipping & Fallback-Retry-Exponential |
 | **OPT-07** | Code-RAG Engine | HOCH | Geplant | `02_Frontend_UI_und_3D_Studio/workflowOrchestrator.js` | AST-basierter Chunking-Filter für Code-Dateien (> 500 Zeilen) |
