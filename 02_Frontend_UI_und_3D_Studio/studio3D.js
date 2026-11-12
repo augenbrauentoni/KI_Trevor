@@ -1201,195 +1201,323 @@ function setupConstellationNetwork(THREE_LIB) {
 }
 
 /**
- * Erzeugt den High-Tech-Arbeitsplatz eines Abteilungsleiters (Lead)
+ * Erzeugt einen hochdetaillierten 3D-Arbeitsplatz für Agenten (High-Fidelity)
+ * - Sci-Fi Schreibtisch: BoxGeometry mit MeshPhysicalMaterial (color: 0x111928, metalness: 0.8, roughness: 0.2), Cyan-Leuchtkante (emissive: 0x00f0ff)
+ * - Curved Multi-Monitor-Setup: CylinderGeometry (openEnded: true, kleines thetaLength)
+ *   Vorderseite leuchtet hellblau (MeshBasicMaterial, color: 0x0ea5e9), Rückseite dunkelgrau
+ * - PC & Peripherie: Dunkler Tower-PC (BoxGeometry) mit vertikalen Leuchtstreifen neben Tisch, flache Tastatur
+ * - Bürostuhl: Sitzfläche, gebogene Rückenlehne und 5-Stern-Fußkreuz mit Rollen
+ * - Agenten-Figur: Sichtbar im Stuhl / am Tisch mit Kopf, Torso in Abteilungsfarbe (Gold für Leads)
  */
-function createLeadWorkstation(THREE_LIB, agent, colorHex, position) {
-  const group = new THREE_LIB.Group();
-  group.position.copy(position);
-  group.scale.set(1.5, 1.5, 1.5);
-  group.visible = true;
-
-  // Gebogener Metallic-Schreibtisch mit feiner Farbkante
-  const deskGeo = new THREE_LIB.BoxGeometry(1.25, 0.55, 0.65);
-  const deskMat = new THREE_LIB.MeshStandardMaterial({
-    color: 0x0F172A,
-    roughness: 0.25,
-    metalness: 0.8
-  });
-  const desk = new THREE_LIB.Mesh(deskGeo, deskMat);
-  desk.position.y = 0.28;
-  group.add(desk);
-
-  // Leuchtende Tischkante
-  const edgeGeo = new THREE_LIB.BoxGeometry(1.26, 0.025, 0.04);
-  const edgeMat = new THREE_LIB.MeshBasicMaterial({ color: parseInt(colorHex.replace('#', '0x'), 16) });
-  const edgeMesh = new THREE_LIB.Mesh(edgeGeo, edgeMat);
-  edgeMesh.position.set(0, 0.55, -0.31);
-  group.add(edgeMesh);
-
-  // Curved Widescreen
-  const screenGeo = new THREE_LIB.BoxGeometry(0.74, 0.38, 0.03);
-  const screenMat = new THREE_LIB.MeshStandardMaterial({
-    color: 0x0F172A,
-    emissive: parseInt(colorHex.replace('#', '0x'), 16),
-    emissiveIntensity: 0.75,
-    roughness: 0.2,
-    map: serverScreenTexture || null
-  });
-  const screen = new THREE_LIB.Mesh(screenGeo, screenMat);
-  screen.position.set(0, 0.74, 0.06);
-
-  const userData = {
-    type: 'chef',
-    agentId: agent.id,
-    chefId: agent.id,
-    isLead: true,
-    name: agent.name,
-    role: agent.role,
-    department: agent.department,
-    deptCode: agent.deptCode,
-    deptName: agent.deptName,
-    status: 'Bereit',
-    currentTask: null,
-    idleThought: agent.idleThought || 'Auditiere Abteilungsstandards...',
-    easy_explanation: agent.easy_explanation
-  };
-  screen.userData = userData;
-  group.add(screen);
-
-  // Beleuchtete Tastatur
-  const kbGeo = new THREE_LIB.PlaneGeometry(0.42, 0.18);
-  const kbMat = new THREE_LIB.MeshBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.7 });
-  const kb = new THREE_LIB.Mesh(kbGeo, kbMat);
-  kb.rotation.x = -Math.PI / 2;
-  kb.position.set(0, 0.56, 0.18);
-  group.add(kb);
-
-  // Status-Sphäre
-  const orbGeo = new THREE_LIB.SphereGeometry(0.04, 16, 16);
-  const orbMat = new THREE_LIB.MeshBasicMaterial({ color: parseInt(colorHex.replace('#', '0x'), 16) });
-  const orb = new THREE_LIB.Mesh(orbGeo, orbMat);
-  orb.position.set(0.45, 0.60, 0.18);
-  group.add(orb);
-
-  // Schreibtisch-Beleuchtung (PointLight für Arbeitsplatz)
-  if (typeof THREE_LIB.PointLight === 'function') {
-    const deskLight = new THREE_LIB.PointLight(parseInt(colorHex.replace('#', '0x'), 16) || 0x00F0FF, 0.9, 2.5);
-    deskLight.position.set(0, 0.85, 0.05);
-    group.add(deskLight);
+export function createHighDetailWorkstation(THREE_LIB, agentOrOptions, colorHexParam, positionParam, rotYParam = 0, isLeadParam = false) {
+  let agent, colorHex, position, rotY, isLead;
+  if (agentOrOptions && agentOrOptions.agent) {
+    agent = agentOrOptions.agent;
+    colorHex = agentOrOptions.colorHex || colorHexParam || '#00F0FF';
+    position = agentOrOptions.position || positionParam || new THREE_LIB.Vector3(0, 0, 0);
+    rotY = agentOrOptions.rotY ?? rotYParam ?? 0;
+    isLead = agentOrOptions.isLead ?? isLeadParam ?? false;
+  } else {
+    agent = agentOrOptions;
+    colorHex = colorHexParam || '#00F0FF';
+    position = positionParam || new THREE_LIB.Vector3(0, 0, 0);
+    rotY = rotYParam || 0;
+    isLead = isLeadParam || false;
   }
 
-  // Ergonomischer Chefsessel
-  const chairGroup = new THREE_LIB.Group();
-  chairGroup.position.set(0, 0.0, 0.52);
-  const chairSeatGeo = new THREE_LIB.BoxGeometry(0.44, 0.06, 0.42);
-  const chairMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.35, metalness: 0.75 });
-  const chairSeat = new THREE_LIB.Mesh(chairSeatGeo, chairMat);
-  chairSeat.position.y = 0.30;
-  chairGroup.add(chairSeat);
-  const chairBackGeo = new THREE_LIB.BoxGeometry(0.42, 0.50, 0.05);
-  const chairBack = new THREE_LIB.Mesh(chairBackGeo, chairMat);
-  chairBack.position.set(0, 0.56, 0.18);
-  chairGroup.add(chairBack);
-  group.add(chairGroup);
-
-  // Lead-Avatar mit Gold/Cyan-Schulterring
-  const avatar = createStylizedDeveloperAvatar(THREE_LIB, colorHex, true, false);
-  avatar.position.set(0, 0.18, 0.44);
-  avatar.userData = userData;
-  group.add(avatar);
-
-  // Boden-Highlight-Ring
-  const hlGeo = new THREE_LIB.TorusGeometry(0.75, 0.025, 8, 32);
-  const hlMat = new THREE_LIB.MeshBasicMaterial({
-    color: parseInt(colorHex.replace('#', '0x'), 16),
-    transparent: true,
-    opacity: 0.85
-  });
-  const hlRing = new THREE_LIB.Mesh(hlGeo, hlMat);
-  hlRing.rotation.x = Math.PI / 2;
-  hlRing.position.y = 0.02;
-  hlRing.visible = false;
-  group.add(hlRing);
-
-  // Zylinder-Hitbox für schnelles und exaktes Raycasting
-  const hitboxGeo = new THREE_LIB.CylinderGeometry(0.75, 0.75, 1.8, 16);
-  const hitboxMat = new THREE_LIB.MeshBasicMaterial({ visible: false });
-  const hitbox = new THREE_LIB.Mesh(hitboxGeo, hitboxMat);
-  hitbox.position.y = 0.9;
-  hitbox.userData = {
-    ...userData,
-    highlightRing: hlRing,
-    headPos: new THREE_LIB.Vector3(position.x, position.y + 1.4 * 1.5, position.z)
-  };
-  group.add(hitbox);
-
-  const entry = {
-    agent,
-    group,
-    mesh: screen,
-    screen,
-    screens: [screen],
-    avatar,
-    hitbox,
-    isLead: true
-  };
-  agentMeshMap[agent.id] = entry;
-  chefMeshMap[agent.id] = entry;
-
-  if (typeof window !== 'undefined') {
-    window.interactiveAgentMeshes = window.interactiveAgentMeshes || [];
-    window.interactiveAgentMeshes.push(hitbox);
-  }
-  interactiveObjects.push(hitbox);
-  interactiveObjects.push(screen);
-
-  return group;
-}
-
-/**
- * Erzeugt den High-Tech-Arbeitsplatz eines Fach-Spezialisten
- */
-function createSpecialistWorkstation(THREE_LIB, agent, colorHex, position, rotY = 0) {
   const group = new THREE_LIB.Group();
   group.position.copy(position);
   group.rotation.y = rotY;
-  group.scale.set(1.5, 1.5, 1.5);
+  const scale = isLead ? 1.6 : 1.45;
+  group.scale.set(scale, scale, scale);
   group.visible = true;
 
-  // Schreibtisch
-  const deskGeo = new THREE_LIB.BoxGeometry(0.92, 0.52, 0.52);
-  const deskMat = new THREE_LIB.MeshStandardMaterial({
-    color: 0x0F172A,
-    roughness: 0.25,
-    metalness: 0.8
-  });
-  const desk = new THREE_LIB.Mesh(deskGeo, deskMat);
-  desk.position.y = 0.26;
-  group.add(desk);
+  const accentColorInt = parseInt((colorHex || '#00F0FF').replace('#', '0x'), 16);
+  const cyanGlowInt = 0x00F0FF;
+  const leadGoldInt = 0xF59E0B;
 
-  // Leuchtende Tischkante
-  const edgeGeo = new THREE_LIB.BoxGeometry(0.93, 0.02, 0.035);
-  const edgeMat = new THREE_LIB.MeshBasicMaterial({ color: parseInt(colorHex.replace('#', '0x'), 16) });
+  // ---------------------------------------------------------------------------
+  // 1. SCI-FI SCHREIBTISCH: Flacher, abgerundeter Tisch mit leuchtender Cyan-Kante
+  // THREE.BoxGeometry mit MeshPhysicalMaterial, color: 0x111928, metalness: 0.8, roughness: 0.2
+  // ---------------------------------------------------------------------------
+  const deskWidth = isLead ? 1.25 : 0.98;
+  const deskDepth = isLead ? 0.62 : 0.52;
+  const deskHeight = 0.52;
+  const topThickness = 0.045;
+
+  const deskMat = new THREE_LIB.MeshPhysicalMaterial({
+    color: 0x111928,
+    metalness: 0.8,
+    roughness: 0.2,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.2
+  });
+
+  // Haupt-Tischplatte
+  const deskTopGeo = new THREE_LIB.BoxGeometry(deskWidth, topThickness, deskDepth);
+  const deskTop = new THREE_LIB.Mesh(deskTopGeo, deskMat);
+  deskTop.position.set(0, deskHeight, 0);
+  deskTop.castShadow = true;
+  deskTop.receiveShadow = true;
+  group.add(deskTop);
+
+  // Leuchtende Cyan-Kante an der Vorderseite (emissive: 0x00f0ff)
+  const edgeMat = new THREE_LIB.MeshPhysicalMaterial({
+    color: 0x00F0FF,
+    emissive: 0x00F0FF,
+    emissiveIntensity: 1.2,
+    roughness: 0.1,
+    metalness: 0.1
+  });
+  const edgeGeo = new THREE_LIB.BoxGeometry(deskWidth + 0.01, 0.016, 0.02);
   const edgeMesh = new THREE_LIB.Mesh(edgeGeo, edgeMat);
-  edgeMesh.position.set(0, 0.52, -0.25);
+  edgeMesh.position.set(0, deskHeight, deskDepth * 0.5);
   group.add(edgeMesh);
 
-  // Dual-Monitore angewinkelt mit Code-Textur
-  const screenGeo = new THREE_LIB.BoxGeometry(0.38, 0.26, 0.025);
-  const screenMat = new THREE_LIB.MeshStandardMaterial({
-    color: 0x0F172A,
-    emissive: parseInt(colorHex.replace('#', '0x'), 16),
-    emissiveIntensity: 0.75,
-    roughness: 0.2,
-    map: codeScreenTexture || null
+  // Titan-verstärkte Schrägstützen / Tischbeine
+  const legMat = new THREE_LIB.MeshStandardMaterial({
+    color: 0x1E293B,
+    metalness: 0.9,
+    roughness: 0.25
+  });
+  [-1, 1].forEach(side => {
+    const legGeo = new THREE_LIB.BoxGeometry(0.045, deskHeight, deskDepth * 0.75);
+    const leg = new THREE_LIB.Mesh(legGeo, legMat);
+    leg.position.set(side * (deskWidth * 0.44), deskHeight * 0.5, 0);
+    leg.castShadow = true;
+    group.add(leg);
+
+    // Kufe / Bodenfuß
+    const footGeo = new THREE_LIB.BoxGeometry(0.07, 0.02, deskDepth * 0.85);
+    const foot = new THREE_LIB.Mesh(footGeo, legMat);
+    foot.position.set(side * (deskWidth * 0.44), 0.01, 0);
+    group.add(foot);
   });
 
+  // ---------------------------------------------------------------------------
+  // 2. CURVED MULTI-MONITOR-SETUP
+  // THREE.CylinderGeometry (openEnded: true, kleines thetaLength), 2-3 gebogene Monitore
+  // Vorderseite hellblau (MeshBasicMaterial, color: 0x0ea5e9), Rückseite dunkelgrau
+  // ---------------------------------------------------------------------------
+  const monitorGroup = new THREE_LIB.Group();
+  monitorGroup.position.set(0, deskHeight + topThickness * 0.5, 0);
+
+  const screenRadius = 0.85;
+  const screenHeight = isLead ? 0.36 : 0.28;
+  const screenSegments = 16;
+  const monitorY = screenHeight * 0.5 + 0.12;
+
+  // Vorderseiten-Material: Hellblau leuchtend (MeshBasicMaterial, color: 0x0ea5e9)
+  const screenFrontMat = new THREE_LIB.MeshBasicMaterial({
+    color: 0x0EA5E9,
+    side: THREE_LIB.DoubleSide
+  });
+
+  // Rückseiten-Gehäuse-Material: Dunkelgrau
+  const screenBackMat = new THREE_LIB.MeshStandardMaterial({
+    color: 0x111827,
+    roughness: 0.7,
+    metalness: 0.3,
+    side: THREE_LIB.DoubleSide
+  });
+
+  // 3 Monitore: Center, Left (-25°), Right (+25°)
+  const monitorSlices = [
+    { thetaStart: -0.19, thetaLength: 0.38, name: 'center' },
+    { thetaStart: -0.62, thetaLength: 0.38, name: 'left' },
+    { thetaStart: 0.24, thetaLength: 0.38, name: 'right' }
+  ];
+
+  const screenMeshes = [];
+  const cylinderCenterZ = screenRadius * 0.85; // Bogen wölbt sich sanft um den Sitzplatz bei z > 0
+
+  monitorSlices.forEach(slice => {
+    // 1. Hellblauer Screen (Vorderseite)
+    const screenGeo = new THREE_LIB.CylinderGeometry(
+      screenRadius, screenRadius, screenHeight,
+      screenSegments, 1, true,
+      slice.thetaStart, slice.thetaLength
+    );
+    const screenMesh = new THREE_LIB.Mesh(screenGeo, screenFrontMat.clone());
+    screenMesh.position.set(0, monitorY, cylinderCenterZ);
+
+    // 2. Dunkelgraues Außengehäuse (Rückseite)
+    const backGeo = new THREE_LIB.CylinderGeometry(
+      screenRadius * 1.012, screenRadius * 1.012, screenHeight + 0.015,
+      screenSegments, 1, true,
+      slice.thetaStart - 0.01, slice.thetaLength + 0.02
+    );
+    const backMesh = new THREE_LIB.Mesh(backGeo, screenBackMat);
+    backMesh.position.set(0, monitorY, cylinderCenterZ);
+
+    monitorGroup.add(backMesh);
+    monitorGroup.add(screenMesh);
+    screenMeshes.push(screenMesh);
+  });
+
+  // Monitor-Tischhalterung: Dual-Pole Ständer & Querträger
+  const poleMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1E293B, metalness: 0.8, roughness: 0.3 });
+  [-0.22, 0.22].forEach(px => {
+    const poleGeo = new THREE_LIB.CylinderGeometry(0.012, 0.012, 0.32, 10);
+    const pole = new THREE_LIB.Mesh(poleGeo, poleMat);
+    pole.position.set(px, 0.16, -0.08);
+    monitorGroup.add(pole);
+  });
+  const crossbarGeo = new THREE_LIB.BoxGeometry(0.68, 0.018, 0.018);
+  const crossbar = new THREE_LIB.Mesh(crossbarGeo, poleMat);
+  crossbar.position.set(0, monitorY, -0.06);
+  monitorGroup.add(crossbar);
+
+  group.add(monitorGroup);
+
+  // ---------------------------------------------------------------------------
+  // 3. PC & PERIPHERIE
+  // Dunkler Tower-PC (BoxGeometry) mit vertikalen Leuchtstreifen neben dem Tisch, flache Tastatur
+  // ---------------------------------------------------------------------------
+  const towerW = 0.16;
+  const towerH = 0.44;
+  const towerD = 0.42;
+  const towerGeo = new THREE_LIB.BoxGeometry(towerW, towerH, towerD);
+  const towerMat = new THREE_LIB.MeshStandardMaterial({
+    color: 0x0B0F19,
+    metalness: 0.75,
+    roughness: 0.25
+  });
+  const tower = new THREE_LIB.Mesh(towerGeo, towerMat);
+  tower.position.set(deskWidth * 0.5 + 0.13, towerH * 0.5, 0.04);
+  tower.castShadow = true;
+  group.add(tower);
+
+  // Vertikale Leuchtstreifen auf der Frontseite des Tower-PCs
+  [-0.035, 0.035].forEach(sx => {
+    const stripeGeo = new THREE_LIB.BoxGeometry(0.008, towerH * 0.82, 0.01);
+    const stripeMat = new THREE_LIB.MeshBasicMaterial({
+      color: isLead ? leadGoldInt : accentColorInt
+    });
+    const stripe = new THREE_LIB.Mesh(stripeGeo, stripeMat);
+    stripe.position.set(deskWidth * 0.5 + 0.13 + sx, towerH * 0.5, 0.04 + towerD * 0.5 + 0.004);
+    group.add(stripe);
+  });
+
+  // Flache Tastatur auf dem Tisch
+  const kbGeo = new THREE_LIB.BoxGeometry(0.36, 0.012, 0.14);
+  const kbMat = new THREE_LIB.MeshStandardMaterial({ color: 0x0B1120, roughness: 0.6, metalness: 0.4 });
+  const kb = new THREE_LIB.Mesh(kbGeo, kbMat);
+  kb.position.set(0, deskHeight + topThickness * 0.5 + 0.006, 0.16);
+  group.add(kb);
+
+  // Beleuchtete Tastenfläche / RGB Underglow
+  const kbGlowGeo = new THREE_LIB.PlaneGeometry(0.34, 0.12);
+  const kbGlowMat = new THREE_LIB.MeshBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.75 });
+  const kbGlow = new THREE_LIB.Mesh(kbGlowGeo, kbGlowMat);
+  kbGlow.rotation.x = -Math.PI / 2;
+  kbGlow.position.set(0, deskHeight + topThickness * 0.5 + 0.013, 0.16);
+  group.add(kbGlow);
+
+  // Ergonomische Maus & Mauspad
+  const mousepadGeo = new THREE_LIB.BoxGeometry(0.18, 0.004, 0.20);
+  const mousepadMat = new THREE_LIB.MeshStandardMaterial({ color: 0x070B14, roughness: 0.8 });
+  const mousepad = new THREE_LIB.Mesh(mousepadGeo, mousepadMat);
+  mousepad.position.set(0.28, deskHeight + topThickness * 0.5 + 0.002, 0.16);
+  group.add(mousepad);
+
+  const mouseGeo = new THREE_LIB.BoxGeometry(0.045, 0.018, 0.075);
+  const mouseMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.3, metalness: 0.8 });
+  const mouse = new THREE_LIB.Mesh(mouseGeo, mouseMat);
+  mouse.position.set(0.28, deskHeight + topThickness * 0.5 + 0.012, 0.16);
+  group.add(mouse);
+
+  // Schreibtisch-Arbeitsplatzlicht (PointLight)
+  if (typeof THREE_LIB.PointLight === 'function') {
+    const deskLight = new THREE_LIB.PointLight(accentColorInt || 0x00F0FF, 0.85, 2.4);
+    deskLight.position.set(0, deskHeight + 0.65, 0.1);
+    group.add(deskLight);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 4. BÜROSTUHL
+  // Detaillierter Stuhl aus Sitzfläche, gebogener Rückenlehne und Fußkreuz (5-Stern)
+  // ---------------------------------------------------------------------------
+  const chairGroup = new THREE_LIB.Group();
+  chairGroup.position.set(0, 0, 0.44);
+
+  const chairSeatY = 0.32;
+  const chairMat = new THREE_LIB.MeshStandardMaterial({
+    color: 0x111827,
+    roughness: 0.35,
+    metalness: 0.65
+  });
+
+  // Sitzfläche
+  const seatGeo = new THREE_LIB.BoxGeometry(0.38, 0.05, 0.38);
+  const seat = new THREE_LIB.Mesh(seatGeo, chairMat);
+  seat.position.set(0, chairSeatY, 0);
+  seat.castShadow = true;
+  chairGroup.add(seat);
+
+  // Gebogene Rückenlehne (CylinderGeometry für geschwungene Ergonomie)
+  const backGeo = new THREE_LIB.CylinderGeometry(0.24, 0.24, 0.44, 16, 1, true, -Math.PI * 0.32, Math.PI * 0.64);
+  const backMesh = new THREE_LIB.Mesh(backGeo, chairMat);
+  backMesh.position.set(0, chairSeatY + 0.24, -0.05);
+  backMesh.rotation.y = Math.PI;
+  chairGroup.add(backMesh);
+
+  // Kopfstütze
+  const headrestGeo = new THREE_LIB.BoxGeometry(0.22, 0.08, 0.06);
+  const headrest = new THREE_LIB.Mesh(headrestGeo, chairMat);
+  headrest.position.set(0, chairSeatY + 0.48, 0.14);
+  chairGroup.add(headrest);
+
+  // Armlehnen (Links / Rechts)
+  [-0.21, 0.21].forEach(ax => {
+    const armGeo = new THREE_LIB.BoxGeometry(0.04, 0.14, 0.26);
+    const arm = new THREE_LIB.Mesh(armGeo, chairMat);
+    arm.position.set(ax, chairSeatY + 0.10, 0.02);
+    chairGroup.add(arm);
+  });
+
+  // Fußkreuz: Verchromte Mittelsäule + 5-Stern Ausleger mit Rollen
+  const chromeMat = new THREE_LIB.MeshStandardMaterial({
+    color: 0xE2E8F0,
+    metalness: 0.95,
+    roughness: 0.1
+  });
+  const pillarGeo = new THREE_LIB.CylinderGeometry(0.02, 0.02, chairSeatY - 0.04, 12);
+  const pillar = new THREE_LIB.Mesh(pillarGeo, chromeMat);
+  pillar.position.set(0, (chairSeatY - 0.04) * 0.5 + 0.04, 0);
+  chairGroup.add(pillar);
+
+  // 5-Stern Fußkreuz (5 Ausleger-Arme)
+  const armLen = 0.21;
+  for (let i = 0; i < 5; i++) {
+    const angle = (i * 2 * Math.PI) / 5;
+    const baseArmGeo = new THREE_LIB.BoxGeometry(0.022, 0.022, armLen);
+    const baseArm = new THREE_LIB.Mesh(baseArmGeo, chairMat);
+    baseArm.position.set(Math.sin(angle) * (armLen * 0.5), 0.035, Math.cos(angle) * (armLen * 0.5));
+    baseArm.rotation.y = angle;
+    chairGroup.add(baseArm);
+
+    // Rolle am Ende des Arms
+    const casterGeo = new THREE_LIB.SphereGeometry(0.016, 8, 8);
+    const casterMat = new THREE_LIB.MeshStandardMaterial({ color: 0x050811, roughness: 0.9 });
+    const caster = new THREE_LIB.Mesh(casterGeo, casterMat);
+    caster.position.set(Math.sin(angle) * armLen, 0.016, Math.cos(angle) * armLen);
+    chairGroup.add(caster);
+  }
+
+  group.add(chairGroup);
+
+  // ---------------------------------------------------------------------------
+  // 5. AGENTEN-FIGUR
+  // Setze den Agenten sichtbar in den Stuhl / direkt an den Tisch
+  // Kopf, Torso mit Akzentfarben für die jeweilige Abteilung (Gold für Leads)
+  // ---------------------------------------------------------------------------
   const userData = {
-    type: 'pc',
+    type: isLead ? 'chef' : 'pc',
     agentId: agent.id,
     pcId: agent.id,
-    isLead: false,
+    chefId: agent.id,
+    isLead: isLead,
     name: agent.name,
     role: agent.role,
     department: agent.department,
@@ -1401,67 +1529,18 @@ function createSpecialistWorkstation(THREE_LIB, agent, colorHex, position, rotY 
     easy_explanation: agent.easy_explanation
   };
 
-  const screenLeft = new THREE_LIB.Mesh(screenGeo, screenMat.clone());
-  screenLeft.position.set(-0.21, 0.65, 0.03);
-  screenLeft.rotation.y = 0.22;
-  screenLeft.userData = userData;
-  group.add(screenLeft);
-
-  const screenRight = new THREE_LIB.Mesh(screenGeo, screenMat.clone());
-  screenRight.position.set(0.21, 0.65, 0.03);
-  screenRight.rotation.y = -0.22;
-  screenRight.userData = userData;
-  group.add(screenRight);
-
-  // Beleuchtete Tastatur
-  const kbGeo = new THREE_LIB.PlaneGeometry(0.32, 0.14);
-  const kbMat = new THREE_LIB.MeshBasicMaterial({ color: 0x00F0FF, transparent: true, opacity: 0.65 });
-  const kb = new THREE_LIB.Mesh(kbGeo, kbMat);
-  kb.rotation.x = -Math.PI / 2;
-  kb.position.set(0, 0.53, 0.15);
-  group.add(kb);
-
-  // Status-Sphäre
-  const orbGeo = new THREE_LIB.SphereGeometry(0.035, 16, 16);
-  const orbMat = new THREE_LIB.MeshBasicMaterial({ color: parseInt(colorHex.replace('#', '0x'), 16) });
-  const orb = new THREE_LIB.Mesh(orbGeo, orbMat);
-  orb.position.set(0.34, 0.56, 0.15);
-  group.add(orb);
-
-  // Schreibtisch-Beleuchtung (PointLight für Arbeitsplatz)
-  if (typeof THREE_LIB.PointLight === 'function') {
-    const deskLight = new THREE_LIB.PointLight(parseInt(colorHex.replace('#', '0x'), 16) || 0x00F0FF, 0.75, 2.0);
-    deskLight.position.set(0, 0.75, 0.05);
-    group.add(deskLight);
-  }
-
-  // Ergonomischer Bürostuhl
-  const chairGroup = new THREE_LIB.Group();
-  chairGroup.position.set(0, 0.0, 0.46);
-  const chairSeatGeo = new THREE_LIB.BoxGeometry(0.38, 0.05, 0.36);
-  const chairMat = new THREE_LIB.MeshStandardMaterial({ color: 0x1E293B, roughness: 0.35, metalness: 0.75 });
-  const chairSeat = new THREE_LIB.Mesh(chairSeatGeo, chairMat);
-  chairSeat.position.y = 0.28;
-  chairGroup.add(chairSeat);
-  const chairBackGeo = new THREE_LIB.BoxGeometry(0.36, 0.42, 0.04);
-  const chairBack = new THREE_LIB.Mesh(chairBackGeo, chairMat);
-  chairBack.position.set(0, 0.50, 0.16);
-  chairGroup.add(chairBack);
-  group.add(chairGroup);
-
-  // Avatar
-  const avatar = createStylizedDeveloperAvatar(THREE_LIB, colorHex, false, false);
-  avatar.position.set(0, 0.16, 0.38);
+  const avatar = createStylizedDeveloperAvatar(THREE_LIB, colorHex, isLead, false);
+  avatar.position.set(0, 0.22, 0.40);
   avatar.userData = userData;
   group.add(avatar);
   developerAvatars.push(avatar);
 
-  // Boden-Highlight-Ring
-  const hlGeo = new THREE_LIB.TorusGeometry(0.65, 0.02, 8, 32);
+  // Boden-Highlight-Ring (wird bei Klick / Hover aktiv)
+  const hlGeo = new THREE_LIB.TorusGeometry(0.72, 0.022, 8, 32);
   const hlMat = new THREE_LIB.MeshBasicMaterial({
-    color: parseInt(colorHex.replace('#', '0x'), 16),
+    color: isLead ? leadGoldInt : accentColorInt,
     transparent: true,
-    opacity: 0.8
+    opacity: 0.85
   });
   const hlRing = new THREE_LIB.Mesh(hlGeo, hlMat);
   hlRing.rotation.x = Math.PI / 2;
@@ -1470,40 +1549,56 @@ function createSpecialistWorkstation(THREE_LIB, agent, colorHex, position, rotY 
   group.add(hlRing);
 
   // Zylinder-Hitbox für schnelles und exaktes Raycasting
-  const hitboxGeo = new THREE_LIB.CylinderGeometry(0.65, 0.65, 1.8, 16);
+  const hitboxGeo = new THREE_LIB.CylinderGeometry(0.72, 0.72, 1.8, 16);
   const hitboxMat = new THREE_LIB.MeshBasicMaterial({ visible: false });
   const hitbox = new THREE_LIB.Mesh(hitboxGeo, hitboxMat);
   hitbox.position.y = 0.9;
   hitbox.userData = {
     ...userData,
     highlightRing: hlRing,
-    headPos: new THREE_LIB.Vector3(position.x, position.y + 1.35 * 1.5, position.z)
+    headPos: new THREE_LIB.Vector3(position.x, position.y + 1.4 * scale, position.z)
   };
   group.add(hitbox);
+
+  // Registrierung im System
+  screenMeshes.forEach(sm => { sm.userData = userData; });
+  const primaryScreen = screenMeshes[0] || deskTop;
 
   const entry = {
     agent,
     group,
-    mesh: screenLeft,
-    screenLeft,
-    screenRight,
-    screens: [screenLeft, screenRight],
+    mesh: primaryScreen,
+    screens: screenMeshes,
     avatar,
     hitbox,
-    isLead: false
+    isLead
   };
   agentMeshMap[agent.id] = entry;
-  pcMeshMap[agent.id] = entry;
+  if (isLead) chefMeshMap[agent.id] = entry;
+  else pcMeshMap[agent.id] = entry;
 
   if (typeof window !== 'undefined') {
     window.interactiveAgentMeshes = window.interactiveAgentMeshes || [];
     window.interactiveAgentMeshes.push(hitbox);
   }
   interactiveObjects.push(hitbox);
-  interactiveObjects.push(screenLeft);
-  interactiveObjects.push(screenRight);
+  screenMeshes.forEach(sm => interactiveObjects.push(sm));
 
   return group;
+}
+
+/**
+ * Erzeugt den High-Tech-Arbeitsplatz eines Abteilungsleiters (Lead)
+ */
+function createLeadWorkstation(THREE_LIB, agent, colorHex, position, rotY = 0) {
+  return createHighDetailWorkstation(THREE_LIB, agent, colorHex, position, rotY, true);
+}
+
+/**
+ * Erzeugt den High-Tech-Arbeitsplatz eines Fach-Spezialisten
+ */
+function createSpecialistWorkstation(THREE_LIB, agent, colorHex, position, rotY = 0) {
+  return createHighDetailWorkstation(THREE_LIB, agent, colorHex, position, rotY, false);
 }
 
 /**

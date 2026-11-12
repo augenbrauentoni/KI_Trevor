@@ -19,9 +19,9 @@ const stylesCss = fs.readFileSync(path.join(__dirname, '02_Frontend_UI_und_3D_St
 
 // TEST 1: index.html Cache-Busting v=12.0 & Three.js Post-Processing Addons
 console.log('--- Test 1: index.html Cache-Busting & Post-Processing Setup ---');
-assert(html.includes('href="./styles.css?v=14.0"') || html.includes('href="./styles.css?v=12.0"'), 'styles.css must have cache ?v=14.0 or ?v=12.0');
-assert(html.includes('href="./style.css?v=14.0"') || html.includes('href="./style.css?v=12.0"'), 'style.css must have cache ?v=14.0 or ?v=12.0');
-assert(html.includes('src="./app.js?v=14.0"') || html.includes('src="./app.js?v=12.0"'), 'app.js must have cache ?v=14.0 or ?v=12.0');
+assert(html.includes('href="./styles.css?v=16.0"') || html.includes('href="./styles.css?v=14.0"') || html.includes('href="./styles.css?v=12.0"'), 'styles.css must have cache ?v=16.0, ?v=14.0 or ?v=12.0');
+assert(html.includes('href="./style.css?v=16.0"') || html.includes('href="./style.css?v=14.0"') || html.includes('href="./style.css?v=12.0"'), 'style.css must have cache ?v=16.0, ?v=14.0 or ?v=12.0');
+assert(html.includes('src="./app.js?v=16.0"') || html.includes('src="./app.js?v=14.0"') || html.includes('src="./app.js?v=12.0"'), 'app.js must have cache ?v=16.0, ?v=14.0 or ?v=12.0');
 
 // Importmap or CDN scripts for postprocessing
 assert(html.includes('EffectComposer.js'), 'index.html must include EffectComposer.js');

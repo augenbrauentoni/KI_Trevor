@@ -392,9 +392,34 @@ export function executeTrainingStep(departments) {
   // Asynchron an /api/memory/save senden
   saveInsightToCloudMemory(data).catch(() => {});
 
-  // Bei relevanten Erkenntnissen: Optionalen Vorschlag im Action-Center hinterlegen
-  if (typeof window !== 'undefined' && typeof window.recordTrainingAuditProposal === 'function') {
-    window.recordTrainingAuditProposal(agent, dept, project, data);
+  // Live-Feed in Trainings-Konsole schreiben
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const logMsg = `> [${timeStr}] ${agent.name} ${data.currentAction}...`;
+  if (typeof window !== 'undefined' && typeof window.appendTrainingLog === 'function') {
+    window.appendTrainingLog(logMsg);
+  } else if (typeof document !== 'undefined') {
+    const logEl = document.getElementById('training-console-log');
+    if (logEl) {
+      const line = document.createElement('div');
+      line.className = 'training-log-line';
+      line.style.color = '#38BDF8';
+      line.style.marginTop = '2px';
+      line.innerText = logMsg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  }
+
+  // Bei relevanten Erkenntnissen: Vorschlag im Action-Center hinterlegen
+  if (typeof window !== 'undefined') {
+    window.trainingCycleCount = (window.trainingCycleCount || 0) + 1;
+    if (window.trainingCycleCount % 4 === 1 && typeof window.pushTrainingProposalToActionCenter === 'function') {
+      window.pushTrainingProposalToActionCenter({ agent, dept, project, data });
+    }
+    if (typeof window.recordTrainingAuditProposal === 'function') {
+      window.recordTrainingAuditProposal(agent, dept, project, data);
+    }
   }
 
   return {

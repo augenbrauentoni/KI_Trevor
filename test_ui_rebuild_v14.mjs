@@ -22,9 +22,9 @@ const idleTrainerCode = fs.readFileSync(path.join(__dirname, '02_Frontend_UI_und
 // TEST 1: Cache-Busting & Version 14.0 in index.html
 // -----------------------------------------------------------------------------
 console.log('--- Test 1: Cache-Busting & Version 14.0 in index.html ---');
-assert(html.includes('href="./styles.css?v=14.0"'), 'index.html must have href="./styles.css?v=14.0"');
-assert(html.includes('href="./style.css?v=14.0"'), 'index.html must have href="./style.css?v=14.0"');
-assert(html.includes('src="./app.js?v=14.0"'), 'index.html must have src="./app.js?v=14.0"');
+assert(html.includes('href="./styles.css?v=16.0"') || html.includes('href="./styles.css?v=14.0"'), 'styles.css must have cache ?v=16.0 or ?v=14.0');
+assert(html.includes('href="./style.css?v=16.0"') || html.includes('href="./style.css?v=14.0"'), 'style.css must have cache ?v=16.0 or ?v=14.0');
+assert(html.includes('src="./app.js?v=16.0"') || html.includes('src="./app.js?v=14.0"'), 'app.js must have cache ?v=16.0 or ?v=14.0');
 console.log('✔ Test 1 passed: Cache-busting ?v=14.0 correctly set on all CSS and JS bundles.');
 
 // -----------------------------------------------------------------------------

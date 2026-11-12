@@ -952,6 +952,32 @@ ${task.antigravity_prompt}
     });
 
     syncLocalCheckpointFile(updated, 'Auftrag freigegeben ("JA") -> In Zwischenablage & 05_Antigravity_Outputs/ abgelegt');
+
+    // In Browser-Umgebung in window.completedTasks ablegen
+    if (typeof window !== 'undefined') {
+      window.completedTasks = window.completedTasks || [];
+      const entry = {
+        id: updated.id,
+        prompt: updated.user_prompt || 'Auftrag',
+        title: updated.user_prompt || 'Auftrag',
+        summary: updated.trevor_summary || 'Auftrag durch Trevor Multi-Agenten Studio freigegeben.',
+        codeText: updated.antigravity_prompt || '',
+        qaReport: updated.qa_report || null,
+        impactAnalysis: updated.impact_analysis || null,
+        completedAt: updated.updated_at || new Date().toISOString(),
+        status: 'COMPLETED'
+      };
+      window.completedTasks = window.completedTasks.filter(t => t.id !== entry.id);
+      window.completedTasks.unshift(entry);
+      try {
+        if (window.localStorage) {
+          window.localStorage.setItem('trevor_completed_tasks', JSON.stringify(window.completedTasks));
+        }
+      } catch { /* ignore */ }
+      if (typeof window.renderTaskQueueUI === 'function') {
+        window.renderTaskQueueUI();
+      }
+    }
     return {
       status: 'approved',
       clipboardCopied: copied,
